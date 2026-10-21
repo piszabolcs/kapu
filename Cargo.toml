@@ -1,0 +1,35 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/kapu-core",
+    "crates/kapu-cli",
+    "crates/kapu-mcp",
+    "crates/kapu-bench",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+license = "MIT"
+authors = ["Pintér Szabolcs"]
+publish = false
+
+# NFR-03: no unsafe, no unwrap/expect/panic outside tests, pedantic clippy.
+# CI and scripts/check.ps1 run clippy with `-D warnings`, so every `warn` here is an error there.
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+unimplemented = "deny"
+indexing_slicing = "deny"
+todo = "warn"
+module_name_repetitions = "allow"
+
+[profile.release]
+codegen-units = 1
+lto = true

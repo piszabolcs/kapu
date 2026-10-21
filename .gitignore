@@ -1,0 +1,19 @@
+# Rust
+/target/
+/fuzz/target/
+/fuzz/corpus/
+/fuzz/artifacts/
+# Packaged / downloaded vector models (D29): never committed
+/models/
+# Python developer tooling (tools/distill): venv only
+/tools/distill/.venv/
+__pycache__/
+*.pyc
+# Atomic-save temp files (FR-18)
+*.kapu.tmp
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+*.log

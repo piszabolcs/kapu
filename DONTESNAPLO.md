@@ -1,0 +1,39 @@
+# KAPU – Döntésnapló (D31-től)
+
+A `SPEC-KAPU.md` 11. fejezete D1–D30-ig tart, és a spec v1.0 alatt nem módosul. Minden további döntés ide kerül: a spec feltételezéseinek pontosítása, módszercsere a D30 szerint (indoklással és méréssel), eszköz- és folyamatdöntések. Formátum: azonosító, dátum, döntés, indok, elvetett alternatíva, érintett spec-pont.
+
+---
+
+## Induló döntések (2026-10-21, a felhasználóval egyeztetve)
+
+- **D31 Repó és CI.** A repó gyökere a `kapu_file/` mappa; git helyben most, privát GitHub repó és 3 platformos Actions CI akkor, amikor a `gh` be van jelentkezve. Addig a `scripts/check.ps1` futtatja ugyanazokat a kapukat. Elvetve: GitHub azonnal (blokkolt volna a bejelentkezésig); GitHub csak a kiadásnál (NFR-04 a végéig ellenőrizetlen maradt volna).
+- **D32 Kódnyelv.** Kód, kommentek, rustdoc, commit üzenet angol. Csak a spec által szó szerint rögzített magyar szövegek (FR-17 std-1 útmutató, FR-19 mintalista) maradnak magyarul. A projektdokumentumok (TERV, ALLAPOT, DONTESNAPLO, bench/REPORT) magyarul. Indok: nyílt formátum, MIT kód, a crate-ek és az MCP API angol. A README nyelve M9-ben dől el.
+- **D33 Korpusz.** M1: kézi 3 szobás minta és hibás fájlok. M3-tól determinisztikus szintetikus generátor (30/300/3000 szoba). A valódi korpusz a felhasználó repóiból (`Archive/tesztkorpusz_prompt.md`) külön munkamenetben, M8 előtt. Elvetve: előbb a teljes korpusz (csúszás); csak szintetikus (a mérés nem a valódi tudáson történne).
+- **D34 Toolchain.** rustup a felhasználói profilba, `stable-x86_64-pc-windows-msvc` 1.99.1, `rust-toolchain.toml`-ban rögzítve. A gépen meglévő VS Build Tools 2019 (MSVC 14.29) és Windows SDK 10.0.19041 adja a C/C++ fordítót a `cc`-t használó crate-ekhez. Elvetve: GNU toolchain (MSVC amúgy is van).
+- **D35 Szerzőség és push.** Commit szerző kizárólag a felhasználó, AI-attribúció nélkül. Push csak kifejezett kérésre, titok-szkennelés után. Döntésnapló: ez a fájl D31-től, a spec nem módosul.
+
+## A spec pontosításai (TERV.md 2. fejezet; 2.5, 2.10, 2.13 a felhasználó döntése 2026-10-21)
+
+- **D36 Szobahatár (FR-04, FR-14).** A tárolt törzs szobánként: `@@@ <id>\n` + tartalom + `\n` (elválasztó LF). A `#DOCS` hossz az elválasztó LF nélkül értendő; így a kiolvasás bájtra pontos, és az üres szoba `@@@ id\n\n` alakú. Memóriabeli újraépítésnél (FR-15/2) az elválasztó az `@@@` sor előtti LF.
+- **D37 bodyhash (FR-03).** A `#BODY\n` sor utáni teljes tárolt (escape-elt) bájtsorozat BLAKE3 értéke.
+- **D38 embhash (FR-03).** BLAKE3 a `model.safetensors` és a `tokenizer.json` bájtjain, ebben a sorrendben összefűzve. Indok: más tokenizáló más vektort ad, ezért a tokenizáló is a modell része.
+- **D39 Fejléc-túlcsordulás (FR-03).** Ha a fejléc nem fér 511 bájtba + LF, a build E002 hibával leáll („header overflow”). Az `emb=` modellnév legfeljebb 64 karakter.
+- **D40 CRLF importnál (FR-02, FR-18, 7.3) – felhasználói döntés.** `kapu import` és `kapu add` a bemeneti `.md` CRLF sorvégeit LF-re normalizálja és figyelmeztet. A `.kapu` fájlban talált CR továbbra is E003. Elvetve: hiba importnál (Windows-on a legtöbb `.md` CRLF, használhatatlan lett volna).
+- **D41 Szoba és alajtó kettős találata (FR-09).** A szoba indexelt tartalma az alajtóit is tartalmazza, így ugyanarra a kifejezésre a szoba és az alajtó is találat. Marad így: az AI választhat az olcsó alajtó és a teljes szoba között, a BM25 a rövidebb alajtót rangsorolja előrébb. M8 méri, zavar-e.
+- **D42 `term` él súlya (FR-11/2).** A közös ritka kifejezések IDF-összege osztva a fájlban előforduló legnagyobb ilyen összeggel; a maximum 1.0.
+- **D43 Leiden paraméterek (FR-12/1).** Felbontás γ = 1.0 (standard modularitás), legfeljebb 10 iteráció vagy amíg nincs változás. A véletlen csak a csúcsok bejárási sorrendjében, seed = 42, saját platformfüggetlen PRNG (xoshiro256**), nem a std `HashMap`. Saját implementáció, mert nincs Rust crate; fejlesztői ellenőrzés Python `leidenalg`-gal.
+- **D44 Hálózati témájú szólista (FR-19/5).** A repóban karbantartott HU+EN lista: network, hálózat, http, api, curl, download, letöltés, upload, feltöltés, request, fetch, wget, proxy, socket, url.
+- **D45 Szobatörlés – felhasználói döntés.** Új CLI parancs: `kapu rm <fájl> <id>` (build-del). MCP-ben nincs törlés: az AI ne töröljön tudást. Indok: a spec nem adott törlést; Notepad + build vagy export/import túl nehézkes.
+- **D46 Determinizmus lebegőponttal (NFR-02).** A magban nincs `HashMap`-iteráció a kimenetben (`BTreeMap` vagy rendezett `Vec`), nincs BLAS/SIMD kernel (saját skalárszorzat rögzített sorrendben), a modell átlagolása saját f32 kóddal. Emiatt M4-ben valószínű a saját Model2Vec-betöltő a `model2vec-rs` `ndarray`-os útja helyett; a Windows+Linux CI dönti el.
+- **D47 Vektor-gyorsítótár (FR-10/3, FR-16).** Első keresésnél az olvasó minden ajtó vektorát kiszámolja (a törzset beolvassa, de nem adja vissza). Hely: a felhasználói gyorsítótár-mappa `kapu/<embhash>/` alkönyvtára. NFR-05 méri 3000 szobán.
+- **D48 Kétnyelvű eszközleírás (FR-17) – felhasználói döntés.** A `std-1` útmutató szövege változatlan (magyar). Az MCP eszközleírások kétnyelvűek: a magyar bekezdés után ugyanaz angolul. Elvetve: csak magyar (angol prompt esetén az ügynök rosszabbul érti).
+- **D49 `kapu bench` találatszámítás (8. fejezet).** Elvárt ajtó = `slug(valasz_fajl)/slug(valasz_szakasz)`, szakasz nélkül a szoba. Szigorú találat: az elvárt ajtó a top-k-ban. Megengedő találat: az elvárt ajtó **vagy a szobája** a top-k-ban. Mindkettő riportálva.
+- **D50 `validate --full` modell nélkül (FR-20).** Ha a csomagolt modell `embhash`-e eltér a fájlétól, az újraelőállítás-ellenőrzés kimarad, `W001 model mismatch, rebuild check skipped` figyelmeztetéssel és nem nulla kilépési kóddal.
+- **D51 Végponttól végpontig protokoll (ASSUMPTION-01, M8/6).** A `.kapu` fájl a munkakönyvtáron kívül van, és a naplóban ellenőrizzük, hogy nincs közvetlen `Read` hívás rá. Ha mégis van, az RISK-01 kiterjesztése, a riportba kerül; a formátum nem változik.
+
+## Függőség-döntések (M0, ellenőrzött verziók és licencek)
+
+- **D52 Tokenizáló (UNVERIFIED-01 lezárva).** `tiktoken-rs` 0.12.1 (MIT, karbantartott) az `o200k_base` árakhoz. Tartalék: `bpe-openai` 0.3.2 (MIT).
+- **D53 Modell (ASSUMPTION-02 igazolva).** `minishlab/potion-multilingual-128M`: MIT, a `hu` szerepel a nyelvlistában, `hidden_dim=256`, `model.safetensors` 512 MB f32 (i8-ban ≈128 MB) + `tokenizer.json` 18.6 MB. D28 szerint M8-ban összevetve a saját desztillált modellel.
+- **D54 MCP SDK.** `rmcp` 3.6.0 (Apache-2.0), `default-features = false`, `features = ["server", "macros", "transport-io"]`, hogy ne kerüljön be HTTP-kliens vagy OAuth függőség (7.5: nincs hálózat).
+- **D55 Licenc-allowlist (`deny.toml`).** MIT, Apache-2.0 (+LLVM-exception), BSD-2/3, CC0-1.0, ISC, Unicode-3.0/DFS-2016, Zlib, BSL-1.0, MPL-2.0. Forrás csak crates.io. Yanked verzió tiltva.

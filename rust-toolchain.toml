@@ -1,0 +1,4 @@
+# NFR-03/7: pinned toolchain. rustup installs this version automatically.
+[toolchain]
+channel = "1.99.1"
+components = ["clippy", "rustfmt"]

@@ -1,0 +1,19 @@
+[package]
+name = "kapu-bench"
+description = "Synthetic corpus generator and measurement helpers for KAPU (spec M8)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "kapu-bench"
+path = "src/main.rs"
+
+[dependencies]
+kapu-core = { path = "../kapu-core" }
+
+[lints]
+workspace = true

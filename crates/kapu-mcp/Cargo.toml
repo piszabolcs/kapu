@@ -1,0 +1,19 @@
+[package]
+name = "kapu-mcp"
+description = "MCP server (stdio) exposing KAPU files to AI agents (FR-15)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "kapu-mcp"
+path = "src/main.rs"
+
+[dependencies]
+kapu-core = { path = "../kapu-core" }
+
+[lints]
+workspace = true
