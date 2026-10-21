@@ -14,6 +14,7 @@ path = "src/main.rs"
 
 [dependencies]
 kapu-core = { path = "../kapu-core" }
+clap = { version = "4", features = ["derive"] }
 
 [lints]
 workspace = true

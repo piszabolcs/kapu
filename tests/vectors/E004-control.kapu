@@ -1,0 +1,314 @@
+%KAPU 1.0
+eol=LF
+enc=UTF-8
+tok=o200k_base
+emb=none
+embhash=b3:af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262
+map=512+508
+desc=1020+583
+graph=1603+149
+index=1752+13486
+docs=15238+810
+body=16054+1719
+rooms=3
+doors=7
+groups=2
+bodyhash=b3:c270f0b0de63871de4b3071aa3abad125153680f90ba46edee1ac8b1ed4a0a10
+guide=std-1
+                                                                                                                                                                                     
+#MAP
+G g1 | electron, design, frontend | 2 | 472t
+R frontend-design-alapok | Frontend design alapok | 257t | g1 | frontend, design, glass, színek, css
+S frontend-design-alapok/szinek | Színek | 96t
+S frontend-design-alapok/glass-gomb | Glass gomb | 108t
+R electron-leckek | Electron leckék | 215t | g1 | electron, preload, ipc, hiba
+S electron-leckek/preload-bridge | Preload bridge | 102t
+S electron-leckek/szobajelolo-escape | Szobajelölő \| escape | 79t
+G g2 |  | 1 | 7t
+R szoba |  | 7t | g2 | 
+#END
+#DESC
+frontend-design-alapok	Sötét téma, glassmorphism, bronz és türkiz színek: az alap stílus minden apphoz.	frontend, design, glass, színek, css, gomb
+frontend-design-alapok/szinek	A paletta három alapszínre épül, a	
+frontend-design-alapok/glass-gomb	Az üvegszerű gomb elmosott hátteret	
+electron-leckek	Visszatérő Electron hibák és a helyes megoldásuk.	electron, preload, ipc, hiba
+electron-leckek/preload-bridge	Soha ne kapcsold ki a contextIsolation-t. A renderer csak	
+electron-leckek/szobajelolo-escape	A `@@@` sor csak a sor elején jelöl	
+szoba		
+#END
+#GRAPH
+electron-leckek/preload-bridge	frontend-design-alapok	link	1.0
+frontend-design-alapok/glass-gomb	electron-leckek/preload-bridge	link	1.0
+#END
+#INDEX
+0	3	frontend-design-alapok:2,frontend-design-alapok/glass-gomb:1,frontend-design-alapok/szinek:1
+08	2	frontend-design-alapok:2,frontend-design-alapok/szinek:2
+1	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+12	2	frontend-design-alapok:2,frontend-design-alapok/glass-gomb:2
+12161	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+12161c	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+12px	2	frontend-design-alapok:2,frontend-design-alapok/glass-gomb:2
+18	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+1px	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+255	3	frontend-design-alapok:6,frontend-design-alapok/glass-gomb:3,frontend-design-alapok/szinek:3
+3	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+3fb6a8	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+4	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+6	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+8	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+a	5	electron-leckek:10,electron-leckek/preload-bridge:8,electron-leckek/szobajelolo-escape:4,frontend-design-alapok:6,frontend-design-alapok/szinek:8
+alajtó	4	electron-leckek:1,electron-leckek/preload-bridge:1,frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+alajtót	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+alap	3	electron-leckek:2,electron-leckek/preload-bridge:2,frontend-design-alapok:6
+alapok	3	electron-leckek:2,electron-leckek/preload-bridge:2,frontend-design-alapok:4
+alapszín	2	frontend-design-alapok:1,frontend-design-alapok/szinek:2
+alapszínr	2	frontend-design-alapok:1,frontend-design-alapok/szinek:2
+alapszínre	2	frontend-design-alapok:1,frontend-design-alapok/szinek:2
+ap	2	electron-leckek:1,electron-leckek/preload-bridge:1
+api	2	electron-leckek:1,electron-leckek/preload-bridge:1
+app	1	frontend-design-alapok:2
+apphoz	1	frontend-design-alapok:2
+az	2	frontend-design-alapok:4,frontend-design-alapok/glass-gomb:3
+backdrop	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+backdrop-filt	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+backdrop-filter	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+backgroun	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+background	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+bg	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+blur	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+border	2	frontend-design-alapok:2,frontend-design-alapok/glass-gomb:2
+border-radius	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+bridg	4	electron-leckek:2,electron-leckek/preload-bridge:5,frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+bridge	4	electron-leckek:2,electron-leckek/preload-bridge:5,frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+bronz	2	frontend-design-alapok:3,frontend-design-alapok/szinek:1
+btn	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+btn-glass	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+c	2	frontend-design-alapok:2,frontend-design-alapok/szinek:2
+c08a4	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+c08a4a	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+color	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+contex	2	electron-leckek:2,electron-leckek/preload-bridge:3
+context	2	electron-leckek:2,electron-leckek/preload-bridge:3
+contextbridg	2	electron-leckek:1,electron-leckek/preload-bridge:1
+contextbridge	2	electron-leckek:1,electron-leckek/preload-bridge:1
+contextisolation-	2	electron-leckek:1,electron-leckek/preload-bridge:2
+contextisolation-t	2	electron-leckek:1,electron-leckek/preload-bridge:2
+csak	3	electron-leckek:2,electron-leckek/preload-bridge:2,electron-leckek/szobajelolo-escape:2
+css	3	frontend-design-alapok:5,frontend-design-alapok/glass-gomb:1,frontend-design-alapok/szinek:1
+desig	3	electron-leckek:2,electron-leckek/preload-bridge:2,frontend-design-alapok:7
+design	3	electron-leckek:2,electron-leckek/preload-bridge:2,frontend-design-alapok:7
+egi	2	electron-leckek:2,electron-leckek/szobajelolo-escape:2
+egy	2	electron-leckek:2,electron-leckek/szobajelolo-escape:2
+ele	2	electron-leckek:1,electron-leckek/szobajelolo-escape:2
+electr	3	electron-leckek:9,frontend-design-alapok:2,frontend-design-alapok/glass-gomb:2
+electron	3	electron-leckek:9,frontend-design-alapok:2,frontend-design-alapok/glass-gomb:2
+electron-leck	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+electron-leckek	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+elején	2	electron-leckek:1,electron-leckek/szobajelolo-escape:2
+elmosot	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:2
+elmosott	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:2
+escap	2	electron-leckek:1,electron-leckek/szobajelolo-escape:4
+escape	2	electron-leckek:1,electron-leckek/szobajelolo-escape:4
+expos	2	electron-leckek:1,electron-leckek/preload-bridge:1
+expose	2	electron-leckek:1,electron-leckek/preload-bridge:1
+exposeinmainworl	2	electron-leckek:1,electron-leckek/preload-bridge:1
+exposeinmainworld	2	electron-leckek:1,electron-leckek/preload-bridge:1
+ez	3	electron-leckek:2,electron-leckek/preload-bridge:1,electron-leckek/szobajelolo-escape:1
+fb	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+filter	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+fronten	3	electron-leckek:2,electron-leckek/preload-bridge:2,frontend-design-alapok:7
+frontend	3	electron-leckek:2,electron-leckek/preload-bridge:2,frontend-design-alapok:7
+frontend-design-alap	2	electron-leckek:1,electron-leckek/preload-bridge:1
+frontend-design-alapok	2	electron-leckek:1,electron-leckek/preload-bridge:1
+függvény	2	electron-leckek:1,electron-leckek/preload-bridge:1
+függvényeket	2	electron-leckek:1,electron-leckek/preload-bridge:1
+glass	3	frontend-design-alapok:7,frontend-design-alapok/glass-gomb:6,frontend-design-alapok/szinek:1
+glassmorph	1	frontend-design-alapok:2
+glassmorphis	1	frontend-design-alapok:2
+glassmorphism	1	frontend-design-alapok:2
+gomb	2	frontend-design-alapok:5,frontend-design-alapok/glass-gomb:6
+hami	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+hamis	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+hely	1	electron-leckek:2
+helyes	1	electron-leckek:2
+hi	1	electron-leckek:3
+hiba	1	electron-leckek:5
+hibák	1	electron-leckek:2
+hár	2	frontend-design-alapok:1,frontend-design-alapok/szinek:2
+három	2	frontend-design-alapok:1,frontend-design-alapok/szinek:2
+hátter	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:2
+hátteret	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:2
+in	2	electron-leckek:1,electron-leckek/preload-bridge:1
+inv	2	electron-leckek:1,electron-leckek/preload-bridge:1
+invok	2	electron-leckek:1,electron-leckek/preload-bridge:1
+invoke	2	electron-leckek:1,electron-leckek/preload-bridge:1
+ipc	2	electron-leckek:4,electron-leckek/preload-bridge:1
+ipcrender	2	electron-leckek:1,electron-leckek/preload-bridge:1
+ipcrenderer	2	electron-leckek:1,electron-leckek/preload-bridge:1
+is	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+isol	2	electron-leckek:1,electron-leckek/preload-bridge:2
+isolat	2	electron-leckek:1,electron-leckek/preload-bridge:2
+isolation	2	electron-leckek:1,electron-leckek/preload-bridge:2
+jelöl	2	electron-leckek:1,electron-leckek/szobajelolo-escape:2
+kap	4	electron-leckek:1,electron-leckek/szobajelolo-escape:1,frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+kapcsol	2	electron-leckek:1,electron-leckek/preload-bridge:2
+kapcsold	2	electron-leckek:1,electron-leckek/preload-bridge:2
+kezdődh	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+kezdődhet	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+ki	2	electron-leckek:1,electron-leckek/preload-bridge:2
+kiemelé	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+kiemelés	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+kiengedet	2	electron-leckek:1,electron-leckek/preload-bridge:1
+kiengedett	2	electron-leckek:1,electron-leckek/preload-bridge:1
+kódblok	2	electron-leckek:1,electron-leckek/preload-bridge:1
+kódblokkban	2	electron-leckek:1,electron-leckek/preload-bridge:1
+leck	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+lecke	1	electron-leckek:4
+leckek	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+leckék	1	electron-leckek:4
+leker	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+lekerül	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+lás	4	electron-leckek:1,electron-leckek/preload-bridge:1,frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+lásd	4	electron-leckek:1,electron-leckek/preload-bridge:1,frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+lát	2	electron-leckek:1,electron-leckek/preload-bridge:1
+látja	2	electron-leckek:1,electron-leckek/preload-bridge:1
+mai	2	electron-leckek:1,electron-leckek/preload-bridge:1
+main	2	electron-leckek:1,electron-leckek/preload-bridge:1
+megoldás	1	electron-leckek:2
+megoldásuk	1	electron-leckek:2
+min	1	frontend-design-alapok:2
+mind	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+minden	1	frontend-design-alapok:2
+mindkét	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+még	4	electron-leckek:1,electron-leckek/szobajelolo-escape:1,frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+ne	2	electron-leckek:1,electron-leckek/preload-bridge:2
+nem	2	electron-leckek:1,electron-leckek/preload-bridge:1
+olvasás	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+olvasáskor	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+palett	2	frontend-design-alapok:1,frontend-design-alapok/szinek:2
+paletta	2	frontend-design-alapok:1,frontend-design-alapok/szinek:2
+ping	2	electron-leckek:2,electron-leckek/preload-bridge:2
+prelo	4	electron-leckek:5,electron-leckek/preload-bridge:5,frontend-design-alapok:2,frontend-design-alapok/glass-gomb:2
+preload	4	electron-leckek:4,electron-leckek/preload-bridge:4,frontend-design-alapok:2,frontend-design-alapok/glass-gomb:2
+preload-bridg	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+preload-bridge	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+preloadban	2	electron-leckek:1,electron-leckek/preload-bridge:1
+px	2	frontend-design-alapok:3,frontend-design-alapok/glass-gomb:3
+radius	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+render	2	electron-leckek:2,electron-leckek/preload-bridge:3
+renderer	2	electron-leckek:2,electron-leckek/preload-bridge:3
+rgba	3	frontend-design-alapok:2,frontend-design-alapok/glass-gomb:1,frontend-design-alapok/szinek:1
+ro	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+root	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+sem	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+soh	2	electron-leckek:1,electron-leckek/preload-bridge:2
+soha	2	electron-leckek:1,electron-leckek/preload-bridge:2
+sol	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+solid	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:1
+sor	3	electron-leckek:4,electron-leckek/preload-bridge:1,electron-leckek/szobajelolo-escape:5
+stílus	3	electron-leckek:1,electron-leckek/preload-bridge:1,frontend-design-alapok:2
+stílushoz	2	electron-leckek:1,electron-leckek/preload-bridge:1
+szo	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+szob	3	electron-leckek:2,electron-leckek/preload-bridge:1,electron-leckek/szobajelolo-escape:1
+szoba	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+szobajelölő	2	electron-leckek:1,electron-leckek/szobajelolo-escape:4
+szobát	3	electron-leckek:2,electron-leckek/preload-bridge:1,electron-leckek/szobajelolo-escape:1
+szí	2	frontend-design-alapok:6,frontend-design-alapok/szinek:4
+szín	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+színe	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+színek	2	frontend-design-alapok:6,frontend-design-alapok/szinek:4
+söt	1	frontend-design-alapok:2
+sötét	1	frontend-design-alapok:2
+t	2	electron-leckek:1,electron-leckek/preload-bridge:2
+tartalomsor	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+ts	2	electron-leckek:1,electron-leckek/preload-bridge:1
+turkiz	3	frontend-design-alapok:3,frontend-design-alapok/glass-gomb:1,frontend-design-alapok/szinek:2
+tém	1	frontend-design-alapok:2
+téma	1	frontend-design-alapok:2
+türkiz	1	frontend-design-alapok:2
+van	2	electron-leckek:1,electron-leckek/preload-bridge:1
+var	2	frontend-design-alapok:2,frontend-design-alapok/glass-gomb:2
+visszaperjel	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+visszaperjelet	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+visszatérő	1	electron-leckek:2
+változó	2	frontend-design-alapok:1,frontend-design-alapok/szinek:1
+worl	2	electron-leckek:1,electron-leckek/preload-bridge:1
+world	2	electron-leckek:1,electron-leckek/preload-bridge:1
+ép	2	frontend-design-alapok:1,frontend-design-alapok/szinek:2
+épül	2	frontend-design-alapok:1,frontend-design-alapok/szinek:2
+és	2	electron-leckek:2,frontend-design-alapok:2
+ígi	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+így	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+írás	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+íráskor	2	electron-leckek:1,electron-leckek/szobajelolo-escape:1
+üvegszerű	2	frontend-design-alapok:1,frontend-design-alapok/glass-gomb:2
+#END
+#DOCS
+electron-leckek	@735+673	b3:9a9512e7ed4afd1ad5c35b2f387c42af83401336e698b77f8a5994ad6edb314b	dl=116	c=644
+electron-leckek/preload-bridge	@847+340	b3:29693b25b506046462eed10d9cf2f5be9ee5cfb48b2171d0115299e173e42fc6	dl=72	c=332
+electron-leckek/szobajelolo-escape	@1187+221	b3:e684a140962a5c380a31daeb0962552da08b3ef2116f9b48dc61b05a40adb118	dl=41	c=206
+frontend-design-alapok	@27+687	b3:2b293d292806511af684c772ab42dd735d1bb665cfe64548ba3562d467ec7317	dl=147	c=664
+frontend-design-alapok/glass-gomb	@402+312	b3:cb74508d7839326a4d7e8f6a7b9cca8677342e4be64734bc1130f546c1dbe608	dl=65	c=306
+frontend-design-alapok/szinek	@193+209	b3:e9718d43b2f921c6aef7b599b8398061d3db05480bbeefc16e02a497c6e2f1f2	dl=48	c=200
+szoba	@1419+299	b3:c2c64eb3d58aa71bc2c106289c3a912f54fbf7624a5b22929a948f7910d46204	dl=0	c=16
+#END
+#BODY
+@@@ frontend-design-alapok
+# Frontend design alapok
+> Sötét téma, glassmorphism, bronz és türkiz színek: az alap stílus minden apphoz.
+tags: frontend, design, glass, színek, css, gomb
+
+## Színek
+A paletta három alapszínre épül, a `--turkiz` változó a kiemelés színe.
+```css
+:root {
+  --bg: #12161c;
+  --bronz: #c08a4a;
+  --turkiz: #3fb6a8;
+  --glass: rgba(255, 255, 255, 0.08);
+}
+```
+
+## Glass gomb
+Az üvegszerű gomb elmosott hátteret kap, lásd még az [Electron preload](#electron-leckek/preload-bridge) alajtót.
+```css
+.btn-glass {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  color: var(--turkiz);
+}
+```
+@@@ electron-leckek
+# Electron leckék
+> Visszatérő Electron hibák és a helyes megoldásuk.
+tags: electron, preload, ipc, hiba
+
+## Preload bridge
+Soha ne kapcsold ki a contextIsolation-t. A renderer csak a preloadban kiengedett függvényeket látja, a stílushoz lásd a [Frontend design alapok](#frontend-design-alapok) szobát.
+```ts
+contextBridge.exposeInMainWorld('api', { ping: () => ipcRenderer.invoke('ping') });
+## ez a sor kódblokkban van, nem alajtó
+```
+
+## Szobajelölő | escape
+A `@@@` sor csak a sor elején jelöl szobát. Egy tartalomsor így is kezdődhet:
+```
+\@@@ hamis
+\\@@@ ez sem szoba
+```
+Íráskor mindkét sor még egy visszaperjelet kap, olvasáskor lekerül.
+
+@@@ szoba
+# 
+<!-- Ide jön a szoba címe. Ha üres marad, a szövegből lesz. -->
+
+> 
+<!-- Rövid leírás: mi van ebben a szobában. Ha üres marad, a szövegből lesz. -->
+
+tags: 
+<!-- Keresőszavak vesszővel. Ha üres marad, a szövegből lesznek. -->
+
+<!-- Innen jöhet a tartalom, sima Markdownban. -->
+

@@ -123,12 +123,12 @@ Minden mérföldkő: `[ ]` feladatok → Ellenőrzés parancsai zöldek → `ALL
 - [ ] `ALLAPOT.md`, `DONTESNAPLO.md` (D31–: a 2. fejezet feltételezései)
 - Ellenőrzés: `scripts/check.ps1` zöld (fmt, clippy, üres teszt, deny, audit)
 
-### M1 – Tesztvektorok és tesztvázak  (S–M)
-- [ ] `tests/vectors/minta.kapu`: 3 szoba, 4 alajtó, 2 link, 1 kézi `@@@` escape, egy üres sablon-szoba. Kézzel kiszámolt fejléc és `#DOCS` (Python segédszkripttel a `Archive/build_sample.py` mintájára, de v1.0 szerint; a szkript a `tools/` alá kerül, mert a Rust build később ezt kell reprodukálja bájtra)
-- [ ] Hibás fájl minden kódhoz: E001…E011 (11 fájl), plusz 2 edge: ajtó-ujjlenyomat eltérés újrapróbálással, teljes memóriabeli újraépítés
-- [ ] Tesztvázak a spec minden Acceptance pontjához (FR-01…FR-20, 1.3), `#[ignore]`-ral vagy `todo!()`-val, hogy futnak és elbuknak
-- [ ] Generátor váza (`kapu-bench gen --rooms N --seed 42`): determinisztikus szintetikus Markdown szobák HU+EN szöveggel, kódblokkal, `##` szakaszokkal, linkekkel
-- Ellenőrzés: `cargo test` lefut, a tesztek piros/ignored, a vektorok a repóban
+### M1 – Tesztvektorok és tesztvázak  (S–M)  — kész 2026-10-21
+- [x] `tests/vectors/minta.kapu`: 3 szoba, 4 alajtó, 2 link, `@@@` escape (0 és 1 visszaperjellel), kódblokkban lévő `## `, `|` a címben, a `kapu new` sablon mint `szoba`. A `tools/build_vectors.py` építi (tiktoken o200k_base, Snowball, BLAKE3 referencia), és visszaolvasással ellenőrzi; a bájtszintű döntések D56–D67
+- [x] Hibás fájl minden kódhoz: E001…E011 (11 fájl), plusz 2 edge (`edge-stale-same-length`, `edge-stale-shifted`); `expected.json` az elvárt kóddal, a minta ajtóinak adataival és a kiszolgálandó szövegekkel
+- [x] Tesztvázak a spec minden Acceptance pontjához (FR-01…FR-20, 1.3, M3/M8 ellenőrzések): `crates/kapu-core/tests/acceptance.rs`, 33 `#[ignore]` váz a mérföldkő nevével, `--ignored` futtatásra elbuknak; 5 valódi vektor-integritási teszt fut
+- [x] Generátor (`kapu-bench gen --rooms N --seed 42 --out DIR`): saját xoshiro256** PRNG, HU+EN szöveg, `tags:`, `##` szakaszok, kódblokk, link másik szobára; reprodukálhatósági teszt
+- Ellenőrzés: `cargo test` zöld (5 valódi + 33 ignored), `--ignored` mind elbukik, a vektorok a repóban, `check.ps1` zöld
 
 ### M2 – Olvasás és validálás  (M)
 - [ ] Fejléc-parser (512 bájt, mezők, határellenőrzés NFR-01, ASSUMPTION-08 korlátok)
