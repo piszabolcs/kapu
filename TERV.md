@@ -6,18 +6,20 @@ Jelölés: `[ ]` nyitott, `[x]` kész, `[~]` folyamatban. Minden mérföldkő v�
 
 ---
 
-## 0. Környezet (ellenőrzött tények, 2026-10-21)
+## 0. Környezet (ellenőrzött tények, 2026-10-21, otthoni gép)
+
+A projekt M0 után az otthoni gépre költözött; az eredeti (céges, nem rendszergazdai) környezet adatait az `ALLAPOT.md` M0 bejegyzése őrzi.
 
 | Elem | Állapot |
 |---|---|
-| Gép | Windows 11 Enterprise, nem rendszergazda |
-| Rust | **telepítve ma**: rustup, `stable-x86_64-pc-windows-msvc`, rustc 1.99.1 (2026-10-13), clippy + rustfmt. Hely: `%USERPROFILE%\.cargo` |
-| C/C++ toolchain | VS Build Tools 2019, MSVC 14.29, Windows SDK 10.0.19041 (a `cc`-t használó crate-ekhez elég) |
-| Linkelés | hello-world crate lefordult és lefutott |
-| Python | 3.10.8 (csak a `tools/distill` fejlesztői eszközhöz, venv-ben) |
-| git / gh | git 2.47, gh 2.96 (**nincs bejelentkezve**) |
-| Hálózat | crates.io index, static.rust-lang.org, huggingface.co, pypi.org, github.com elérhető |
-| Hiányzik | cargo-deny, cargo-audit, cargo-fuzz (+ nightly a fuzzhoz) → M0-ban |
+| Gép | Windows 11 Pro, a felhasználó rendszergazda (UAC-emeléssel). Repó: `C:\Users\kaposzta\Desktop\Project\kapu_file\kapu_file` |
+| Rust | rustup 1.29.2, `1.99.1-x86_64-pc-windows-msvc` a `rust-toolchain.toml` szerint, clippy + rustfmt; nightly 1.101.0 csak fuzzhoz. Hely: `%USERPROFILE%\.cargo` |
+| C/C++ toolchain | Visual Studio 2026 Community 18.10, MSVC 14.51 (`VC.Tools.x86.x64`), Windows SDK 10.0.26100 (`D:\Windows Kits\10`) |
+| Linkelés | a workspace tiszta buildből fordul, a három bináris fut |
+| Python | nincs telepítve (csak a `tools/distill` fejlesztői eszközhöz kell majd, M4/M8 előtt) |
+| git / gh | git 2.53, gh 2.102, bejelentkezve (`piszabolcs`); `origin` = `github.com/piszabolcs/kapu` (privát) |
+| Hálózat | crates.io, static.rust-lang.org, github.com elérhető |
+| Segédeszközök | cargo-deny 0.20.2, cargo-audit 0.22.2, cargo-fuzz 0.13.2 telepítve |
 
 ---
 

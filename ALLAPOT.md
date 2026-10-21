@@ -4,6 +4,23 @@ Minden commitnál frissül (TERV.md 8. fejezet). Legfrissebb bejegyzés felül.
 
 ---
 
+## 2026-10-21 – Költözés az otthoni gépre, GitHub bekötve
+
+**Kész**
+- A projekt átkerült az otthoni gépre: `C:\Users\kaposzta\Desktop\Project\kapu_file\kapu_file` (git gyökér). Windows 11 Pro, a felhasználó rendszergazda (UAC-emeléssel).
+- Rust újratelepítve: rustup 1.29.2, a `rust-toolchain.toml` szerinti 1.99.1 MSVC toolchain, nightly 1.101.0 (csak fuzzhoz). cargo-deny 0.20.2, cargo-audit 0.22.2, cargo-fuzz 0.13.2.
+- C/C++ toolchain: Visual Studio 2026 Community (18.10), MSVC 14.51. A gépen hiányzott a Windows SDK és az asztali CRT (`lib\x64`), ezért a `link.exe` nem linkelt; a VS Installerrel pótolva: `Windows11SDK.26100` (a D:\Windows Kits\10 alá települt) és `VC.Tools.x86.x64`.
+- GitHub: a `gh` be van jelentkezve (piszabolcs). A privát `piszabolcs/kapu` repó `origin`-ként bekötve; a helyi két commit rebase-elve a repó kezdő commitja (MIT `LICENSE`) fölé, a történet lineáris.
+- A TERV.md 0. fejezete frissítve az új gép tényeire.
+
+**Ellenőrzés (2026-10-21, lefuttatva az új gépen)**
+- `cargo build --workspace` tiszta buildből zöld, a három bináris fut és kiírja a verziót.
+- `scripts/check.ps1` zöld: fmt, clippy `-D warnings`, 2 teszt, deny (advisories, bans, licenses, sources ok), audit (1348 advisory, 4 crate).
+
+**Következő: M1 – tesztvektorok** (lásd lent, változatlan). Előtte push az `origin main`-re, ezzel a CI mátrix is élesedik.
+
+---
+
 ## 2026-10-21 – M0 kész: repó, toolchain, minőségi kapuk
 
 **Kész**
@@ -29,5 +46,5 @@ Minden commitnál frissül (TERV.md 8. fejezet). Legfrissebb bejegyzés felül.
 - `kapu-bench gen` generátor váza.
 
 **Nyitott kérdések**
-- GitHub: `gh auth login` a felhasználónál, utána privát repó + CI.
+- GitHub: `gh auth login` a felhasználónál, utána privát repó + CI. *(Megoldva az otthoni gépen, lásd a fenti bejegyzést.)*
 - README nyelve M9-ben dől el.
