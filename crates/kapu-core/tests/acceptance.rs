@@ -129,8 +129,18 @@ macro_rules! error_code_test {
     };
 }
 
-error_code_test!(e001_bad_magic, "E001-magic.kapu", "E001");
-error_code_test!(e002_header_not_512_or_no_lf, "E002-header.kapu", "E002");
+#[test]
+fn e001_bad_magic() {
+    // M2 step 1: the header parser already detects this code.
+    let err = kapu_core::Header::parse(&vector("E001-magic.kapu")).unwrap_err();
+    assert_eq!(err.code.as_str(), "E001", "{err}");
+}
+#[test]
+fn e002_header_not_512_or_no_lf() {
+    // M2 step 1: the header parser already detects this code.
+    let err = kapu_core::Header::parse(&vector("E002-header.kapu")).unwrap_err();
+    assert_eq!(err.code.as_str(), "E002", "{err}");
+}
 error_code_test!(e003_cr_in_file, "E003-cr.kapu", "E003");
 error_code_test!(e004_forbidden_character, "E004-control.kapu", "E004");
 error_code_test!(e005_section_span_mismatch, "E005-span.kapu", "E005");
@@ -139,13 +149,42 @@ error_code_test!(e007_door_fingerprint_mismatch, "E007-doorhash.kapu", "E007");
 error_code_test!(e008_invalid_identifier, "E008-id.kapu", "E008");
 error_code_test!(e009_dangling_reference, "E009-dangling.kapu", "E009");
 error_code_test!(e010_caption_over_hard_limit, "E010-caption.kapu", "E010");
-error_code_test!(e011_unknown_hash_prefix, "E011-hashprefix.kapu", "E011");
+#[test]
+fn e011_unknown_hash_prefix() {
+    // M2 step 1: the header parser already detects this code.
+    let err = kapu_core::Header::parse(&vector("E011-hashprefix.kapu")).unwrap_err();
+    assert_eq!(err.code.as_str(), "E011", "{err}");
+}
 
 #[test]
 #[ignore = "M2: validator"]
 fn sample_validates_clean() {
     let _data = vector("minta.kapu");
     pending("M2", "validate minta.kapu reports no error");
+}
+
+#[test]
+fn header_of_sample_matches_expected_json() {
+    let h = kapu_core::Header::parse(&vector("minta.kapu")).unwrap();
+    let want = expected()["minta.kapu"]["header_body"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert_eq!(format!("{}+{}", h.body.start, h.body.len), want);
+    assert_eq!((h.rooms, h.doors, h.groups), (3, 7, 2));
+    assert_eq!(h.emb, "none");
+}
+
+#[test]
+fn header_parses_in_every_vector_whose_fault_is_elsewhere() {
+    for (name, entry) in expected().as_object().unwrap() {
+        let code = entry["expect"].as_str().unwrap();
+        let result = kapu_core::Header::parse(&vector(name));
+        match code {
+            "E001" | "E002" | "E011" => assert!(result.is_err(), "{name}"),
+            _ => assert!(result.is_ok(), "{name}: {:?}", result.err()),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

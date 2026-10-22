@@ -15,6 +15,12 @@
     )
 )]
 
+pub mod error;
+pub mod header;
+
+pub use error::{Error, ErrorCode, Result};
+pub use header::{Hash, Header, Span};
+
 /// Format version written on the first header line (`%KAPU 1.0`, FR-03).
 pub const FORMAT_VERSION: &str = "1.0";
 
