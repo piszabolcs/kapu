@@ -141,9 +141,24 @@ fn e002_header_not_512_or_no_lf() {
     let err = kapu_core::Header::parse(&vector("E002-header.kapu")).unwrap_err();
     assert_eq!(err.code.as_str(), "E002", "{err}");
 }
-error_code_test!(e003_cr_in_file, "E003-cr.kapu", "E003");
-error_code_test!(e004_forbidden_character, "E004-control.kapu", "E004");
-error_code_test!(e005_section_span_mismatch, "E005-span.kapu", "E005");
+#[test]
+fn e003_cr_in_file() {
+    // M2 step 2: the section reader detects this code.
+    let err = kapu_core::Sections::parse(&vector("E003-cr.kapu")).unwrap_err();
+    assert_eq!(err.code.as_str(), "E003", "{err}");
+}
+#[test]
+fn e004_forbidden_character() {
+    // M2 step 2: the section reader detects this code.
+    let err = kapu_core::Sections::parse(&vector("E004-control.kapu")).unwrap_err();
+    assert_eq!(err.code.as_str(), "E004", "{err}");
+}
+#[test]
+fn e005_section_span_mismatch() {
+    // M2 step 2: the section reader detects this code.
+    let err = kapu_core::Sections::parse(&vector("E005-span.kapu")).unwrap_err();
+    assert_eq!(err.code.as_str(), "E005", "{err}");
+}
 error_code_test!(e006_bodyhash_mismatch, "E006-bodyhash.kapu", "E006");
 error_code_test!(e007_door_fingerprint_mismatch, "E007-doorhash.kapu", "E007");
 error_code_test!(e008_invalid_identifier, "E008-id.kapu", "E008");
@@ -176,13 +191,23 @@ fn header_of_sample_matches_expected_json() {
 }
 
 #[test]
-fn header_parses_in_every_vector_whose_fault_is_elsewhere() {
+fn sections_parse_in_every_vector_whose_fault_is_elsewhere() {
+    use kapu_core::{BodyLength, Limits, Sections};
     for (name, entry) in expected().as_object().unwrap() {
         let code = entry["expect"].as_str().unwrap();
-        let result = kapu_core::Header::parse(&vector(name));
+        let data = vector(name);
+        let strict = Sections::parse(&data);
         match code {
-            "E001" | "E002" | "E011" => assert!(result.is_err(), "{name}"),
-            _ => assert!(result.is_ok(), "{name}: {:?}", result.err()),
+            "E001" | "E002" | "E003" | "E004" | "E005" | "E011" => {
+                assert_eq!(strict.unwrap_err().code.as_str(), code, "{name}");
+            }
+            "stale" => {
+                // a grown body fails the strict length check but the reader tolerates it
+                let tolerant =
+                    Sections::parse_with(&data, &Limits::default(), BodyLength::Tolerate);
+                assert!(tolerant.is_ok(), "{name}: {:?}", tolerant.err());
+            }
+            _ => assert!(strict.is_ok(), "{name}: {:?}", strict.err()),
         }
     }
 }
@@ -216,12 +241,17 @@ fn fr15_edge2_shifted_positions_rebuilt_from_room_markers() {
 // ---------------------------------------------------------------------------
 
 #[test]
-#[ignore = "M2: reader"]
 fn fr01_sections_in_order_without_overlap_or_overrun() {
-    pending(
-        "M2",
-        "validator confirms section order and header positions on minta.kapu",
-    );
+    let data = vector("minta.kapu");
+    let s = kapu_core::Sections::parse(&data).unwrap();
+    assert!(s.body_length_matches);
+    assert!(s.map.starts_with("G g1 |"));
+    assert_eq!(s.docs.lines().count(), 7, "one #DOCS line per door");
+    assert!(s.body.starts_with(
+        b"@@@ frontend-design-alapok
+"
+    ));
+    assert_eq!(u64::try_from(s.body.len()).unwrap(), s.header.body.len);
 }
 
 #[test]
