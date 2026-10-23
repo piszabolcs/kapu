@@ -6,7 +6,6 @@ Fejlesztés közben talált kérdések, kockázatok és spec-rések a végső á
 
 | # | Hol | Aggály | Mostani állapot | Javaslat |
 |---|---|---|---|---|
-| A30 | Commit-szerző e-mail címe | A KAPU commitjai a gépi git-beállítás szerint `Pintér Szabolcs <piszabolcs@gmail.com>` szerzővel készülnek (a már pusholt korai commitok is). A portfólió-repóidban a szerző mindig a GitHub noreply cím (`36420877+piszabolcs@users.noreply.github.com`), sosem a gmail. | Nem módosítottam. A még nem pusholt commitoknál a szerző könnyen átírható, a pusholtaknál force push kell. | Döntés: marad a gmail, vagy push előtt átírjuk a szerzőt a noreply címre (és a helyi `git config user.email`-t is). |
 
 ## B) Nyitott munka
 
