@@ -10,7 +10,7 @@ import json
 import subprocess
 import sys
 
-ROOTS = ("kapu-cli", "kapu-mcp")
+ROOTS = ("kapu-cli", "kapu-mcp", "kapu-gui")
 
 
 def main() -> None:
@@ -43,11 +43,14 @@ def main() -> None:
     # with a path argument the file is written directly, LF only (FR-02 style)
     out = open(sys.argv[1], "w", encoding="utf-8", newline="\n") if len(sys.argv) > 1 else sys.stdout
     out.write("# Third-party components\n\n")
-    out.write("KAPU code is MIT (`LICENSE`), the specification CC BY 4.0. The binaries `kapu` and `kapu-mcp` contain the crates below; every licence is on the allowlist of `deny.toml` (checked by `cargo deny` in CI).\n\n")
+    out.write("KAPU code is MIT (`LICENSE`), the specification CC BY 4.0. The binaries `kapu`, `kapu-mcp` and `kapu-gui` contain the crates below (for the build host's platform); every licence is on the allowlist of `deny.toml` (checked by `cargo deny` in CI).\n\n")
     out.write("## Vector model\n\n")
     out.write("| Component | Licence | Source |\n|---|---|---|\n")
     out.write("| potion-multilingual-128M (Model2Vec static embeddings; shipped as its int8 form, `tools/quantize.py`) | MIT | https://huggingface.co/minishlab/potion-multilingual-128M |\n")
     out.write("| tokenizer of BAAI/bge-m3 (`tokenizer.json`, distributed with the model) | MIT | https://huggingface.co/BAAI/bge-m3 |\n\n")
+    out.write("## Fonts of the desktop window\n\n")
+    out.write("| Component | Licence | Source |\n|---|---|---|\n")
+    out.write("| Geist and Geist Mono, variable, latin and latin-ext subsets (`crates/kapu-gui/ui/fonts`, licence text in `OFL.txt`) | OFL-1.1 | https://github.com/vercel/geist-font |\n\n")
     out.write(f"## Rust crates ({len(rows)})\n\n| Crate | Version | Licence | Repository |\n|---|---|---|---|\n")
     for name, version, lic, repo in rows:
         out.write(f"| {name} | {version} | {lic} | {repo} |\n")

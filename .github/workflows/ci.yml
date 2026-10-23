@@ -20,6 +20,12 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      # kapu-gui (M10, D115): Tauri needs the WebKitGTK webview and its headers on Linux.
+      - name: Linux webview libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev librsvg2-dev
       # rustup reads rust-toolchain.toml and installs the pinned version.
       - run: rustup show
       - uses: Swatinem/rust-cache@v2

@@ -1,6 +1,7 @@
 # M9: portable packages for Windows, Linux and macOS (NFR-06), on a version tag.
-# Each package: kapu, kapu-mcp, models/potion-multilingual-128M-i8 (downloaded
-# from Hugging Face and quantized with tools/quantize.py), licences, README, spec.
+# Each package: kapu, kapu-mcp, kapu-gui, models/potion-multilingual-128M-i8
+# (downloaded from Hugging Face and quantized with tools/quantize.py), the demo
+# file examples/kapu-spec.kapu, licences, README, spec.
 # The packages are attached to a draft release; publishing it is a manual step.
 name: Release
 
@@ -30,9 +31,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: Linux webview libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev librsvg2-dev
       - run: rustup show
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release --locked -p kapu-cli -p kapu-mcp
+      - run: cargo build --release --locked -p kapu-cli -p kapu-mcp -p kapu-gui --bins
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -55,7 +61,8 @@ jobs:
           v="${GITHUB_REF_NAME#v}"
           name="kapu-$v-${{ matrix.target }}"
           mkdir -p "dist/$name/models/potion-multilingual-128M-i8"
-          cp "target/release/kapu${{ matrix.exe }}" "target/release/kapu-mcp${{ matrix.exe }}" "dist/$name/"
+          cp "target/release/kapu${{ matrix.exe }}" "target/release/kapu-mcp${{ matrix.exe }}" "target/release/kapu-gui${{ matrix.exe }}" "dist/$name/"
+          mkdir -p "dist/$name/examples" && cp examples/kapu-spec.kapu "dist/$name/examples/"
           cp models/potion-multilingual-128M-i8/* "dist/$name/models/potion-multilingual-128M-i8/"
           cp LICENSE README.md SPEC-KAPU.md THIRD-PARTY.md "dist/$name/"
           printf 'SPEC-KAPU.md: CC BY 4.0, https://creativecommons.org/licenses/by/4.0/\n' > "dist/$name/LICENSE-SPEC.txt"
