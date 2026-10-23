@@ -327,6 +327,67 @@ fn rrf(keyword: &[Hit], semantic: &[(f64, String)]) -> BTreeMap<String, (f64, bo
     fused
 }
 
+/// Longest excerpt shown under a search hit, in characters (D124).
+pub const EXCERPT_CHARS: usize = 160;
+
+/// D124: for each door id, the line of its served text that shares the most
+/// query terms (the first such line on a tie), or its first prose line when
+/// no line shares one: one plain line of at most [`EXCERPT_CHARS`]
+/// characters, without Markdown markers. An unknown id gets `""`.
+///
+/// # Errors
+/// A broken file, or a door whose fingerprint does not match (E007).
+pub fn excerpts(file: &[u8], ids: &[&str], query: &str) -> Result<Vec<String>> {
+    let s = Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?;
+    let entries = s.doc_entries()?;
+    let wanted = query_terms(query);
+    ids.iter()
+        .map(|id| match entries.iter().find(|e| e.id == *id) {
+            Some(entry) => Ok(best_line(
+                &crate::docs::served_text(s.stored(entry)?)?,
+                &wanted,
+            )),
+            None => Ok(String::new()),
+        })
+        .collect()
+}
+
+fn best_line(text: &str, wanted: &BTreeSet<String>) -> String {
+    let mut best: Option<(usize, &str)> = None;
+    let mut first_prose: Option<&str> = None;
+    for line in text.lines().map(str::trim) {
+        if line.is_empty() || line.starts_with("```") || line.starts_with("tags:") {
+            continue;
+        }
+        if first_prose.is_none() && !line.starts_with('#') {
+            first_prose = Some(line);
+        }
+        let shared = query_terms(line).intersection(wanted).count();
+        if shared > 0 && best.is_none_or(|(n, _)| shared > n) {
+            best = Some((shared, line));
+        }
+    }
+    one_line(best.map(|(_, l)| l).or(first_prose).unwrap_or(""))
+}
+
+/// Markdown markers off, whitespace collapsed, cut at a word before
+/// [`EXCERPT_CHARS`]; `kapu-room` is broken up so an excerpt can never look
+/// like a frame (FR-15/2).
+fn one_line(line: &str) -> String {
+    let text = line
+        .trim_start_matches(['#', '>', '-', '*', ' '])
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .replace("kapu-room", "kapu room");
+    if text.chars().count() <= EXCERPT_CHARS {
+        return text;
+    }
+    let cut: String = text.chars().take(EXCERPT_CHARS - 1).collect();
+    let head = cut.rsplit_once(' ').map_or(cut.as_str(), |(head, _)| head);
+    format!("{head}…")
+}
+
 /// The three rankings of one query, door ids best first (for `kapu bench`):
 /// BM25 (top 50), vectors (top 50, `None` without a matching model) and the
 /// RRF fusion (up to 100).

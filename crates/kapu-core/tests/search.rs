@@ -179,3 +179,26 @@ fn fr16_semantic_hit_for_uvegszeru_homalyos_gomb() {
         r.hits.iter().map(|h| (&h.id, h.source)).collect::<Vec<_>>()
     );
 }
+
+#[test]
+fn excerpts_show_the_line_that_matches_the_query() {
+    let data = std::fs::read(root().join("tests/vectors/minta.kapu")).unwrap();
+    let ex = kapu_core::search::excerpts(
+        &data,
+        &[
+            "frontend-design-alapok/glass-gomb",
+            "electron-leckek",
+            "nincs",
+        ],
+        "elmosott háttér",
+    )
+    .unwrap();
+    assert!(ex[0].contains("elmosott hátteret"), "{ex:?}");
+    // no line shares a term: the first prose line, Markdown markers removed
+    assert_eq!(ex[1], "Visszatérő Electron hibák és a helyes megoldásuk.");
+    assert_eq!(ex[2], "");
+    assert!(
+        ex.iter()
+            .all(|e| e.chars().count() <= kapu_core::search::EXCERPT_CHARS)
+    );
+}

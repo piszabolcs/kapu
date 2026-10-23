@@ -59,6 +59,8 @@ pub struct MapView {
     pub flat: bool,
     /// The `#MAP` lines as stored (for plain-text output).
     pub raw_lines: Vec<String>,
+    /// Totals of the whole file, from the same read (D127).
+    pub totals: Totals,
 }
 
 fn split_fields(line: &str) -> Vec<String> {
@@ -119,6 +121,16 @@ pub fn map_view(file: &[u8], group: Option<&str>) -> Result<MapView> {
             line.to_owned(),
         ));
     }
+    let totals = Totals {
+        rooms: s.header.rooms,
+        doors: s.header.doors,
+        groups: s.header.groups,
+        tokens: all
+            .iter()
+            .filter(|(_, d, _)| d.is_room)
+            .map(|(_, d, _)| d.tokens)
+            .sum(),
+    };
     let (doors, flat, raw_lines) = if let Some(g) = group {
         if !groups.iter().any(|x| x.gid == g) {
             return Err(Error::new(ErrorCode::E009, format!("unknown group `{g}`")));
@@ -149,12 +161,106 @@ pub fn map_view(file: &[u8], group: Option<&str>) -> Result<MapView> {
         doors,
         flat,
         raw_lines,
+        totals,
     })
+}
+
+/// Totals of a file for the first line of `kapu_map` (D127).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Totals {
+    /// Number of rooms.
+    pub rooms: u64,
+    /// Number of doors (rooms and sub-doors).
+    pub doors: u64,
+    /// Number of groups.
+    pub groups: u64,
+    /// Price of all rooms together, in tokens (a room's price covers its sub-doors).
+    pub tokens: u64,
+}
+
+impl Totals {
+    /// `rooms=251 doors=1960 groups=10 tokens=579794`: the header's key=value
+    /// style, readable in any language.
+    #[must_use]
+    pub fn line(&self) -> String {
+        format!(
+            "rooms={} doors={} groups={} tokens={}",
+            self.rooms, self.doors, self.groups, self.tokens
+        )
+    }
+}
+
+/// The totals of a file, from its header and map (D127).
+///
+/// # Errors
+/// A broken file.
+pub fn totals(file: &[u8]) -> Result<Totals> {
+    let s = Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?;
+    let map = parse_map(s.map)?;
+    Ok(Totals {
+        rooms: s.header.rooms,
+        doors: s.header.doors,
+        groups: s.header.groups,
+        tokens: map
+            .doors
+            .iter()
+            .filter(|d| d.is_room)
+            .map(|d| d.tokens)
+            .sum(),
+    })
+}
+
+/// One room's map lines as stored: its `R` line, then its `S` lines
+/// (`kapu_map room=`, D125).
+///
+/// # Errors
+/// A broken file; E009 when `id` is not a room.
+pub fn room_lines(file: &[u8], id: &str) -> Result<Vec<String>> {
+    let s = Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?;
+    parse_map(s.map)?; // shape check
+    let room = format!("R {id} |");
+    let subs = format!("S {id}/");
+    let lines: Vec<String> = s
+        .map
+        .lines()
+        .filter(|l| l.starts_with(&room) || l.starts_with(&subs))
+        .map(str::to_owned)
+        .collect();
+    if lines.first().is_some_and(|l| l.starts_with(&room)) {
+        Ok(lines)
+    } else {
+        Err(Error::new(ErrorCode::E009, format!("unknown room `{id}`")))
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn totals_and_room_lines() {
+        let data = std::fs::read(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../tests/vectors/minta.kapu"
+        ))
+        .unwrap();
+        let t = totals(&data).unwrap();
+        assert_eq!(t.line(), "rooms=3 doors=7 groups=2 tokens=479");
+        let lines = room_lines(&data, "frontend-design-alapok").unwrap();
+        assert_eq!(lines.len(), 3);
+        assert!(lines[0].starts_with("R frontend-design-alapok |"));
+        assert!(lines[1].starts_with("S frontend-design-alapok/szinek |"));
+        assert_eq!(
+            room_lines(&data, "nincs").unwrap_err().code,
+            ErrorCode::E009
+        );
+        assert_eq!(
+            room_lines(&data, "frontend-design-alapok/szinek")
+                .unwrap_err()
+                .code,
+            ErrorCode::E009
+        );
+    }
 
     #[test]
     fn small_sample_map_is_flat_and_groups_filter() {

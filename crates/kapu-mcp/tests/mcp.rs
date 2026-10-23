@@ -225,3 +225,65 @@ async fn fr19_write_with_injection_text_saves_and_warns() {
     client.cancel().await.unwrap();
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Spec v1.0.2 outputs: totals line (D127), rooms-only group list and `room`
+/// (D125), search excerpts (D124).
+#[tokio::test]
+async fn v102_map_and_search_outputs() {
+    let dir = workdir("v102");
+    let file = dir.join("minta.kapu");
+    std::fs::copy(root().join("tests/vectors/minta.kapu"), &file).unwrap();
+    let f = file.to_str().unwrap();
+    let client = connect(&dir).await;
+    let (_, first) = call(&client, "kapu_map", json!({ "file": f })).await;
+    let (_, second) = call(&client, "kapu_map", json!({ "file": f })).await;
+    assert!(
+        first.contains("\n\nrooms=3 doors=7 groups=2 tokens=479\n"),
+        "{first}"
+    );
+    assert!(
+        second.starts_with("rooms=3 doors=7 groups=2 tokens=479\n"),
+        "{second}"
+    );
+    let (_, g1) = call(&client, "kapu_map", json!({ "file": f, "group": "g1" })).await;
+    assert!(
+        g1.contains("R frontend-design-alapok |") && !g1.contains("\nS "),
+        "{g1}"
+    );
+    assert!(g1.contains("(4 alajtó: kapu_map room=<szoba-id>)"), "{g1}");
+    let (err, room) = call(
+        &client,
+        "kapu_map",
+        json!({ "file": f, "room": "frontend-design-alapok" }),
+    )
+    .await;
+    assert!(
+        !err && room.contains("S frontend-design-alapok/szinek |"),
+        "{room}"
+    );
+    let (err, _) = call(&client, "kapu_map", json!({ "file": f, "room": "nincs" })).await;
+    assert!(err, "an unknown room is an E009 error");
+
+    let (err, hits) = call(
+        &client,
+        "kapu_search",
+        json!({ "file": f, "query": "gomb", "k": 3 }),
+    )
+    .await;
+    assert!(!err);
+    // D124: an excerpt line under each hit, unless switched off
+    assert!(
+        hits.contains("\n  > ") && hits.contains("(a > sorok kivonatok"),
+        "{hits}"
+    );
+    let (_, bare) = call(
+        &client,
+        "kapu_search",
+        json!({ "file": f, "query": "gomb", "k": 3, "excerpts": false }),
+    )
+    .await;
+    assert!(!bare.contains("\n  > "), "{bare}");
+
+    client.cancel().await.unwrap();
+    let _ = std::fs::remove_dir_all(&dir);
+}

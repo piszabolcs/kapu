@@ -29,6 +29,9 @@ pub struct Neighbour {
     pub tokens: u64,
     /// `link`, `term` or `sim`.
     pub kind: String,
+    /// Edge weight times 10 000; `#GRAPH` stores four decimals (D65), so this
+    /// is exact and the type stays `Eq`.
+    pub weight_e4: u32,
 }
 
 /// One opened door.
@@ -224,6 +227,7 @@ impl<'a> Catalog<'a> {
                     title: n.map(|d| unescape_field(d.title)).unwrap_or_default(),
                     tokens: n.map_or(0, |d| d.tokens),
                     kind: e.kind.to_owned(),
+                    weight_e4: weight_e4(e.weight),
                 })
             })
             .collect();
@@ -239,6 +243,13 @@ impl<'a> Catalog<'a> {
             neighbours,
         }
     }
+}
+
+/// A `#GRAPH` weight (0..=1, four decimals) as ten-thousandths.
+fn weight_e4(weight: f64) -> u32 {
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let w = (weight.clamp(0.0, 1.0) * 10_000.0).round() as u32;
+    w
 }
 
 /// The fast path. `Ok(None)` means "inconsistent, fall back".
