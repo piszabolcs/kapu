@@ -442,7 +442,9 @@ dependencies = [
 name = "kapu-cli"
 version = "0.1.0"
 dependencies = [
+ "clap",
  "kapu-core",
+ "serde_json",
 ]
 
 [[package]]

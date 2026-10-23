@@ -168,10 +168,11 @@ Minden mérföldkő: `[ ]` feladatok → Ellenőrzés parancsai zöldek → `ALL
 - Ellenőrzés: FR-10/4 zöld. **FR-16 Acceptance a `potion-multilingual-128M`-mel nem teljesül** (magyar lekérdezés → CSS-kód, AGGALYOK A21); a teszt indoklással `ignored`, a D28 modellválasztás (M8/5) dönt
 - Mérés: `bench/REPORT.md` 3. táblázat (3000 szoba: BM25 138 ms, hibrid meleg 162 ms, hideg 3,3 s)
 
-### M6 – CLI  (M)
-- [ ] 8. fejezet minden parancsa, `--json`, kilépési kódok, hibakód a kimenetben; `kapu rm` a 2.10 döntés szerint
-- [ ] `kapu bench` (2.14 szerinti találatszámítás; recall@5, recall@10, MRR@10, külön BM25/vec/hibrid)
-- Ellenőrzés: integrációs teszt minden parancsra a `minta.kapu`-n (`assert_cmd`), `--json` kimenetek sémája rögzítve tesztben
+### M6 – CLI  (M)  — kész 2026-10-23
+- [x] 8. fejezet minden parancsa (`new`, `import`, `export`, `add`, `rm`, `build`, `validate [--full]`, `map [--group]`, `search [--k] [--max-tokens]`, `describe`, `open`, `bench`), `--json`, kilépési kódok, hibakód a kimenetben, `--model`/`--no-model` (D98)
+- [x] `kapu bench` (D49: recall@5/10, MRR@10, BM25/vektor/hibrid, szigorú és megengedő; `evaluate.rs`)
+- [x] Térkép-nézet és std-1 útmutató a core-ban (`view.rs`), az MCP is ezt használja
+- Ellenőrzés (zöld): integrációs teszt minden parancsra (`crates/kapu-cli/tests/cli.rs`, `--json` szerkezet rögzítve); keresztellenőrzés a referenciával 300 szobán (D99)
 
 ### M7 – MCP szerver  (M)
 - [ ] `rmcp` stdio szerver, 5 eszköz (FR-15), minden hívásnál fejléc-újraolvasás, útmutató első hívásnál munkamenetenként (FR-17), eszközleírások (2.13 döntés)

@@ -4,6 +4,20 @@ Minden commitnál frissül (TERV.md 8. fejezet). Legfrissebb bejegyzés felül.
 
 ---
 
+## 2026-10-23 – M6 kész: CLI
+
+**Kész**
+- `kapu` CLI mind a 12 paranccsal, `--json`, FR-20 kódokkal és kilépési kódokkal, modellválasztással (D98).
+- `view.rs` (térkép-nézet, std-1 útmutató), `evaluate.rs` (`kapu bench`), `search::rankings`.
+- `tools/crosscheck.py`: a Python referencia és a Rust 300 szobán szakaszonként bájtra azonos (D99); A14 lezárva, helyette A23.
+
+**Ellenőrzés (2026-10-23, lefuttatva)**
+- `scripts/check.ps1` zöld; CLI-integrációs tesztek: 4 (minden parancs).
+
+**Következő: M7 – MCP szerver**
+
+---
+
 ## 2026-10-23 – M5 kész: hibrid keresés (FR-16 Acceptance nyitott)
 
 **Kész**

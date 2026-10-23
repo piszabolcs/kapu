@@ -326,3 +326,55 @@ fn rrf(keyword: &[Hit], semantic: &[(f64, String)]) -> BTreeMap<String, (f64, bo
     }
     fused
 }
+
+/// The three rankings of one query, door ids best first (for `kapu bench`):
+/// BM25 (top 50), vectors (top 50, `None` without a matching model) and the
+/// RRF fusion (up to 100).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Rankings {
+    /// Keyword ranking.
+    pub bm25: Vec<String>,
+    /// Vector ranking, if available.
+    pub vector: Option<Vec<String>>,
+    /// Fused ranking (equals `bm25` without vectors).
+    pub hybrid: Vec<String>,
+}
+
+/// All three rankings of `query` (D49 measurement).
+///
+/// # Errors
+/// A broken file or a tokenizer failure.
+pub fn rankings(
+    file: &[u8],
+    query: &str,
+    cache: Option<&crate::embed::VectorCache<'_>>,
+) -> Result<Rankings> {
+    use crate::catalog::{parse_desc, parse_map, unescape_field};
+    let bm25_ids: Vec<String> = bm25(file, query)?.into_iter().map(|h| h.id).collect();
+    let options = SearchOptions {
+        k: 2 * TOP_N,
+        max_tokens: None,
+    };
+    let result = search(file, query, options, cache)?;
+    let hybrid: Vec<String> = result.hits.iter().map(|h| h.id.clone()).collect();
+    let vector = match (cache, &result.vector) {
+        (Some(cache), VectorStatus::Available) => {
+            let s = Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?;
+            let map = parse_map(s.map)?;
+            let desc = parse_desc(s.desc)?;
+            let title = |id: &str| {
+                map.door(id)
+                    .map(|d| unescape_field(d.title))
+                    .unwrap_or_default()
+            };
+            let ranked = vector_ranking(&s, &desc, &title, &|_| true, cache, query)?;
+            Some(ranked.into_iter().map(|(_, id)| id).collect())
+        }
+        _ => None,
+    };
+    Ok(Rankings {
+        bm25: bm25_ids,
+        vector,
+        hybrid,
+    })
+}

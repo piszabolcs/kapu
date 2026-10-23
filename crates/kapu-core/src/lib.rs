@@ -21,6 +21,7 @@ pub mod docs;
 pub mod edit;
 pub mod embed;
 pub mod error;
+pub mod evaluate;
 pub mod header;
 pub mod leiden;
 pub mod reader;
@@ -29,6 +30,7 @@ pub mod sections;
 pub mod terms;
 pub mod text;
 pub mod validate;
+pub mod view;
 pub mod yake;
 
 pub use docs::{DocEntry, blake3_of, served_text, strip_comments, unescape};
