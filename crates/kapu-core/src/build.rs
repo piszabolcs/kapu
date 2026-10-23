@@ -613,10 +613,12 @@ fn communities(doors: &[Door], edges: &[EdgeRow]) -> Vec<Vec<usize>> {
 }
 
 // D66 group names: class-level TF-IDF `tf * (1 + ln(G / df))` over the
-/// unstemmed terms of at least 3 characters that are not all digits; the
-/// best three joined with `, `, ties in byte order.
+/// unstemmed terms of at least 3 characters that are not all digits and not
+/// stop words (D121); the best three joined with `, `, ties in byte order.
 fn group_names(doors: &[Door], groups: &[Vec<usize>]) -> Vec<String> {
-    let candidate = |t: &str| t.chars().count() >= 3 && !t.chars().all(|c| c.is_ascii_digit());
+    let candidate = |t: &str| {
+        t.chars().count() >= 3 && !t.chars().all(|c| c.is_ascii_digit()) && !yake::is_stopword(t)
+    };
     let mut gdf: BTreeMap<&str, u64> = BTreeMap::new();
     for rooms in groups {
         let seen: BTreeSet<&str> = rooms

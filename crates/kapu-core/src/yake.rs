@@ -85,6 +85,12 @@ pub fn tie_key(score: f64) -> f64 {
     (score * 1e9).round()
 }
 
+/// Whether a lower-cased word is on the stop word list (`data/stopwords.txt`);
+/// group names leave these out too (D121).
+pub(crate) fn is_stopword(word: &str) -> bool {
+    stopwords().contains(word)
+}
+
 fn is_stop(word: &str) -> bool {
     stopwords().contains(word) || word.chars().all(char::is_numeric) || word.chars().count() < 2
 }

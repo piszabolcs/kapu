@@ -35,6 +35,12 @@ OUT = ROOT / "tests" / "vectors"
 
 HEADER_LEN = 512
 FORMAT_VERSION = "1.0"
+# D121: group names leave out the stop words of the YAKE list (same file as Rust).
+STOPWORDS = {
+    line.strip()
+    for line in (ROOT / "crates" / "kapu-core" / "data" / "stopwords.txt").read_text(encoding="utf-8").splitlines()
+    if line.strip() and not line.startswith("#")
+}
 # D57: the sample is built without a vector model. `emb=none` and the BLAKE3 of
 # the empty input mark this; every reader's packaged model differs, so FR-10/4
 # (`vector: unavailable`) is exercised by the sample itself.
@@ -510,9 +516,10 @@ def build_groups(doors: list[Door], edges) -> list[tuple[str, str, list[Door]]]:
     ordered = sorted(comps.values(), key=lambda rs: min(r.id for r in rs))
     g = len(ordered)
     # class-level TF-IDF group names on unstemmed terms: tf * (1 + ln(G/df));
-    # candidates are at least 3 characters long and not purely numeric (D66).
+    # candidates are at least 3 characters long, not purely numeric (D66) and
+    # not stop words (D121).
     def candidate(t: str) -> bool:
-        return len(t) >= 3 and not t.isdigit()
+        return len(t) >= 3 and not t.isdigit() and t not in STOPWORDS
 
     gdf: dict[str, int] = {}
     for rs in ordered:
