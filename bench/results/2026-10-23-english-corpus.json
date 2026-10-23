@@ -1,0 +1,445 @@
+{
+ "date": "2026-10-23",
+ "tools_version": "0.1.0",
+ "specification": "v1.0.2",
+ "machine": "Windows 11 Pro, release build (lto, codegen-units=1)",
+ "vector_model": "potion-multilingual-128M, int8",
+ "corpus": {
+  "description": "216 rooms from the Claude skills installed on the author's machine and 28 English frontend sample rooms; not published (third-party text)",
+  "rooms": 244,
+  "doors": 1916,
+  "groups": 10,
+  "sizes": {
+   "sections": {
+    "map": {
+     "bytes": 210140,
+     "chars": 209880,
+     "tokens": 59571
+    },
+    "desc": {
+     "bytes": 292049,
+     "chars": 291564,
+     "tokens": 71554
+    },
+    "graph": {
+     "bytes": 246208,
+     "chars": 246208,
+     "tokens": 78170
+    },
+    "index": {
+     "bytes": 29569623,
+     "chars": 29569515,
+     "tokens": 8887658
+    },
+    "docs": {
+     "bytes": 309060,
+     "chars": 309060,
+     "tokens": 138557
+    },
+    "body": {
+     "bytes": 2359561,
+     "chars": 2350156,
+     "tokens": 573733
+    }
+   },
+   "whole": {
+    "bytes": 32987159,
+    "chars": 32976901,
+    "tokens": 9809442
+   },
+   "source_markdown_chars": 2337654
+  },
+  "build_seconds": 4.57,
+  "full_check_seconds": 3.28,
+  "second_build_byte_identical": true,
+  "build_warnings": 0
+ },
+ "agent_costs_tokens": {
+  "map_first_call": 777,
+  "map_later_call": 220,
+  "group_lists": [
+   994,
+   1113,
+   478,
+   1123,
+   1186,
+   655,
+   896,
+   2005,
+   399,
+   849
+  ],
+  "search_k5_with_excerpts": {
+   "n": 76,
+   "median": 332.5,
+   "p90": 382,
+   "max": 468
+  },
+  "open_one_door": {
+   "n": 25,
+   "median": 1655,
+   "p90": 5401,
+   "max": 11344
+  },
+  "describe_one_door": {
+   "n": 25,
+   "median": 53,
+   "p90": 95,
+   "max": 108
+  }
+ },
+ "retrieval": {
+  "questions": "77 English questions written with knowledge of the content; 49 skills, 28 frontend, 18 section targets",
+  "metrics": {
+   "all": {
+    "questions": 77,
+    "bm25": {
+     "lenient_mrr@10": 0.7743,
+     "lenient_recall@10": 0.9481,
+     "lenient_recall@5": 0.9091,
+     "mrr@10": 0.6784,
+     "recall@10": 0.8961,
+     "recall@5": 0.8312
+    },
+    "vector": {
+     "lenient_mrr@10": 0.4966,
+     "lenient_recall@10": 0.7922,
+     "lenient_recall@5": 0.6883,
+     "mrr@10": 0.4657,
+     "recall@10": 0.7273,
+     "recall@5": 0.6364
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.7416,
+     "lenient_recall@10": 0.9351,
+     "lenient_recall@5": 0.9091,
+     "mrr@10": 0.6713,
+     "recall@10": 0.8961,
+     "recall@5": 0.8442
+    }
+   },
+   "skills": {
+    "questions": 49,
+    "bm25": {
+     "lenient_mrr@10": 0.6657,
+     "lenient_recall@10": 0.9184,
+     "lenient_recall@5": 0.8571,
+     "mrr@10": 0.6205,
+     "recall@10": 0.8776,
+     "recall@5": 0.7755
+    },
+    "vector": {
+     "lenient_mrr@10": 0.4948,
+     "lenient_recall@10": 0.8163,
+     "lenient_recall@5": 0.7347,
+     "mrr@10": 0.4526,
+     "recall@10": 0.7551,
+     "recall@5": 0.6531
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.7156,
+     "lenient_recall@10": 0.898,
+     "lenient_recall@5": 0.8571,
+     "mrr@10": 0.6469,
+     "recall@10": 0.8571,
+     "recall@5": 0.7959
+    }
+   },
+   "frontend": {
+    "questions": 28,
+    "bm25": {
+     "lenient_mrr@10": 0.9643,
+     "lenient_recall@10": 1.0,
+     "lenient_recall@5": 1.0,
+     "mrr@10": 0.7798,
+     "recall@10": 0.9286,
+     "recall@5": 0.9286
+    },
+    "vector": {
+     "lenient_mrr@10": 0.4998,
+     "lenient_recall@10": 0.75,
+     "lenient_recall@5": 0.6071,
+     "mrr@10": 0.4887,
+     "recall@10": 0.6786,
+     "recall@5": 0.6071
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.7869,
+     "lenient_recall@10": 1.0,
+     "lenient_recall@5": 1.0,
+     "mrr@10": 0.714,
+     "recall@10": 0.9643,
+     "recall@5": 0.9286
+    }
+   },
+   "room-target": {
+    "questions": 59,
+    "bm25": {
+     "lenient_mrr@10": 0.7563,
+     "lenient_recall@10": 0.9322,
+     "lenient_recall@5": 0.8814,
+     "mrr@10": 0.7563,
+     "recall@10": 0.9322,
+     "recall@5": 0.8814
+    },
+    "vector": {
+     "lenient_mrr@10": 0.5214,
+     "lenient_recall@10": 0.8305,
+     "lenient_recall@5": 0.7288,
+     "mrr@10": 0.5214,
+     "recall@10": 0.8305,
+     "recall@5": 0.7288
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.7554,
+     "lenient_recall@10": 0.9322,
+     "lenient_recall@5": 0.9153,
+     "mrr@10": 0.7554,
+     "recall@10": 0.9322,
+     "recall@5": 0.9153
+    }
+   },
+   "section-target": {
+    "questions": 18,
+    "bm25": {
+     "lenient_mrr@10": 0.8333,
+     "lenient_recall@10": 1.0,
+     "lenient_recall@5": 1.0,
+     "mrr@10": 0.4234,
+     "recall@10": 0.7778,
+     "recall@5": 0.6667
+    },
+    "vector": {
+     "lenient_mrr@10": 0.4153,
+     "lenient_recall@10": 0.6667,
+     "lenient_recall@5": 0.5556,
+     "mrr@10": 0.2833,
+     "recall@10": 0.3889,
+     "recall@5": 0.3333
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.6963,
+     "lenient_recall@10": 0.9444,
+     "lenient_recall@5": 0.8889,
+     "mrr@10": 0.3958,
+     "recall@10": 0.7778,
+     "recall@5": 0.6111
+    }
+   }
+  }
+ },
+ "mcp_latency_ms": {
+  "initialize_ms": 30.5,
+  "map": {
+   "ms": {
+    "n": 5,
+    "median": 80.4,
+    "p90": 83.4,
+    "max": 83.4
+   },
+   "tokens": 220
+  },
+  "search_first_ms": 1506.3,
+  "search": {
+   "ms": {
+    "n": 76,
+    "median": 280.2,
+    "p90": 293.2,
+    "max": 304.2
+   },
+   "tokens": {
+    "n": 76,
+    "median": 332.5,
+    "p90": 382,
+    "max": 468
+   }
+  },
+  "open": {
+   "ms": {
+    "n": 25,
+    "median": 71.1,
+    "p90": 91.2,
+    "max": 100.4
+   },
+   "tokens": {
+    "n": 25,
+    "median": 1655,
+    "p90": 5401,
+    "max": 11344
+   }
+  },
+  "describe": {
+   "ms": {
+    "n": 25,
+    "median": 70.3,
+    "p90": 90.6,
+    "max": 99.1
+   },
+   "tokens": {
+    "n": 25,
+    "median": 53,
+    "p90": 95,
+    "max": 108
+   }
+  }
+ },
+ "live_evaluation": {
+  "agents": "5 Claude Sonnet agents, 2 questions each, only the four KAPU read tools through tools/kapu_mcp_call.py (real MCP, logged)",
+  "correct": 10,
+  "questions": 10,
+  "rows": [
+   {
+    "question": 1,
+    "topic": "design reference: recommended button colour",
+    "correct": true,
+    "tool_calls": [
+     {
+      "tool": "kapu_search",
+      "tokens": 350
+     },
+     {
+      "tool": "kapu_search",
+      "tokens": 728
+     },
+     {
+      "tool": "kapu_open",
+      "tokens": 707
+     }
+    ],
+    "tokens_read": 1785
+   },
+   {
+    "question": 2,
+    "topic": "debugging: phase before any fix",
+    "correct": true,
+    "tool_calls": [
+     {
+      "tool": "kapu_search",
+      "tokens": 231
+     },
+     {
+      "tool": "kapu_open",
+      "tokens": 2483
+     }
+    ],
+    "tokens_read": 2714
+   },
+   {
+    "question": 3,
+    "topic": "spreadsheet formula check script",
+    "correct": true,
+    "tool_calls": [
+     {
+      "tool": "kapu_search",
+      "tokens": 382
+     },
+     {
+      "tool": "kapu_open",
+      "tokens": 525
+     }
+    ],
+    "tokens_read": 907
+   },
+   {
+    "question": 4,
+    "topic": "MCP pagination default",
+    "correct": true,
+    "tool_calls": [
+     {
+      "tool": "kapu_search",
+      "tokens": 314
+     },
+     {
+      "tool": "kapu_map",
+      "tokens": 760
+     },
+     {
+      "tool": "kapu_open",
+      "tokens": 206
+     }
+    ],
+    "tokens_read": 1280
+   },
+   {
+    "question": 5,
+    "topic": "README badge limit",
+    "correct": true,
+    "tool_calls": [
+     {
+      "tool": "kapu_search",
+      "tokens": 370
+     },
+     {
+      "tool": "kapu_open",
+      "tokens": 487
+     },
+     {
+      "tool": "kapu_search",
+      "tokens": 353
+     }
+    ],
+    "tokens_read": 1210
+   },
+   {
+    "question": 6,
+    "topic": "TypeScript MCP SDK package name",
+    "correct": true,
+    "tool_calls": [
+     {
+      "tool": "kapu_search",
+      "tokens": 373
+     }
+    ],
+    "tokens_read": 373
+   },
+   {
+    "question": 7,
+    "topic": "total number of rooms",
+    "correct": true,
+    "tool_calls": [
+     {
+      "tool": "kapu_map",
+      "tokens": 777
+     }
+    ],
+    "tokens_read": 777
+   },
+   {
+    "question": 8,
+    "topic": "CSS anchor positioning: browser version",
+    "correct": true,
+    "tool_calls": [
+     {
+      "tool": "kapu_search",
+      "tokens": 355
+     }
+    ],
+    "tokens_read": 355
+   },
+   {
+    "question": 9,
+    "topic": "scheduler.yield(): missing browser",
+    "correct": true,
+    "tool_calls": [
+     {
+      "tool": "kapu_search",
+      "tokens": 337
+     }
+    ],
+    "tokens_read": 337
+   },
+   {
+    "question": 10,
+    "topic": "field-sizing: Firefox version",
+    "correct": true,
+    "tool_calls": [
+     {
+      "tool": "kapu_search",
+      "tokens": 334
+     }
+    ],
+    "tokens_read": 334
+   }
+  ]
+ }
+}

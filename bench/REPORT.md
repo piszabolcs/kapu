@@ -151,3 +151,21 @@ Az eszközleírások tokenje: `kapu_map` 297 (benne az std-1 útmutató), `kapu_
 | 10 | magyar kérdés: AbortController szoba | igen | 1 | search | 221 |
 
 Eredmény: 10/10 helyes, mediánban 2 hívás és kb. 2,2 ezer token kérdésenként, miközben a törzs 579 794, a fájl 9,96 millió token. Az ügynökök visszajelzései (AGGALYOK A33-A36): a keresési találatok mellé rövid kivonat kellene; egy csoport ajtólistája túl hosszú; a kinyitáskor kapott szomszédlista zajos; a térképről hiányzik az összes szoba száma.
+
+## 9. Spec v1.0.2 és a teljesen angol mérés (2026-10-23)
+
+A felhasználó kérésére a publikált mérés teljesen angol: angol korpusz (a 7 magyar szoba nélkül: 216 skill + 28 frontend-szoba, 244 szoba) és csak angol kérdések (77). A teljes angol riport: [RESULTS.md](RESULTS.md), nyers számok: `results/2026-10-23-english-corpus.json`. A magyar kérdés angol szövegre külön szál (A21, 6. fejezet).
+
+| Mérőszám | Érték |
+|---|---:|
+| Törzs (karakter / token) | 2 350 156 / 573 733 |
+| Teljes fájl (karakter / token) | 32 976 901 / 9 809 442 (90% index) |
+| Build / teljes ellenőrzés | 4,6 s / 3,3 s, bájtazonos második build, 0 figyelmeztetés |
+| Hibrid r@5 / r@10 / MRR@10 (77 angol kérdés) | 0,84 / 0,90 / 0,67 (BM25: 0,83 / 0,90 / 0,68; vektor: 0,64 / 0,73 / 0,47) |
+| Térkép (első / később) | 777 / 220 token, 80 ms |
+| Csoportlista (v1.0.2, csak szobák) | 399 - 2 005 token, a 10 együtt 9 698 |
+| Keresés kivonatokkal (k=5) | 333 token, 280 ms medián |
+| Kinyitás egy ajtó | 1 655 token medián, 71 ms |
+| Élő próba (5 Sonnet-ügynök, 10 angol kérdés) | 10/10 helyes, mediánban 842 token és 1,5 hívás kérdésenként; 5 válasz a kivonatból, kinyitás nélkül |
+
+A v1.0.2 hatása a vegyes korpuszon mérve (a 7. és 8. fejezethez képest): a legnagyobb csoportlista 15 756 → 2 005 token (D125), a W003 274 → 0 (D123, 113 új `link` él), az első térképhívás 2 971 → 777 token (D122), az élő próba mediánja 2 238 → 842 token (D124; más korpusz, a 10 kérdésből 8 azonos). A keresés minősége a v1.0.2-től nem változott (a gráf nem vesz részt a rangsorban).
