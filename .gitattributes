@@ -11,6 +11,9 @@
 *.jsonl text eol=lf
 *.png binary
 *.safetensors binary
+*.woff2 binary
+*.ico binary
+*.icns binary
 
 # Test vectors are byte-exact fixtures (some contain CR or control bytes on purpose): never normalise.
 tests/vectors/*.kapu binary

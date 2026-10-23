@@ -20,3 +20,6 @@ Thumbs.db
 *.log
 # Release packages (M9)
 /dist/
+
+# Tauri build output (capability schemas, regenerated on every build)
+/crates/kapu-gui/gen/

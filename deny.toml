@@ -15,6 +15,9 @@ ignore = [
     # D94: `paste` is an unmaintained proc-macro pulled in by `tokenizers` 0.22.
     # Compile-time only, no runtime code; revisit when `tokenizers` drops it.
     { id = "RUSTSEC-2024-0436", reason = "compile-time proc-macro of tokenizers, no runtime code (D94)" },
+    # D119: proc-macro-error comes with the GTK3 bindings (glib-macros) of Tauri's Linux webview.
+    # Compile-time only, Linux only; Tauri 2 has no GTK4 port to move to.
+    { id = "RUSTSEC-2024-0370", reason = "compile-time proc-macro of Tauri's Linux GTK3 stack, no runtime code (D119)" },
 ]
 
 [licenses]

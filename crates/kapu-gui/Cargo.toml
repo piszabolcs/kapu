@@ -1,0 +1,39 @@
+[package]
+name = "kapu-gui"
+description = "Desktop window for KAPU files: map, rooms, search, graph, checks (M10)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[lib]
+name = "kapu_gui"
+path = "src/lib.rs"
+
+[[bin]]
+name = "kapu-gui"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.7", features = [] }
+
+[dependencies]
+kapu-core = { path = "../kapu-core" }
+# D115: Tauri 2 window with the system webview; the interface is plain HTML, CSS
+# and JavaScript in ui/, embedded in the binary at build time (no Node build).
+tauri = { version = "2.12", features = [] }
+tauri-plugin-dialog = "2.8"
+# Web links from a room open in the system browser; no D-Bus stack (D119).
+open = "5"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+
+[dev-dependencies]
+# examples/serve.rs: the same interface in a browser, for screenshots and UI tests.
+tiny_http = "0.12"
+
+[lints]
+workspace = true

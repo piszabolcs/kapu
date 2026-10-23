@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KAPU</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="preload" href="fonts/geist-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/app.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#stage">Skip to content</a>
+
+  <header class="topbar">
+    <div class="brand">
+      <img src="icon.svg" alt="" width="22" height="22">
+      <span class="wordmark">KAPU</span>
+    </div>
+    <div class="file-chip" id="file-chip" hidden>
+      <span class="file-name" id="file-name"></span>
+      <span class="file-path mono" id="file-path"></span>
+    </div>
+    <nav class="views" aria-label="Views" id="view-nav" hidden>
+      <a href="#room" data-view="room" aria-keyshortcuts="Control+1">Room</a>
+      <a href="#search" data-view="search" aria-keyshortcuts="Control+2">Search</a>
+      <a href="#graph" data-view="graph" aria-keyshortcuts="Control+3">Graph</a>
+      <a href="#check" data-view="check" aria-keyshortcuts="Control+4">Check</a>
+    </nav>
+    <form class="quick-search" id="quick-search" role="search" hidden>
+      <label class="visually-hidden" for="quick-query">Search the doors</label>
+      <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>
+      <input id="quick-query" name="q" type="search" placeholder="Search doors" autocomplete="off" spellcheck="false">
+      <kbd aria-hidden="true">Ctrl K</kbd>
+    </form>
+    <div class="actions">
+      <button type="button" class="button ghost" id="reload" hidden title="Read the file again from disk">Reload</button>
+      <button type="button" class="button" id="open" aria-keyshortcuts="Control+O">Open<kbd aria-hidden="true">Ctrl O</kbd></button>
+    </div>
+  </header>
+
+  <div class="workspace" id="workspace">
+    <aside class="rail" id="rail" aria-label="Map" hidden>
+      <div class="rail-head">
+        <h2 class="rail-title">Map</h2>
+        <p class="rail-totals mono" id="rail-totals"></p>
+        <label class="visually-hidden" for="filter">Filter doors by title, id or tag</label>
+        <input id="filter" class="filter" type="search" placeholder="Filter by title, id or tag" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="rail-body" id="map" tabindex="-1"></div>
+    </aside>
+
+    <main class="stage" id="stage" tabindex="-1">
+      <section class="view view-start" data-view="start" aria-labelledby="start-title">
+        <div class="start">
+          <img class="start-mark" src="icon.svg" alt="" width="72" height="72">
+          <h1 id="start-title">Open a knowledge file</h1>
+          <p class="start-lead">A <span class="mono">.kapu</span> file is one text file with a map of doors, their token prices, an index and a graph. Open one to read it the way an agent does: look at the map, search, open only what you need.</p>
+          <div class="start-actions">
+            <button type="button" class="button primary" id="start-open">Open file<kbd aria-hidden="true">Ctrl O</kbd></button>
+            <span class="start-hint" id="drop-hint">or drop a .kapu file on the window</span>
+          </div>
+          <form class="path-form" id="path-form" hidden>
+            <label for="path-input">Path to a .kapu file</label>
+            <div class="path-row">
+              <input id="path-input" type="text" spellcheck="false" autocomplete="off" placeholder="C:\path\to\file.kapu">
+              <button type="submit" class="button">Open</button>
+            </div>
+          </form>
+          <p class="start-error" id="start-error" role="alert" hidden></p>
+          <section class="recent" id="recent" aria-labelledby="recent-title" hidden>
+            <h2 id="recent-title">Recent</h2>
+            <ul id="recent-list"></ul>
+          </section>
+        </div>
+      </section>
+
+      <section class="view view-room" data-view="room" aria-labelledby="room-title" hidden>
+        <article class="room" id="room" aria-busy="false">
+          <nav class="crumbs mono" aria-label="Location" id="room-crumbs"></nav>
+          <h1 id="room-title"></h1>
+          <p class="room-meta mono" id="room-meta"></p>
+          <p class="room-lead" id="room-lead"></p>
+          <div class="prose" id="room-body"></div>
+        </article>
+        <aside class="inspector" aria-label="Door details" id="inspector">
+          <section class="panel" id="panel-tags">
+            <h2>Tags</h2>
+            <ul class="tags" id="room-tags"></ul>
+          </section>
+          <section class="panel" id="panel-subs">
+            <h2>Sub-doors</h2>
+            <ul class="doorlist" id="room-subs"></ul>
+          </section>
+          <section class="panel" id="panel-neighbours">
+            <h2>Neighbours</h2>
+            <p class="panel-note">From the graph: <span class="kind">link</span> written in the text, <span class="kind">term</span> shared rare terms, <span class="kind">sim</span> similar meaning.</p>
+            <ul class="doorlist" id="room-neighbours"></ul>
+          </section>
+          <section class="panel" id="panel-print">
+            <h2>Fingerprint</h2>
+            <p class="mono fingerprint" id="room-print"></p>
+          </section>
+        </aside>
+      </section>
+
+      <section class="view view-search" data-view="search" aria-labelledby="search-title" hidden>
+        <div class="search-head">
+          <h1 id="search-title" class="visually-hidden">Search</h1>
+          <form class="search-form" id="search-form" role="search">
+            <label class="visually-hidden" for="search-query">Query</label>
+            <input id="search-query" name="query" type="search" placeholder="What do you need? Words or a question" autocomplete="off" spellcheck="false">
+            <label class="field">
+              <span>Results</span>
+              <select id="search-k">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Token budget</span>
+              <input id="search-budget" type="number" min="0" step="100" placeholder="none" inputmode="numeric">
+            </label>
+            <button type="submit" class="button primary">Search</button>
+          </form>
+          <p class="search-status" id="search-status" role="status"></p>
+        </div>
+        <div class="table-wrap">
+          <table class="results" id="results" hidden>
+            <caption class="visually-hidden">Search results, best first</caption>
+            <thead>
+              <tr>
+                <th scope="col" class="num">#</th>
+                <th scope="col">Door</th>
+                <th scope="col">Source</th>
+                <th scope="col" class="num">Score</th>
+                <th scope="col" class="num">Tokens</th>
+                <th scope="col" class="budget-col">Running total</th>
+              </tr>
+            </thead>
+            <tbody id="results-body"></tbody>
+          </table>
+          <div class="empty" id="search-empty">
+            <p><strong>Search the way an agent does.</strong> BM25 finds the words, the vector model finds the meaning, and the two rankings are merged (RRF). A token budget keeps only what fits.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="view view-graph" data-view="graph" aria-labelledby="graph-title" hidden>
+        <div class="graph-bar">
+          <h1 id="graph-title" class="visually-hidden">Graph</h1>
+          <fieldset class="edge-kinds">
+            <legend class="visually-hidden">Edge kinds</legend>
+            <label><input type="checkbox" value="link" checked> <span class="edge-swatch link"></span>link <span class="mono count" data-count="link"></span></label>
+            <label><input type="checkbox" value="term" checked> <span class="edge-swatch term"></span>term <span class="mono count" data-count="term"></span></label>
+            <label><input type="checkbox" value="sim" checked> <span class="edge-swatch sim"></span>sim <span class="mono count" data-count="sim"></span></label>
+          </fieldset>
+          <div class="graph-tools">
+            <button type="button" class="button ghost" id="graph-zoom-out" aria-label="Zoom out">−</button>
+            <button type="button" class="button ghost" id="graph-zoom-in" aria-label="Zoom in">+</button>
+            <button type="button" class="button ghost" id="graph-fit">Fit</button>
+          </div>
+        </div>
+        <div class="graph-stage">
+          <canvas id="graph" role="img" aria-label="Graph of the doors, coloured by group. Use the map on the left to open a door with the keyboard."></canvas>
+          <div class="graph-tip" id="graph-tip" hidden></div>
+          <ul class="legend" id="legend" aria-label="Groups"></ul>
+          <p class="graph-note" id="graph-note" hidden></p>
+        </div>
+      </section>
+
+      <section class="view view-check" data-view="check" aria-labelledby="check-title" hidden>
+        <div class="check">
+          <h1 id="check-title">Check the file</h1>
+          <p class="check-lead">The quick check reads the header and every derived section. The full check also reads the body: every fingerprint, every room marker, and whether a rebuild gives the same bytes.</p>
+          <div class="check-actions">
+            <button type="button" class="button" id="check-quick">Quick check</button>
+            <button type="button" class="button primary" id="check-full">Full check</button>
+          </div>
+          <div class="check-result" id="check-result" role="status" hidden></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="statusbar">
+    <p class="status" id="status" role="status"></p>
+    <p class="timing mono" id="timing"></p>
+    <button type="button" class="signature" id="signature" aria-haspopup="dialog">psz // v</button>
+  </footer>
+
+  <dialog class="about" id="about" aria-labelledby="about-title" closedby="any">
+    <header class="about-head">
+      <img src="icon.svg" alt="" width="40" height="40">
+      <div>
+        <h2 id="about-title">KAPU <span class="mono" id="about-version"></span></h2>
+        <p class="mono about-format" id="about-format"></p>
+      </div>
+      <form method="dialog"><button class="button ghost close" aria-label="Close">×</button></form>
+    </header>
+    <p class="about-purpose" id="about-purpose"></p>
+    <h3>Architecture</h3>
+    <dl class="about-layers" id="about-layers"></dl>
+    <h3>Built with</h3>
+    <ul class="about-built" id="about-built"></ul>
+    <h3>Repositories</h3>
+    <ul class="about-repos" id="about-repos"></ul>
+    <p class="about-sign mono" id="about-sign"></p>
+  </dialog>
+</body>
+</html>

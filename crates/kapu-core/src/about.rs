@@ -21,7 +21,7 @@ pub const PURPOSE: &str = "Navigable single-file knowledge container for AI agen
 holds the Markdown body with a map, an index and a graph, so an agent opens only the rooms it needs.";
 
 /// The layers the tools are built from, with their role.
-pub const LAYERS: [(&str, &str); 2] = [
+pub const LAYERS: [(&str, &str); 3] = [
     (
         "core",
         "kapu-core: format, validator, builder, BM25 and vector search, graph, Leiden groups",
@@ -30,17 +30,22 @@ pub const LAYERS: [(&str, &str); 2] = [
         "tools",
         "kapu (command line) and kapu-mcp (MCP server over stdio)",
     ),
+    (
+        "window",
+        "kapu-gui: desktop window (Tauri) for the map, rooms, search, graph and checks",
+    ),
 ];
 
 /// Languages, notable libraries and the vector model.
-pub const BUILT_WITH: [&str; 3] = [
+pub const BUILT_WITH: [&str; 4] = [
     "Rust",
     "blake3, tiktoken-rs, tokenizers, rust-stemmers, rmcp, clap",
+    "Tauri 2, pulldown-cmark; HTML, CSS and JavaScript without a build step",
     "static embeddings: potion-multilingual-128M (int8)",
 ];
 
 /// The project repository and the third-party repositories it is built on.
-pub const REPOSITORIES: [(&str, &str); 3] = [
+pub const REPOSITORIES: [(&str, &str); 4] = [
     ("piszabolcs/kapu", REPOSITORY),
     (
         "modelcontextprotocol/rust-sdk",
@@ -50,6 +55,7 @@ pub const REPOSITORIES: [(&str, &str); 3] = [
         "MinishLab/model2vec",
         "https://github.com/MinishLab/model2vec",
     ),
+    ("tauri-apps/tauri", "https://github.com/tauri-apps/tauri"),
 ];
 
 /// The version line that follows the program name: `0.1.0 (KAPU format 1.0)`.
