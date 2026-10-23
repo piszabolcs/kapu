@@ -514,7 +514,13 @@ def build_groups(doors: list[Door], edges) -> list[tuple[str, str, list[Door]]]:
             for t, c in r.raw_terms.items():
                 if candidate(t):
                     tf[t] = tf.get(t, 0) + c
-        scored = sorted(tf.items(), key=lambda kv: (-kv[1] * (1 + math.log(g / gdf[kv[0]])), kv[0].encode()))
+        # D105: scores equal to 1e-9 tie and are broken by byte order
+        # (floor(x + 0.5) is Rust's round() for the positive scores here)
+        def tie_key(kv):
+            score = kv[1] * (1 + math.log(g / gdf[kv[0]]))
+            return (-math.floor(score * 1e9 + 0.5), kv[0].encode())
+
+        scored = sorted(tf.items(), key=tie_key)
         name = ", ".join(t for t, _ in scored[:3])
         gid = f"g{i}"
         for r in rs:

@@ -437,7 +437,7 @@ fn term_edges(doors: &[Door]) -> Vec<EdgeRow> {
         .map(|(term, &count)| {
             (
                 *term,
-                ((room_count - count as f64 + 0.5) / (count as f64 + 0.5) + 1.0).ln(),
+                libm::log((room_count - count as f64 + 0.5) / (count as f64 + 0.5) + 1.0),
             )
         })
         .collect();
@@ -645,11 +645,13 @@ fn group_names(doors: &[Door], groups: &[Vec<usize>]) -> Vec<String> {
                 .iter()
                 .map(|(term, &count)| {
                     let df = gdf.get(term).copied().unwrap_or(1) as f64;
-                    (*term, count as f64 * (1.0 + (group_count / df).ln()))
+                    (*term, count as f64 * (1.0 + libm::log(group_count / df)))
                 })
                 .collect();
+            // D105: equal to 1e-9 is a tie, broken by byte order
             scored.sort_by(|a, b| {
-                b.1.total_cmp(&a.1)
+                yake::tie_key(b.1)
+                    .total_cmp(&yake::tie_key(a.1))
                     .then_with(|| a.0.as_bytes().cmp(b.0.as_bytes()))
             });
             scored

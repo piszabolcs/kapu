@@ -63,7 +63,7 @@ pub fn bm25(file: &[u8], query: &str) -> Result<Vec<Hit>> {
         }
         #[allow(clippy::cast_precision_loss)]
         let df = parse_decimal(df).unwrap_or(0) as f64;
-        let idf = ((n - df + 0.5) / (df + 0.5) + 1.0).ln();
+        let idf = libm::log((n - df + 0.5) / (df + 0.5) + 1.0);
         for posting in postings.split(',') {
             let Some((id, tf)) = posting.rsplit_once(':') else {
                 continue;

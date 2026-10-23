@@ -19,9 +19,9 @@ use kapu_core::build::{RoomSource, build_with};
 use kapu_core::embed::Model;
 use kapu_core::{Level, Sections, validate_with};
 
-/// BLAKE3 of the corpus built with the tiny model (since D93). Change only on purpose,
+/// BLAKE3 of the corpus built with the tiny model (since D105). Change only on purpose,
 /// together with a decision-log entry.
-const GOLDEN: &str = "b7b272aa89d10bdeec2a4fbf4eff809c9462fd29a169ed0c5ee7ba3c0b5c099c";
+const GOLDEN: &str = "ab7f26dabfb88a4b161d34cf3c7040436c007ecae1a391196c33fa899c16acd0";
 
 fn tiny() -> Model {
     Model::load(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/model/kapu-test-tiny"))
@@ -109,6 +109,10 @@ fn build_with_tiny_model_is_identical_on_every_platform() {
             .rebuild_checked
     );
 
+    // with KAPU_DUMP set, keep the built file for inspection
+    if let Some(path) = std::env::var_os("KAPU_DUMP") {
+        std::fs::write(path, &built.bytes).unwrap();
+    }
     let hash = blake3::hash(&built.bytes).to_hex().to_string();
     println!(
         "tiny-model corpus: {} bytes, {} groups, BLAKE3 {hash}",

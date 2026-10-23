@@ -79,6 +79,12 @@ struct Stats {
     right: BTreeMap<String, u32>,
 }
 
+/// A score rounded to 1e-9 for comparisons (D105).
+#[must_use]
+pub fn tie_key(score: f64) -> f64 {
+    (score * 1e9).round()
+}
+
 fn is_stop(word: &str) -> bool {
     stopwords().contains(word) || word.chars().all(char::is_numeric) || word.chars().count() < 2
 }
@@ -130,7 +136,7 @@ fn word_scores(stats: &BTreeMap<String, Stats>, sentence_count: usize) -> BTreeM
 
     let mut score = BTreeMap::new();
     for (word, s) in stats {
-        let t_case = s.upper.max(s.acronym) / (1.0 + s.tf.ln());
+        let t_case = s.upper.max(s.acronym) / (1.0 + libm::log(s.tf));
         // BTreeSet iterates in order, so the indices are already sorted
         let idx: Vec<usize> = s.sentences.iter().copied().collect();
         #[allow(clippy::cast_precision_loss)]
@@ -143,7 +149,7 @@ fn word_scores(stats: &BTreeMap<String, Stats>, sentence_count: usize) -> BTreeM
                     / 2.0
             }
         };
-        let t_pos = (3.0 + median).ln().ln();
+        let t_pos = libm::log(libm::log(3.0 + median));
         let t_norm = s.tf / (mean + std).max(f64::MIN_POSITIVE);
         let t_rel = 1.0 + (side(&s.left) + side(&s.right)) * s.tf / max_tf.max(1.0);
         #[allow(clippy::cast_precision_loss)]
@@ -187,8 +193,11 @@ fn ranked_candidates(sents: &[Vec<String>], score: &BTreeMap<&str, f64>) -> Vec<
             (kw, s)
         })
         .collect();
+    // D105: scores equal to 1e-9 are ties, broken by byte order, so the last
+    // bits of the floating-point arithmetic never decide the order
     ranked.sort_by(|a, b| {
-        a.1.total_cmp(&b.1)
+        tie_key(a.1)
+            .total_cmp(&tie_key(b.1))
             .then_with(|| a.0.as_bytes().cmp(b.0.as_bytes()))
     });
     ranked.into_iter().map(|(kw, _)| kw).collect()
