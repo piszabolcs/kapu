@@ -1,0 +1,62 @@
+# cargo-fuzz targets (NFR-03/5). Own workspace: built only by `cargo +nightly fuzz`,
+# never by the main workspace's stable toolchain.
+[package]
+name = "kapu-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+kapu-core = { path = "../crates/kapu-core" }
+
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "header"
+path = "fuzz_targets/header.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "sections"
+path = "fuzz_targets/sections.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "docs"
+path = "fuzz_targets/docs.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "catalog"
+path = "fuzz_targets/catalog.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "validate"
+path = "fuzz_targets/validate.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "reader"
+path = "fuzz_targets/reader.rs"
+test = false
+doc = false
+bench = false

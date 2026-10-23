@@ -1,2 +1,4 @@
-tiktoken
-snowballstemmer
+tiktoken==0.14.0
+# Pinned to the Snowball generation that rust-stemmers 1.2 implements (D80):
+# snowballstemmer 3.x changed the English algorithm (e.g. organizations -> organiz).
+snowballstemmer==2.2.0

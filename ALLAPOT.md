@@ -4,6 +4,25 @@ Minden commitnál frissül (TERV.md 8. fejezet). Legfrissebb bejegyzés felül.
 
 ---
 
+## 2026-10-23 – M2 kész: olvasás, validálás, fuzz
+
+**Kész**
+- `kapu-core`: `error.rs` (E001–E011), `header.rs` (512 bájtos fejléc), `sections.rs` (szakaszhatárok, CR/vezérlő/bidi/láthatatlan karakterek, parserkorlátok, szigorú és toleráns törzshossz), `docs.rs` (`#DOCS`, ajtók kivágása, BLAKE3, escape, megjegyzések), `catalog.rs` (`#MAP`/`#DESC`/`#GRAPH` sorok), `validate.rs` (alap és teljes szint, rögzített sorrend), `reader.rs` (kinyitás, leírás, keret, szomszédok, FR-15 edge 1–2 újraépítéssel).
+- Első külső függőség: `blake3` 1.8 (D73).
+- `fuzz/`: hat cargo-fuzz célpont, `scripts/fuzz.ps1`. Windowson a VS AddressSanitizer komponens kell hozzá (telepítve, D86).
+- Python referencia: `snowballstemmer` 2.2.0-ra rögzítve, mert a 3.x angol tövezője eltér a Rust-tól (D80); összegzési sorrend és NFC javítva (D81, D82). A vektorok bájtra változatlanok.
+- `AGGALYOK.md`: a végső áttekintésre gyűjtött kérdések (A1–A9).
+- A tanulómódot a felhasználó 2026-10-23-án kikapcsolta; a munka folyamatosan halad a terv szerint.
+
+**Ellenőrzés (2026-10-23, lefuttatva)**
+- `scripts/check.ps1` zöld: 30 egységteszt, 29 elfogadási teszt (17 ignored, M3–M8), deny, audit.
+- Mind a 11 hibakód-vektor és mindkét edge-vektor a várt eredményt adja.
+- Fuzz: célpontonként 2 perc, kb. 6,4 millió bemenet, nincs találat. Az 1 órás kapu még hátravan.
+
+**Következő: M3 – build**
+
+---
+
 ## 2026-10-21 – M1 kész: tesztvektorok, tesztvázak, generátor
 
 **Kész**

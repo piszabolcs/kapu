@@ -460,7 +460,8 @@ def build_graph(doors: list[Door]) -> list[tuple[str, str, str, float]]:
                 shared = (set(a.terms) & set(b.terms)) & rare
                 if shared:
                     x, y = sorted((a.id, b.id))
-                    sums[(x, y)] = sum(idf[t] for t in shared)
+                    # D81: fixed summation order (UTF-8 byte order), never set order
+                    sums[(x, y)] = sum(idf[t] for t in sorted(shared, key=lambda t: t.encode()))
         if sums:
             mx = max(sums.values())
             for (x, y), s in sums.items():
@@ -520,7 +521,8 @@ def build_groups(doors: list[Door], edges) -> list[tuple[str, str, list[Door]]]:
 
 
 def esc_field(s: str) -> str:
-    return s.replace("|", "\\|").replace("\t", " ")
+    """FR-13 field escape on NFC text (FR-02/6, D82)."""
+    return nfc(s).replace("|", "\\|").replace("\t", " ")
 
 
 def section(name: str, lines: list[str]) -> bytes:
@@ -546,7 +548,7 @@ def derive(doors: list[Door]) -> dict[str, bytes]:
                     map_lines.append(f"S {s.id} | {esc_field(s.title)} | {s.tokens}t")
 
     desc_lines = [
-        f"{d.id}\t{nfc(d.description).replace(chr(9), ' ')}\t{', '.join(d.tags)}" for d in doors
+        f"{d.id}\t{nfc(d.description).replace(chr(9), ' ')}\t{nfc(', '.join(d.tags)).replace(chr(9), ' ')}" for d in doors
     ]
     graph_lines = [f"{a}\t{b}\t{t}\t{fmt_weight(w)}" for a, b, t, w in edges]
 

@@ -130,13 +130,13 @@ Minden mérföldkő: `[ ]` feladatok → Ellenőrzés parancsai zöldek → `ALL
 - [x] Generátor (`kapu-bench gen --rooms N --seed 42 --out DIR`): saját xoshiro256** PRNG, HU+EN szöveg, `tags:`, `##` szakaszok, kódblokk, link másik szobára; reprodukálhatósági teszt
 - Ellenőrzés: `cargo test` zöld (5 valódi + 33 ignored), `--ignored` mind elbukik, a vektorok a repóban, `check.ps1` zöld
 
-### M2 – Olvasás és validálás  (M)
-- [ ] Fejléc-parser (512 bájt, mezők, határellenőrzés NFR-01, ASSUMPTION-08 korlátok)
-- [ ] Szakaszolvasó seekkel; `#DOCS` → pozíció → tartalom; escape-visszafejtés; ujjlenyomat-ellenőrzés; FR-15 edge 1–2 (újrapróbálás, memóriabeli újraépítés `index: stale` állapottal)
-- [ ] `validate` (alap + `--full` a 2.15 szerint), E001–E011
-- [ ] `kapu_open` és `kapu_describe` logika a core-ban (keret, szomszédlista még üres gráfnál is)
-- [ ] Fuzz célpontok: `header`, `map`, `desc`, `graph`, `index`, `docs`, `whole_file`
-- Ellenőrzés: minden M1 vektor a várt eredményt adja; `cargo fuzz run <cél> -- -max_total_time=3600` célpontonként hiba nélkül (7 óra gépidő, éjszaka vagy háttérben)
+### M2 – Olvasás és validálás  (M)  — kész 2026-10-23 (az 1 órás fuzz-kapu nyitott)
+- [x] Fejléc-parser (512 bájt, mezők, határellenőrzés NFR-01, ASSUMPTION-08 korlátok): `header.rs`, D68
+- [x] Szakaszolvasó; `#DOCS` → pozíció → tartalom; escape-visszafejtés; ujjlenyomat-ellenőrzés; FR-15 edge 1–2 (újraolvasás, memóriabeli újraépítés `index_stale` jelzéssel): `sections.rs`, `docs.rs`, `reader.rs`, D69–D73, D77
+- [x] `validate` (alap + `--full`), E001–E011: `validate.rs`, D74–D76; a `--full` újraépítés-összevetése M3-ban
+- [x] `kapu_open` és `kapu_describe` logika a core-ban (keret, szomszédlista): `reader.rs`, `catalog.rs`, D78–D79
+- [x] Fuzz célpontok: `header`, `sections`, `docs`, `catalog` (map/desc/graph), `validate`, `reader` (teljes fájl): `fuzz/`, `scripts/fuzz.ps1`, D86
+- Ellenőrzés: minden M1 vektor a várt eredményt adja (zöld); fuzz célpontonként 2 perc hiba nélkül (kb. 6,4 millió bemenet). **Nyitott:** célpontonként 1 óra (`scripts/fuzz.ps1 -Seconds 3600`, kb. 6 óra gépidő), a kiadás (M9) előtt kötelező.
 
 ### M3 – Build alapok  (L)
 - [ ] Szobahatárok, azonosítóképzés (FR-04/4, NFKD), ütközéskezelés, escape íráskor
