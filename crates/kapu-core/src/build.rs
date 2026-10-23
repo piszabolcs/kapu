@@ -400,19 +400,33 @@ pub fn fmt_weight(w: f64) -> String {
 
 type EdgeRow = (String, String, &'static str, f64);
 
-/// FR-11/1 `link` edges; a link to a missing door is a W003 warning.
+/// FR-11/1 `link` edges; a link to a missing door path (with `/`) is a W003
+/// warning, a missing target without `/` an in-page anchor (D123).
 fn link_edges(doors: &[Door], warnings: &mut Vec<Warning>) -> Vec<EdgeRow> {
     let ids: BTreeSet<&str> = doors.iter().map(|d| d.id.as_str()).collect();
     let mut edges = Vec::new();
     for door in doors {
+        let room = door.id.split('/').next().unwrap_or("");
         for target in &door.links {
-            if !ids.contains(target.as_str()) {
+            // D123: `#x` also names a section of the same room, as an in-page
+            // anchor would; an unknown target without `/` is such an anchor.
+            let local = format!("{room}/{target}");
+            let resolved = if ids.contains(target.as_str()) {
+                Some(target.as_str())
+            } else if !target.contains('/') && ids.contains(local.as_str()) {
+                Some(local.as_str())
+            } else {
+                None
+            };
+            if let Some(t) = resolved {
+                if t != door.id {
+                    edges.push((door.id.clone(), t.to_owned(), "link", 1.0));
+                }
+            } else if target.contains('/') {
                 warnings.push(Warning {
                     code: "W003",
                     message: format!("`{}` links to missing door `{target}`", door.id),
                 });
-            } else if target != &door.id {
-                edges.push((door.id.clone(), target.clone(), "link", 1.0));
             }
         }
     }
@@ -1045,6 +1059,40 @@ mod tests {
         );
         let w = build(&[room("a", "x\u{200b}y")]).unwrap().warnings;
         assert_eq!(w.first().map(|w| w.code), Some("W002"));
+    }
+
+    #[test]
+    fn in_page_anchors_link_to_sections_or_stay_quiet() {
+        let built = build(&[
+            room(
+                "a",
+                "# A\n\nSee [setup](#setup) and [top](#top).\n\n## Setup\nsteps\n",
+            ),
+            room("b", "# B\n\nGo to [a](#a) and [gone](#a/gone).\n"),
+        ])
+        .unwrap();
+        let s = crate::Sections::parse(&built.bytes).unwrap();
+        let edges: Vec<_> = crate::catalog::parse_graph(s.graph)
+            .unwrap()
+            .into_iter()
+            .filter(|e| e.kind == "link")
+            .map(|e| (e.from.to_owned(), e.to.to_owned()))
+            .collect();
+        assert!(
+            edges.contains(&("a".to_owned(), "a/setup".to_owned())),
+            "{edges:?}"
+        );
+        assert!(
+            edges.contains(&("b".to_owned(), "a".to_owned())),
+            "{edges:?}"
+        );
+        let w003: Vec<_> = built.warnings.iter().filter(|w| w.code == "W003").collect();
+        assert_eq!(
+            w003.len(),
+            1,
+            "only the door path is a missing link: {w003:?}"
+        );
+        assert!(w003.first().is_some_and(|w| w.message.contains("a/gone")));
     }
 
     #[test]

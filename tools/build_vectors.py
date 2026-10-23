@@ -459,7 +459,12 @@ def build_graph(doors: list[Door]) -> list[tuple[str, str, str, float]]:
     ids = {d.id for d in doors}
     edges: list[tuple[str, str, str, float]] = []
     for d in doors:
+        room = d.id.split("/")[0]
         for target in d.links:
+            # D123: `#x` also names a section of the same room; an unknown target
+            # without `/` is an in-page anchor (no edge, no warning).
+            if target not in ids and "/" not in target and f"{room}/{target}" in ids:
+                target = f"{room}/{target}"
             if target in ids and target != d.id:
                 edges.append((d.id, target, "link", 1.0))
     # `term` edges (FR-11/2) between rooms over room-level documents.
