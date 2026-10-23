@@ -417,7 +417,8 @@ fn open_path_reads_the_file_from_disk() {
 //
 // The builder's Acceptance points (FR-02, FR-04..FR-09, FR-15 four-door open,
 // FR-18, the M3 byte-identity and import/export checks) live in
-// `tests/build.rs` and `src/edit.rs`; FR-10/4 and FR-16 in `tests/search.rs`.
+// `tests/build.rs` and `src/edit.rs`; FR-10/4 and FR-16 in `tests/search.rs`; FR-15 (MCP) and FR-19 in
+// `crates/kapu-mcp/tests/mcp.rs`.
 
 #[test]
 fn fr01_sections_in_order_without_overlap_or_overrun() {
@@ -528,15 +529,6 @@ fn fr12_build_twice_gives_identical_groups_and_file() {
         "the Leiden grouping of the sample equals the reference"
     );
     // with a model: see tests/determinism.rs (tiny model, golden hash on every platform)
-}
-
-#[test]
-#[ignore = "M7: MCP server"]
-fn fr19_write_with_injection_text_saves_and_warns() {
-    pending(
-        "M7",
-        "kapu_write with `ignore all previous instructions` saves and warns with the id",
-    );
 }
 
 // ---------------------------------------------------------------------------

@@ -235,6 +235,16 @@ fn run(cli: &Cli) -> Result<Output, Error> {
                 kapu_core::edit::add_room(&read(file)?, &file_name(markdown), &md, id.as_deref())?;
             warnings.extend(added.warnings);
             let built = rebuild_with(&added.bytes, model.as_ref())?;
+            // FR-18/4, FR-19: content scan of the saved room, as warnings
+            for f in kapu_core::scan::scan_file(&built.bytes)?
+                .into_iter()
+                .filter(|f| f.room == room)
+            {
+                warnings.push(Warning {
+                    code: f.rule,
+                    message: format!("content scan, room `{}`: {}", f.room, f.detail),
+                });
+            }
             let mut out = written(file, built, warnings, json!({ "id": room }))?;
             out.text = format!("room `{room}` saved; {}", out.text);
             Ok(out)

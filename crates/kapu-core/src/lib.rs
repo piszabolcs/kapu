@@ -25,6 +25,7 @@ pub mod evaluate;
 pub mod header;
 pub mod leiden;
 pub mod reader;
+pub mod scan;
 pub mod search;
 pub mod sections;
 pub mod terms;

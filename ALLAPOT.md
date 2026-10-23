@@ -4,6 +4,21 @@ Minden commitnál frissül (TERV.md 8. fejezet). Legfrissebb bejegyzés felül.
 
 ---
 
+## 2026-10-23 – M7 kész: MCP szerver
+
+**Kész**
+- `kapu-mcp`: `rmcp` 3.7 stdio szerver öt eszközzel (`kapu_map`, `kapu_search`, `kapu_describe`, `kapu_open`, `kapu_write`), std-1 útmutató, kétnyelvű leírások, tartalomvizsgálat (D100).
+- `scan.rs` (FR-19, S1–S6, D101); a CLI `kapu add` is vizsgál.
+- README: MCP-beállítás Claude Code-hoz és Claude Desktophoz, CLI-példák.
+
+**Ellenőrzés (2026-10-23, lefuttatva)**
+- `scripts/check.ps1` zöld. MCP konformancia a hivatalos klienssel: 2 teszt (teljes folyamat a mintán, FR-19 írás).
+- Nem futott: kézi próba Claude Code-ból (A25).
+
+**Következő: M8 – mérés és modellválasztás**
+
+---
+
 ## 2026-10-23 – M6 kész: CLI
 
 **Kész**

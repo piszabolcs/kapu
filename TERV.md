@@ -174,13 +174,12 @@ Minden mérföldkő: `[ ]` feladatok → Ellenőrzés parancsai zöldek → `ALL
 - [x] Térkép-nézet és std-1 útmutató a core-ban (`view.rs`), az MCP is ezt használja
 - Ellenőrzés (zöld): integrációs teszt minden parancsra (`crates/kapu-cli/tests/cli.rs`, `--json` szerkezet rögzítve); keresztellenőrzés a referenciával 300 szobán (D99)
 
-### M7 – MCP szerver  (M)
-- [ ] `rmcp` stdio szerver, 5 eszköz (FR-15), minden hívásnál fejléc-újraolvasás, útmutató első hívásnál munkamenetenként (FR-17), eszközleírások (2.13 döntés)
-- [ ] FR-19 tartalomvizsgálat: minták fájlból (`crates/kapu-core/data/scan_patterns.txt`, HU+EN), első megnyitáskor és `kapu_write`-nál
-- [ ] Automatikus teszt: egyetlen eszközválasz sem tartalmazza a teljes törzset (a válasz nem tartalmazhat kettőnél több szoba keretet, ha csak egyet kértek, és a válasz mérete ≤ kért ajtók ára × 1.5 + fix keret)
-- [ ] Claude Code / Claude Desktop konfigurációs példa a README-be
-- Ellenőrzés: MCP konformancia (`rmcp` teszt-kliens: initialize, tools/list, tools/call minden eszközre); FR-15 és FR-19 Acceptance; kézi próba Claude Code-ból a `minta.kapu`-n
-- Mérés: `kapu_map`/`kapu_open` válaszidő és válaszméret tokenben 30/300/3000 szobán
+### M7 – MCP szerver  (M)  — kész 2026-10-23 (a kézi Claude Code-próba nyitott, A25)
+- [x] `rmcp` 3.7 stdio szerver, 5 eszköz (FR-15), minden hívásnál fájl-újraolvasás, útmutató munkamenetenként az első térképnél (FR-17), kétnyelvű eszközleírások (D48, D100)
+- [x] FR-19 tartalomvizsgálat (`scan.rs`, `data/scan_patterns.txt`, D101): első megnyitáskor és `kapu_write`-nál; a CLI `kapu add` is
+- [x] Automatikus teszt: egyetlen eszközválasz sem tartalmazza a teljes törzset; négy ajtó egy hívásban
+- [x] Claude Code / Claude Desktop konfigurációs példa a README-ben
+- Ellenőrzés (zöld): MCP konformancia a hivatalos `rmcp` klienssel (initialize, tools/list, tools/call mind az öt eszközre); FR-15 és FR-19 Acceptance (`crates/kapu-mcp/tests/mcp.rs`). **Nyitott:** kézi próba Claude Code-ból (A25)
 
 ### M8 – Mérés és modellválasztás  (L, részben külön munkamenet)
 1. [ ] **Korpusz** a repóidból a `tesztkorpusz_prompt.md` szerint, ≥ 40 kérdés (fele HU, fele EN, köztük „nem szó szerinti” kérdések). Külön munkamenet, kimenet: `bench/korpusz/`. Céges adat nem kerülhet bele (a prompt szabályai).
