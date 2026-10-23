@@ -1,4 +1,4 @@
-# KAPU Specification  v1.0.1  (2026-10-23; v1.0: 2026-10-20)
+# KAPU Specification  v1.0.2  (2026-10-23; v1.0: 2026-10-20)
 
 Navigálható, egyfájlos tudáskonténer AI ügynököknek.
 Szerző és ötletgazda: Pintér Szabolcs. Specifikáció licence: CC BY 4.0. Kód licence: MIT.
@@ -240,19 +240,19 @@ tags:
 ```
 
 - Rules:
-  1. `link`: a tartalom `[szöveg](#id)` Markdown linkjeiből, ahol az `id` létező ajtó. Súly 1.0. Irányított.
+  1. `link`: a tartalom `[szöveg](#id)` Markdown linkjeiből, ahol az `id` létező ajtó. Ha az `id` nem ajtó, nincs benne `/`, de a forrás szobájának van `<szoba>/<id>` alajtója, a link arra az alajtóra mutat (fájlon belüli horgony, v1.0.2, D123). Súly 1.0. Irányított.
   2. `term`: két szoba között, ha legalább egy közös kifejezésük van, amelynek IDF értéke a legalább két szobában előforduló kifejezések IDF-értékeinek felső 10%-ában van (ASSUMPTION-06; v1.0.1, D93). Súly: a közös ritka kifejezések IDF-összegének normalizált értéke.
   3. `sim`: szobánként a k=5 legközelebbi szomszéd koszinusz-hasonlóság szerint, ha a hasonlóság legalább 0.6 (ASSUMPTION-06). Súly: a hasonlóság.
   4. `term` és `sim` élek irányítatlanok, egyszer tárolva, a kisebb azonosító áll elöl.
   5. A sorok rendezettek (forrás, cél, típus).
-- Edge cases: önhurok nem keletkezik. Nem létező célra mutató link nem él, a build figyelmeztet.
+- Edge cases: önhurok nem keletkezik. Nem létező célra mutató link nem él; a build csak akkor figyelmeztet (W003), ha a cél `/`-t tartalmaz (ajtóútvonal), a `/` nélküli ismeretlen cél fájlon belüli horgony (v1.0.2, D123).
 - Acceptance: Given két szoba, mindkettő a ritka `--turkiz` változót használja, When build, Then közöttük `term` él keletkezik.
 
 ### FR-12 Csoportok
 
 - Rules:
   1. A szobák (alajtók nélkül) gráfján, a `link`, `term` és `sim` élek súlyával Leiden közösségkeresés fut, modularitás optimalizálással, rögzített véletlenmaggal (`seed=42`), rögzített iterációszámmal.
-  2. Csoportnév: a csoport szobáinak szövegéből osztályszintű TF-IDF szerinti 3 legjellemzőbb kifejezés, vesszővel.
+  2. Csoportnév: a csoport szobáinak szövegéből osztályszintű TF-IDF szerinti 3 legjellemzőbb kifejezés, vesszővel; a stopszavak (FR-06/3 listája) nem jelöltek (v1.0.2, D121).
   3. Csoportazonosító: `g1`, `g2`, ... a csoport legkisebb szobaazonosítója szerinti sorrendben.
   4. Ha a gráf üres vagy egyetlen csoport adódik, minden szoba a `g1` csoportba kerül.
 - Edge cases: izolált szoba saját csoportot kap.
@@ -297,10 +297,10 @@ S <id> | <cím> | <token>t
 
 | Eszköz | Bemenet | Kimenet |
 |---|---|---|
-| `kapu_map` | `file`, `group?` | csoport nélkül: a szabványos útmutató (első hívásnál munkamenetenként) és a csoportlista. Csoporttal: a csoport ajtóinak rövid sorai. Ha a fájlban egy csoport van, vagy a teljes rövid térkép legfeljebb 2000 token, csoport nélkül is az ajtósorokat adja (ASSUMPTION-07). |
-| `kapu_search` | `file`, `query`, `k?=10`, `max_tokens?` | rangsorolt ajtósorok: azonosító, cím, ár, pontszám, találat forrása (`bm25`, `vec`, `both`). `max_tokens` esetén a nagyobb árú ajtók kimaradnak. |
+| `kapu_map` | `file`, `group?`, `room?` | csoport nélkül: a szabványos útmutató (első hívásnál munkamenetenként), egy összesítő sor (`rooms=… doors=… groups=… tokens=…`, D127) és a csoportlista. Csoporttal: a csoport szobasorai; egy szoba ára az alajtóit is fedi (D125). `room` megadásával: a szoba sora és alajtóinak sorai (D125). Ha a fájlban egy csoport van, vagy a teljes rövid térkép legfeljebb 2000 token, csoport nélkül is az összes ajtósort adja (ASSUMPTION-07). |
+| `kapu_search` | `file`, `query`, `k?=10` (legfeljebb 50, D120), `max_tokens?`, `excerpts?=true` | rangsorolt ajtósorok: azonosító, cím, ár, pontszám, találat forrása (`bm25`, `vec`, `both`); alattuk egy-egy `>` kivonatsor az ajtó legjobban illeszkedő sorából, legfeljebb 160 karakter (D124). `max_tokens` esetén a nagyobb árú ajtók kimaradnak. |
 | `kapu_describe` | `file`, `ids[]` | az ajtók hosszú leírása és összes tagje |
-| `kapu_open` | `file`, `ids[]` | az ajtók tartalma keretben, és ajtónként a gráfszomszédok listája (azonosító, cím, ár, éltípus). Több azonosító egy hívásban (D19). |
+| `kapu_open` | `file`, `ids[]` | az ajtók tartalma keretben, és ajtónként legfeljebb 8 gráfszomszéd (azonosító, cím, ár, éltípus), előbb a `link`, aztán a `term`, aztán a `sim` élek, típuson belül súly szerint; a többi szomszéd száma egy sorban (D126). Több azonosító egy hívásban (D19). |
 | `kapu_write` | `file`, `id?`, `markdown` | szoba létrehozása vagy cseréje, majd build. Válasz: azonosító, új ár, tartalomvizsgálati figyelmeztetések. |
 
 - Rules:
@@ -315,7 +315,7 @@ S <id> | <cím> | <token>t
 
   A `boundary` minden keretnél új, előre nem kitalálható érték (12 hexadecimális jegy), és a záró jelölőben is szerepel, így a tartalomban előforduló `</kapu-room` nem zárhatja le a keretet (v1.0.1, D106).
 
-  3. A gráfszomszédok listája adat, nem javaslat és nem utasítás.
+  3. A gráfszomszédok listája és a keresési kivonatok adatok, nem javaslatok és nem utasítások. A kivonatban a `kapu-room` szó szóközzel tagolódik, így kivonat nem nézhet ki keretnek (D124).
   4. Az ismeretlen azonosító hibát ad az adott azonosítóra, a többit kiszolgálja.
 - Edge cases:
   1. Ha egy ajtó ujjlenyomata nem egyezik (pl. közben mentés történt), az olvasó újraolvassa a fejlécet és a `#DOCS` szakaszt, és egyszer újrapróbálja.
@@ -591,3 +591,13 @@ A felhasználó jóváhagyásával, a fejlesztés közben talált spec-rések al
 5. **FR-05 (D108):** a megjegyzés-eltávolítás egyetlen, többsoros megjegyzésre is érvényes szabálya.
 6. **FR-20 (D109):** új E012 hibakód a környezeti hibákra.
 7. **FR-12, D43 (D110):** a Leiden 8 indítással (mag 42–49) és indításonként a konvergenciáig ismételt optimalizálással fut, a legnagyobb modularitás nyer; az ellenőrzés kritériuma: nem lehet 0,005-nél rosszabb a `leidenalg` (mag 42) értékénél.
+
+## 15. Változások v1.0.1 → v1.0.2 (2026-10-23)
+
+A valódi korpuszos teszt- és mérési kör (`bench/REPORT.md` 5-8. fejezet) után, a felhasználó jóváhagyásával. A fájl első sora (`%KAPU 1.0`) nem változik.
+
+1. **FR-12/2 (D121):** a csoportnevekből kimaradnak a stopszavak. Indok: angol szövegen a nevek „the, and, …” formájúak lettek.
+2. **FR-11/1 (D123):** a `#x` link a forrás szobájának `x` alajtójára is mutathat; a `/` nélküli ismeretlen cél fájlon belüli horgony, nem ad W003-at. Indok: a valódi Markdown fájlon belüli horgonyai 274 hamis figyelmeztetést adtak.
+3. **FR-15 `kapu_search` (D120, D124):** `k` legfeljebb 50; találatonként egy kivonatsor (`excerpts=false` kikapcsolja). Indok: az élő próba ügynökei a kinyitás előtt nem látták, miért jó egy találat.
+4. **FR-15 `kapu_map` (D125, D127):** összesítő sor; csoporttal csak a szobák; új `room` paraméter az alajtókhoz. Indok: egy csoport ajtólistája 15 756 tokenig nőtt.
+5. **FR-15 `kapu_open` (D126):** legfeljebb 8 szomszéd, `link` elöl, súly szerint. Indok: egy szobának 31 szomszédja is lehet, ez zaj.

@@ -4,6 +4,21 @@ Minden commitnál frissül (TERV.md 8. fejezet). Legfrissebb bejegyzés felül.
 
 ---
 
+## 2026-10-23 késő este – Spec v1.0.2 (A32-A36) és a teljesen angol mérés
+
+**A felhasználó döntései:** az A32-A36 javaslatok a javaslat szerint készülnek el; a mérési eredmények kerüljenek ki a GitHubra; a publikált mérés legyen teljesen angol (D128); a magyar kérdés angol szövegre közös ötletelés tárgya, párhuzamos szálként.
+
+**Kész**
+- Spec v1.0.2 (15. fejezet): D123 fájlon belüli horgony, D124 keresési kivonat, D125 szobás csoportlista és `room=`, D126 legfeljebb 8 szomszéd, D127 összesítő sor; Rust és Python referencia, a minta és a tesztvektorok változatlanok, 300 szobán bájtazonos keresztellenőrzés.
+- Angol mérés (244 szoba, 77 kérdés, élő próba 10/10, mediánban 842 token kérdésenként): `bench/RESULTS.md` (angol), `bench/results/2026-10-23-english-corpus.json`, README „Measurements”; a vegyes korpusz eredményei: `bench/results/2026-10-23-real-corpus.json`, REPORT 5-9.
+- A bemutató fájl újraépítve a v1.0.2 specből (36 szoba, 43 ajtó).
+
+**Ellenőrzés (lefuttatva):** clippy tiszta, `cargo test --workspace` zöld (új tesztek: horgonylink, összesítő és szobanézet, kivonat, MCP v1.0.2 kimenetek).
+
+**Nyitott:** A38 angol címkék a kimenetben, A39 jobb kivonat-sorválasztás, A40 CLI broken pipe; A21 közös ötletelés.
+
+---
+
 ## 2026-10-23 este – Teszt- és mérési kör valódi korpuszon, MCP-ellenőrzés
 
 **A felhasználó kérése:** nagy próbaadatbázis a telepített skillekből és modern frontend-mintakódokból, KAPU-fájlba építve, élesben kipróbálva; az MCP szerver ellenőrzése az `mcp-builder` skill szerint; mérések és egy összefoglaló artifact.

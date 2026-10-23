@@ -3,6 +3,19 @@
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
 The file format has its own version (`%KAPU 1.0`, see `SPEC-KAPU.md`); the tools below are versioned separately.
 
+## [Unreleased]
+
+### Changed
+- Specification v1.0.2: in-page anchors link to the room's own sections and no longer warn (D123); group names leave out stop words (D121).
+- `kapu-mcp`: tool annotations, at most 50 hits, a next step in every error (D120); an excerpt line under each search hit (D124); a group lists its rooms only and `room=` lists one room's sub-doors (D125); at most 8 neighbours per opened door (D126); a totals line on the map (D127).
+
+### Fixed
+- The S5 content scan no longer matches a command name inside another word (`async`, `confirm`) (D122).
+
+### Added
+- Real-corpus measurements: `bench/REPORT.md` chapters 5-9, `bench/results/`.
+- Tools: `tools/collect_skills.py`, `tools/mcp_probe.py`, `tools/kapu_mcp_call.py`, `tools/mcp_eval.py`.
+
 ## [0.1.0] - 2026-10-23
 
 First portfolio release. Specification v1.0.1, milestones M0-M7 and M10 done, M8 and M9 in part (see `TERV.md`).
