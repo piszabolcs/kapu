@@ -11,6 +11,7 @@ Minden commitnál frissül (TERV.md 8. fejezet). Legfrissebb bejegyzés felül.
 - Mérések: `bench/REPORT.md` 1–4. táblázat (build, fájlméret, térkép/törzs arány, gráf és csoportok, modularitás a `leidenalg`-gal összevetve, térkép-, kinyitás- és keresési idők, f32 kontra i8).
 - Portable Windows-csomag (`scripts/package.ps1`, 123,5 MB zip, füstteszttel), kiadási workflow Linuxra és macOS-re címkére (piszkozat), `THIRD-PARTY.md`, README frissítve (D103).
 - CI: Linuxos fuzz-füstteszt minden pushnál (D104).
+- Fuzz helyben, célpontonként 10 perc: header 13,3 M, sections 1,8 M, docs 4,4 M, catalog 6,4 M, validate 0,5 M, reader 0,3 M bemenet, összesen kb. 26,7 millió, **nincs találat** (napló: `fuzz/fuzz-run.log`, nincs gitben).
 
 **Nyitott (a felhasználóval):** valódi korpusz és rajta a `kapu bench` (M8/1–2), kézi ellenőrzések (M8/4), saját desztillált modell (M8/5), Claude Code végponttól végpontig (M8/6, A25), tiszta gépes próba (A28), 1 órás fuzz-kapu, push és GitHub release. Részletek: `AGGALYOK.md`.
 
