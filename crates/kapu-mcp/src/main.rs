@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
-use kapu_core::embed::{DEFAULT_MODEL, Model, VectorCache, find_model_dir};
+use kapu_core::embed::{DEFAULT_MODEL, FALLBACK_MODEL, Model, VectorCache, find_model_dir};
 use kapu_core::search::{SearchOptions, VectorStatus};
 use kapu_core::view::{GUIDE_STD1, GUIDE_STD1_EN};
 use rmcp::handler::server::router::tool::ToolRouter;
@@ -242,12 +242,12 @@ impl KapuServer {
         let path = PathBuf::from(&args.file);
         let data = read(&args.file)?;
         let header = kapu_core::Header::parse(&data)?;
-        let model_name = if header.emb == kapu_core::build::NO_MODEL {
-            DEFAULT_MODEL
+        let model = if header.emb == kapu_core::build::NO_MODEL {
+            self.model(DEFAULT_MODEL)
+                .or_else(|| self.model(FALLBACK_MODEL))
         } else {
-            header.emb.as_str()
+            self.model(&header.emb)
         };
-        let model = self.model(model_name);
         let (added, id) =
             kapu_core::edit::add_room(&data, "kapu_write", &args.markdown, args.id.as_deref())?;
         let built = kapu_core::build::rebuild_with(&added.bytes, model.as_deref())?;

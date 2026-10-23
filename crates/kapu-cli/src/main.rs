@@ -12,7 +12,7 @@ use std::time::Instant;
 
 use clap::{Parser, Subcommand};
 use kapu_core::build::{Built, Warning, rebuild_with, write_atomic};
-use kapu_core::embed::{DEFAULT_MODEL, Model, VectorCache, find_model_dir};
+use kapu_core::embed::{DEFAULT_MODEL, Model, VectorCache, find_default_model_dir, find_model_dir};
 use kapu_core::search::{SearchOptions, VectorStatus};
 use kapu_core::{Error, ErrorCode, Level};
 use serde_json::{Value, json};
@@ -136,7 +136,7 @@ fn writer_model(cli: &Cli, warnings: &mut Vec<Warning>) -> Result<Option<Model>,
     if let Some(dir) = &cli.model {
         return Model::load(dir).map(Some);
     }
-    if let Some(dir) = find_model_dir(DEFAULT_MODEL) {
+    if let Some(dir) = find_default_model_dir() {
         return Model::load(&dir).map(Some);
     }
     warnings.push(Warning {

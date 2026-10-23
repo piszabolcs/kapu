@@ -281,11 +281,16 @@ fn search_times(
 ) -> kapu_core::Result<String> {
     use kapu_core::embed::{Model, VectorCache};
     use kapu_core::search::{SearchOptions, search};
+    let start = Instant::now();
     let model = Model::load(model_dir)?;
-    let mut out = String::from(
-        "| Szobák | Ajtók | BM25 (ms) | Hibrid, hideg gyorsítótár (ms) | Hibrid, meleg gyorsítótár (ms) |
-|---:|---:|---:|---:|---:|
+    let load = start.elapsed().as_secs_f64() * 1000.0;
+    let mut out = format!(
+        "Modell: {} (betöltés és embhash: {load:.0} ms)
+
+| Szobák | Ajtók | Térkép (ms) | 4 ajtó nyitása (ms) | BM25 (ms) | Hibrid, hideg (ms) | Hibrid, meleg (ms) |
+|---:|---:|---:|---:|---:|---:|---:|
 ",
+        model.name()
     );
     for &n in sizes {
         let rooms: Vec<RoomSource> = corpus::markdown_rooms(n, seed)
@@ -293,7 +298,18 @@ fn search_times(
             .map(|(id, content)| RoomSource { id, content })
             .collect();
         let bytes = build_with(&rooms, Some(&model))?.bytes;
-        let doors = kapu_core::Sections::parse(&bytes)?.header.doors;
+        let s = kapu_core::Sections::parse(&bytes)?;
+        let doors = s.header.doors;
+        let ids: Vec<String> = s
+            .doc_entries()?
+            .iter()
+            .step_by(usize::try_from(doors / 4).unwrap_or(1).max(1))
+            .take(4)
+            .map(|e| e.id.to_owned())
+            .collect();
+        let refs: Vec<&str> = ids.iter().map(String::as_str).collect();
+        let map = time3(|| kapu_core::view::map_view(&bytes, None).map(|_| ()))?;
+        let open = time3(|| kapu_core::open_bytes(&bytes, &refs).map(|_| ()))?;
         let bm25 = time3(|| search(&bytes, query, SearchOptions::default(), None).map(|_| ()))?;
         let dir = std::env::temp_dir().join(format!("kapu-bench-cache-{}-{n}", std::process::id()));
         let cold = time3(|| {
@@ -306,7 +322,10 @@ fn search_times(
         let warm =
             time3(|| search(&bytes, query, SearchOptions::default(), Some(&cache)).map(|_| ()))?;
         let _ = std::fs::remove_dir_all(&dir);
-        let _ = writeln!(out, "| {n} | {doors} | {bm25:.0} | {cold:.0} | {warm:.0} |");
+        let _ = writeln!(
+            out,
+            "| {n} | {doors} | {map:.1} | {open:.1} | {bm25:.0} | {cold:.0} | {warm:.0} |"
+        );
     }
     Ok(out)
 }

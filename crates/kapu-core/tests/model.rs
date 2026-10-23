@@ -107,3 +107,33 @@ fn similar_meanings_are_closer_than_unrelated_ones() {
         cosine(&glass, &tax)
     );
 }
+
+#[test]
+fn i8_model_gives_nearly_the_same_vectors_as_f32() {
+    let Some(f32_model) = model() else { return };
+    let dir = root().join("models/potion-multilingual-128M-i8");
+    if !dir.join("model.safetensors").is_file() {
+        eprintln!("i8 model not present, skipping (tools/quantize.py makes it)");
+        return;
+    }
+    let i8_model = Model::load(&dir).unwrap();
+    assert_eq!(i8_model.name(), "potion-multilingual-128M-i8");
+    let reference: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(root().join("tests/model/potion_reference.json")).unwrap(),
+    )
+    .unwrap();
+    for case in reference["cases"].as_array().unwrap() {
+        let text = case["text"].as_str().unwrap();
+        let a = f32_model.embed(text).unwrap();
+        let b = i8_model.embed(text).unwrap();
+        if a.iter().all(|x| *x == 0.0) {
+            continue;
+        }
+        let sim = cosine(&a, &b);
+        println!(
+            "i8 vs f32 cosine {sim:.6} for {:?}",
+            &text[..text.len().min(30)]
+        );
+        assert!(sim > 0.999, "i8 vector drifts: {sim}");
+    }
+}

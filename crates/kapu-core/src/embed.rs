@@ -31,7 +31,7 @@ pub struct Model {
     dim: usize,
     rows: usize,
     /// `rows × dim`, row-major.
-    embeddings: Vec<f32>,
+    embeddings: Matrix,
     tokenizer: Tokenizer,
     unk: Option<u32>,
     max_chars: usize,
@@ -73,6 +73,40 @@ pub fn model_hash(dir: &Path) -> Result<Hash> {
     Ok(Hash(*hasher.finalize().as_bytes()))
 }
 
+/// The embedding matrix as stored: f32, or i8 with one f32 scale per row
+/// (kept as i8 in memory, so the i8 model needs a quarter of the RAM).
+enum Matrix {
+    F32(Vec<f32>),
+    I8 { values: Vec<i8>, scales: Vec<f32> },
+}
+
+impl Matrix {
+    /// Adds row `row` to `sum` in f64; false if the row does not exist.
+    fn add_row(&self, row: usize, dim: usize, sum: &mut [f64]) -> bool {
+        let start = row * dim;
+        match self {
+            Self::F32(values) => values.get(start..start + dim).is_some_and(|r| {
+                for (s, v) in sum.iter_mut().zip(r) {
+                    *s += f64::from(*v);
+                }
+                true
+            }),
+            Self::I8 { values, scales } => {
+                match (values.get(start..start + dim), scales.get(row)) {
+                    (Some(r), Some(&scale)) => {
+                        // the product is formed in f32 first, like dequantizing the row
+                        for (s, v) in sum.iter_mut().zip(r) {
+                            *s += f64::from(f32::from(*v) * scale);
+                        }
+                        true
+                    }
+                    _ => false,
+                }
+            }
+        }
+    }
+}
+
 /// Little-endian f32 values; trailing bytes that do not make a value are ignored.
 fn f32_le(bytes: &[u8]) -> Vec<f32> {
     let (chunks, _) = bytes.as_chunks::<4>();
@@ -81,7 +115,7 @@ fn f32_le(bytes: &[u8]) -> Vec<f32> {
 
 /// Reads the `embeddings` tensor of a safetensors file as f32, row-major.
 /// F32 is taken as is; I8 is multiplied by the per-row `scales` (f32).
-fn read_embeddings(path: &Path) -> Result<(Vec<f32>, usize, usize)> {
+fn read_embeddings(path: &Path) -> Result<(Matrix, usize, usize)> {
     let bytes = std::fs::read(path).map_err(|e| model_err(format!("{}: {e}", path.display())))?;
     let header_len = bytes
         .get(..8)
@@ -139,20 +173,17 @@ fn read_embeddings(path: &Path) -> Result<(Vec<f32>, usize, usize)> {
     let count = rows
         .checked_mul(dim)
         .ok_or_else(|| model_err("tensor too large"))?;
-    let values: Vec<f32> = match dtype.as_str() {
-        "F32" if data.len() == count * 4 => f32_le(data),
+    let values = match dtype.as_str() {
+        "F32" if data.len() == count * 4 => Matrix::F32(f32_le(data)),
         "I8" if data.len() == count => {
             let (_, scale_shape, scale_data) = tensor("scales")?;
             if scale_shape.first() != Some(&rows) || scale_data.len() != rows * 4 {
                 return Err(model_err("`scales` does not match `embeddings`"));
             }
-            let scales: Vec<f32> = f32_le(scale_data);
-            data.iter()
-                .enumerate()
-                .map(|(i, &b)| {
-                    f32::from(i8::from_le_bytes([b])) * scales.get(i / dim).copied().unwrap_or(0.0)
-                })
-                .collect()
+            Matrix::I8 {
+                values: data.iter().map(|&b| i8::from_le_bytes([b])).collect(),
+                scales: f32_le(scale_data),
+            }
         }
         other => {
             return Err(model_err(format!(
@@ -276,11 +307,7 @@ impl Model {
             if row >= self.rows {
                 continue;
             }
-            let start = row * self.dim;
-            if let Some(values) = self.embeddings.get(start..start + self.dim) {
-                for (s, v) in sum.iter_mut().zip(values) {
-                    *s += f64::from(*v);
-                }
+            if self.embeddings.add_row(row, self.dim, &mut sum) {
                 used += 1;
             }
         }
@@ -348,8 +375,17 @@ pub fn find_model_dir(name: &str) -> Option<PathBuf> {
         .find(|d| d.join("model.safetensors").is_file())
 }
 
-/// The packaged model's name (D28; M8 may replace it with a distilled one).
-pub const DEFAULT_MODEL: &str = "potion-multilingual-128M";
+/// The packaged model's name: the i8 form of `potion-multilingual-128M`
+/// (D102; a distilled model may replace it after the M8 comparison, D28).
+pub const DEFAULT_MODEL: &str = "potion-multilingual-128M-i8";
+/// Used when the packaged i8 model is not there (D102).
+pub const FALLBACK_MODEL: &str = "potion-multilingual-128M";
+
+/// The default model directory: [`DEFAULT_MODEL`], else [`FALLBACK_MODEL`].
+#[must_use]
+pub fn find_default_model_dir() -> Option<PathBuf> {
+    find_model_dir(DEFAULT_MODEL).or_else(|| find_model_dir(FALLBACK_MODEL))
+}
 
 // ---------------------------------------------------------------------------
 // Vector cache (FR-10/3, D47)

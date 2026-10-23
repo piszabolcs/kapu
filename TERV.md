@@ -181,14 +181,14 @@ Minden mérföldkő: `[ ]` feladatok → Ellenőrzés parancsai zöldek → `ALL
 - [x] Claude Code / Claude Desktop konfigurációs példa a README-ben
 - Ellenőrzés (zöld): MCP konformancia a hivatalos `rmcp` klienssel (initialize, tools/list, tools/call mind az öt eszközre); FR-15 és FR-19 Acceptance (`crates/kapu-mcp/tests/mcp.rs`). **Nyitott:** kézi próba Claude Code-ból (A25)
 
-### M8 – Mérés és modellválasztás  (L, részben külön munkamenet)
-1. [ ] **Korpusz** a repóidból a `tesztkorpusz_prompt.md` szerint, ≥ 40 kérdés (fele HU, fele EN, köztük „nem szó szerinti” kérdések). Külön munkamenet, kimenet: `bench/korpusz/`. Céges adat nem kerülhet bele (a prompt szabályai).
-2. [ ] `kapu bench` futtatás: recall@5/10, MRR@10 BM25 / vektor / hibrid külön, szigorú és megengedő találat (2.14)
-3. [ ] Skálázás: 30/300/3000 szoba, térkép/fájl tokenarány, build és eszköz-válaszidők (NFR-05), csomagméret
-4. [ ] Gráf él-pontosság: 50 véletlen él kézi ellenőrzése típusonként (jó/rossz), csoportnevek érthetősége (igen/nem) → táblázat
-5. [ ] D28: `potion-multilingual-128M` i8 **vs** saját desztillált modell (`tools/distill`: Python `model2vec`, tanár `BAAI/bge-m3`, szókincs HU+EN+kód a korpuszból és nyilvános listákból). Ugyanaz a bench mindkettővel; a jobbik kerül a csomagba, a döntés a DONTESNAPLO-ba.
-6. [ ] Végponttól végpontig: 1.3 forgatókönyv Claude Code-dal, MCP-naplóval, a 2.16 protokoll szerint; a napló a riport melléklete
-- Ellenőrzés: `bench/REPORT.md` minden számmal; 1.3 sikerkritérium teljesül (egy fájl, térkép/keresés belépés, csak releváns szobák, nincs teljes törzs, tokenösszeg nagyságrendje)
+### M8 – Mérés és modellválasztás  (L, részben külön munkamenet)  — részben kész 2026-10-23
+1. [ ] **Korpusz** a repóidból a `tesztkorpusz_prompt.md` szerint, ≥ 40 kérdés. Nyitott (A26): a te repóidból, külön munkamenetben.
+2. [~] `kapu bench` kész (recall@5/10, MRR@10, BM25/vektor/hibrid, szigorú és megengedő, D49); futtatás a korpusz után.
+3. [x] Skálázás: 30/300/3000 szoba, térkép/fájl tokenarány, build-, térkép-, kinyitás- és keresési idők, csomagméret (`bench/REPORT.md` 1–4. táblázat)
+4. [ ] Gráf élpontosság és csoportnevek kézi mintán. Nyitott (emberi ellenőrzés).
+5. [~] D28: i8 kvantálás kész és alapértelmezett (D102); saját desztillált modell és az összevetés a korpuszon nyitott; az FR-16 eset a jelenlegi modellel nem teljesül (A21).
+6. [ ] Végponttól végpontig Claude Code-dal. Nyitott (A25).
+- Mérés közben: a `leidenalg`-összevetés (2. táblázat) és a Python–Rust keresztellenőrzés (D99) is lefutott.
 
 ### M9 – Kiadás  (M)
 - [ ] Portable csomag platformonként: `kapu.exe` + `kapu-mcp.exe` + `models/` mappa; Linux/macOS binárisok a CI-ból
