@@ -23,3 +23,6 @@ Thumbs.db
 
 # Tauri build output (capability schemas, regenerated on every build)
 /crates/kapu-gui/gen/
+
+# Test corpus (third-party skills, sample code, question sets): local only, never committed
+/bench/korpusz/
