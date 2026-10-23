@@ -1,0 +1,263 @@
+{
+ "date": "2026-10-23",
+ "tools_version": "0.1.0",
+ "specification": "v1.0.3",
+ "knowledge_file": {
+  "description": "the user's own pixellab.kapu: PixelLab documentation, REST API v2 reference, MCP tools, Python SDK and transcripts of linked videos; third-party text, not published",
+  "rooms": 154,
+  "groups": 7,
+  "knowledge_tokens": 206899,
+  "file_bytes": 7115588
+ },
+ "scenario": "amateur indie team building a top-down game with a dog hero; 12 requests, 9 in Hungarian and 3 in English",
+ "agents": "4 Claude Sonnet agents, 3 requests each, only through tools/kapu_mcp_call.py (real MCP, kapu_write not allowed)",
+ "judge": "independent Claude Sonnet agent; opened every cited door, split each answer into claims and checked each against the source text",
+ "summary": {
+  "correct": 11,
+  "partly": 1,
+  "claims_supported": 127,
+  "claims_total": 130,
+  "median_tokens_per_request": 2623.5,
+  "mean_tokens_per_request": 2913,
+  "max_tokens_per_request": 6662,
+  "median_calls_per_request": 3.0,
+  "total_tokens": 34953,
+  "search_calls": 17,
+  "open_calls": 18,
+  "median_search_tokens": 415,
+  "median_open_tokens": 1290.5,
+  "mean_helpfulness": 3.92,
+  "english_queries": "17 of 17"
+ },
+ "notes": [
+  "Every search query was written in English, also for the 9 Hungarian requests: the agent translated to the content language itself.",
+  "The partly correct answer (p12) is a reading error: the opened door states how many objects one call returns, the agent missed it.",
+  "Search latency is high (median 1.3 s) because the wrapper starts a new server, and loads the vector model, for every call."
+ ],
+ "items": [
+  {
+   "id": "p1",
+   "topic": "ways to use PixelLab (web, Aseprite, other)",
+   "request_language": "hu",
+   "calls": [
+    "map",
+    "search",
+    "open"
+   ],
+   "tokens": 2167,
+   "queries": [
+    "ways to use PixelLab: website, Aseprite extension, API, MCP"
+   ],
+   "correct": "yes",
+   "claims_supported": 7,
+   "claims_total": 7,
+   "helpfulness": 4
+  },
+  {
+   "id": "p2",
+   "topic": "8-directional dog for a top-down game",
+   "request_language": "hu",
+   "calls": [
+    "search",
+    "search",
+    "open",
+    "open"
+   ],
+   "tokens": 3323,
+   "queries": [
+    "8 directional character top-down view animal dog",
+    "Characters page create character web 4 or 8 directions view top-down tutorial"
+   ],
+   "correct": "yes",
+   "claims_supported": 12,
+   "claims_total": 12,
+   "helpfulness": 4
+  },
+  {
+   "id": "p3",
+   "topic": "walk animation and frame count",
+   "request_language": "hu",
+   "calls": [
+    "search",
+    "open",
+    "search",
+    "open"
+   ],
+   "tokens": 5355,
+   "queries": [
+    "walk animation template quadruped how many frames",
+    "quadruped animal walk template animation dog cat frames one click"
+   ],
+   "correct": "yes",
+   "claims_supported": 10,
+   "claims_total": 10,
+   "helpfulness": 4
+  },
+  {
+   "id": "p4",
+   "topic": "seamless grass and dirt path tiles",
+   "request_language": "en",
+   "calls": [
+    "map",
+    "search",
+    "map",
+    "open",
+    "open"
+   ],
+   "tokens": 3984,
+   "queries": [
+    "seamless top-down tileset grass dirt path tiles connect"
+   ],
+   "correct": "yes",
+   "claims_supported": 14,
+   "claims_total": 15,
+   "helpfulness": 3
+  },
+  {
+   "id": "p5",
+   "topic": "one style across all images",
+   "request_language": "hu",
+   "calls": [
+    "search",
+    "open",
+    "open"
+   ],
+   "tokens": 2580,
+   "queries": [
+    "consistent style across all assets characters buildings objects style reference"
+   ],
+   "correct": "yes",
+   "claims_supported": 10,
+   "claims_total": 10,
+   "helpfulness": 5
+  },
+  {
+   "id": "p6",
+   "topic": "install the Aseprite extension",
+   "request_language": "hu",
+   "calls": [
+    "search",
+    "open"
+   ],
+   "tokens": 1092,
+   "queries": [
+    "install PixelLab extension in Aseprite"
+   ],
+   "correct": "yes",
+   "claims_supported": 10,
+   "claims_total": 10,
+   "helpfulness": 5
+  },
+  {
+   "id": "p7",
+   "topic": "connect Claude Code, Godot and PixelLab",
+   "request_language": "en",
+   "calls": [
+    "map",
+    "search",
+    "open"
+   ],
+   "tokens": 2667,
+   "queries": [
+    "MCP server connect Claude Code Godot"
+   ],
+   "correct": "yes",
+   "claims_supported": 11,
+   "claims_total": 12,
+   "helpfulness": 4
+  },
+  {
+   "id": "p8",
+   "topic": "attack animation for the dog",
+   "request_language": "hu",
+   "calls": [
+    "search",
+    "open",
+    "search",
+    "search",
+    "open"
+   ],
+   "tokens": 6662,
+   "queries": [
+    "attack punch animation template character quick",
+    "template animations quadruped dog animal skeleton attack bite",
+    "animate_character template_animation_id quadruped body_type"
+   ],
+   "correct": "yes",
+   "claims_supported": 9,
+   "claims_total": 9,
+   "helpfulness": 3
+  },
+  {
+   "id": "p9",
+   "topic": "photo of our dog to pixel art",
+   "request_language": "hu",
+   "calls": [
+    "search",
+    "open"
+   ],
+   "tokens": 1557,
+   "queries": [
+    "photo to pixel art convert image reference"
+   ],
+   "correct": "yes",
+   "claims_supported": 10,
+   "claims_total": 10,
+   "helpfulness": 4
+  },
+  {
+   "id": "p10",
+   "topic": "transparent sprite background",
+   "request_language": "hu",
+   "calls": [
+    "search",
+    "open"
+   ],
+   "tokens": 1120,
+   "queries": [
+    "remove background transparent sprite"
+   ],
+   "correct": "yes",
+   "claims_supported": 8,
+   "claims_total": 8,
+   "helpfulness": 4
+  },
+  {
+   "id": "p11",
+   "topic": "UI buttons and a health bar",
+   "request_language": "en",
+   "calls": [
+    "search",
+    "open"
+   ],
+   "tokens": 1721,
+   "queries": [
+    "game UI elements buttons health bar"
+   ],
+   "correct": "yes",
+   "claims_supported": 14,
+   "claims_total": 14,
+   "helpfulness": 4
+  },
+  {
+   "id": "p12",
+   "topic": "50 items from code: API and authentication",
+   "request_language": "hu",
+   "calls": [
+    "search",
+    "open",
+    "search",
+    "open"
+   ],
+   "tokens": 2725,
+   "queries": [
+    "API SDK authentication API key generate many items",
+    "background jobs polling rate limit concurrent requests items objects"
+   ],
+   "correct": "partly",
+   "claims_supported": 12,
+   "claims_total": 13,
+   "helpfulness": 3
+  }
+ ]
+}

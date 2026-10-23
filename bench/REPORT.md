@@ -169,3 +169,37 @@ A felhasználó kérésére a publikált mérés teljesen angol: angol korpusz (
 | Élő próba (5 Sonnet-ügynök, 10 angol kérdés) | 10/10 helyes, mediánban 842 token és 1,5 hívás kérdésenként; 5 válasz a kivonatból, kinyitás nélkül |
 
 A v1.0.2 hatása a vegyes korpuszon mérve (a 7. és 8. fejezethez képest): a legnagyobb csoportlista 15 756 → 2 005 token (D125), a W003 274 → 0 (D123, 113 új `link` él), az első térképhívás 2 971 → 777 token (D122), az élő próba mediánja 2 238 → 842 token (D124; más korpusz, a 10 kérdésből 8 azonos). A keresés minősége a v1.0.2-től nem változott (a gráf nem vesz részt a rangsorban).
+
+## 10. Élő próba egy valódi tudásfájlon: PixelLab, amatőr indie-fejlesztő szerepben (2026-10-23)
+
+- **Tudásfájl:** a felhasználó saját `pixellab.kapu` fájlja: a PixelLab teljes dokumentációja (súgóoldalak, REST API v2 referencia, MCP-eszközök, Python SDK) és a hivatkozott videók átirata. 154 szoba, 7 csoport, kb. 206 900 token tudás, 7,1 MB. Harmadik fél tartalma, nincs a repóban.
+- **Forgatókönyv:** "Pixel Paws", felülnézetes indie játék egy kutya főszereplővel; a csapat teljesen kezdő. 12 kérés: 9 magyarul, 3 angolul, kezdő szóhasználattal (pl. "minden irányból ugyanúgy néz ki", "hogyan szedjük le a hátteret").
+- **Futtatás:** 4 Claude Sonnet ügynök, ügynökönként 3 kérés, csak a `tools/kapu_mcp_call.py` burkolón át (valódi MCP, `kapu_write` tiltva, a fájl közvetlenül nem olvasható). Spec v1.0.3.
+- **Bírálat:** egy független Sonnet-ügynök minden hivatkozott ajtót kinyitott (és keresett is), a válaszokat állításokra bontotta, és mindegyiket a forrásszöveghez mérte.
+
+| # | Kérés (rövidítve) | Nyelv | Hívások | Token | Helyes | Alátámasztott állítás | Hasznosság (1-5) |
+|---:|---|:---:|---:|---:|:---:|---:|---:|
+| 1 | hogyan használható egyáltalán (web, Aseprite, más) | HU | 3 | 2 167 | igen | 7/7 | 4 |
+| 2 | 8 irányú kutya felülnézetes játékhoz | HU | 4 | 3 323 | igen | 12/12 | 4 |
+| 3 | séta animáció, hány képkocka | HU | 4 | 5 355 | igen | 10/10 | 4 |
+| 4 | összeillő fű- és földút-csempék | EN | 5 | 3 984 | igen | 14/15 | 3 |
+| 5 | egységes stílus minden képen | HU | 3 | 2 580 | igen | 10/10 | 5 |
+| 6 | Aseprite-bővítmény telepítése | HU | 2 | 1 092 | igen | 10/10 | 5 |
+| 7 | Claude Code + Godot + PixelLab összekötése | EN | 3 | 2 667 | igen | 11/12 | 4 |
+| 8 | ütés animáció a kutyának | HU | 5 | 6 662 | igen | 9/9 | 3 |
+| 9 | saját kutyafotóból pixel art | HU | 2 | 1 557 | igen | 10/10 | 4 |
+| 10 | átlátszó háttér a sprite-okon | HU | 2 | 1 120 | igen | 8/8 | 4 |
+| 11 | UI-gombok és életerő-csík | EN | 2 | 1 721 | igen | 14/14 | 4 |
+| 12 | 50 féle tárgy programból: API, hitelesítés | HU | 4 | 2 725 | részben | 12/13 | 3 |
+
+Eredmény: 11 helyes és 1 részben helyes válasz; a 130 állításból 127 alátámasztott, kitalált csomagnév, szám vagy felületelem nem volt. Kérésenként mediánban 3 hívás és 2 624 token (átlag 2 913, legtöbb 6 662), a 12 kérés együtt 34 953 token, a tudás 206 900 tokenjéhez képest kérésenként kb. 1/80. Hívások: 17 keresés (medián 415 token), 18 kinyitás (medián 1 291 token), 4 térkép (293 token, útmutatóval). A keresés 1,3 s mediánja a burkoló miatt magas: minden hívás új szervert indít, és újratölti a vektormodellt (valódi munkamenetben 0,3 s körül).
+
+Megfigyelések:
+
+- **Nyelv:** mind a 17 keresési lekérdezés angol volt, a 9 magyar kérésnél is: az ügynök maga fordított a tartalom nyelvére. A 6. fejezet 0,45-ös magyar r@10 értéke nyers magyar lekérdezésekre vonatkozik; ügynökön át ez a helyzet ezen a próbán nem állt elő (A21).
+- **A részben helyes válasz (12) olvasási hiba, nem keresési:** a kinyitott API-ajtó leírja, hogy a `size` szabja meg, hány tárgy jön egy hívásból (≤42 px → 64, ≤85 → 16, ≤170 → 4), és hogy `item_descriptions`-szel tárgyanként külön leírás adható; az ügynök ezt nem vette észre, és hívásonként egy tárgyból számolt költséget.
+- **"Ezt a dokumentáció nem mondja meg":** két válasz (3: a kutya sétájának képkockaszáma, 8: az `attack` sablon négylábúra) ezt jelezte, és a bíráló kereséssel igazolta, hogy tényleg nincs benne.
+- **Hiányok:** a 4. válasz csak az MCP-utat írta le (a webes "Create tileset" eszközt nem), a 7. nem említette, hogy az MCP-hez előfizetés kell, a 8. csak MCP-szintaxist adott a Characters oldal egykattintásos sablonja helyett. Az amatőr szemszögből ezek a leggyengébb pontok (hasznosság 3).
+- **Csoportnevek:** az API-referencia csoportja "image, optional, str", egy másiké "pixel, pixellab, let"; a YAKE a paramétertáblák szavait és a "let" szót is kulcsszónak veszi (A41).
+
+Nyers számok: `results/2026-10-23-pixellab-live.json`.
