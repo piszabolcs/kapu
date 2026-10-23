@@ -1,0 +1,5 @@
+{
+ "model_type": "model2vec",
+ "hidden_dim": 16,
+ "normalize": true
+}

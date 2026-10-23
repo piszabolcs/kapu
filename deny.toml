@@ -11,7 +11,11 @@ feature-depth = 1
 db-path = "$CARGO_HOME/advisory-dbs"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 yanked = "deny"
-ignore = []
+ignore = [
+    # D94: `paste` is an unmaintained proc-macro pulled in by `tokenizers` 0.22.
+    # Compile-time only, no runtime code; revisit when `tokenizers` drops it.
+    { id = "RUSTSEC-2024-0436", reason = "compile-time proc-macro of tokenizers, no runtime code (D94)" },
+]
 
 [licenses]
 # Permissive licences only (TERV.md 1.1). Anything else fails the check.

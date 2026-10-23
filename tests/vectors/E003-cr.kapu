@@ -6,10 +6,10 @@ emb=none
 embhash=b3:af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262
 map=512+509
 desc=1021+582
-graph=1603+149
-index=1752+13486
-docs=15238+810
-body=16054+1719
+graph=1603+197
+index=1800+13486
+docs=15286+810
+body=16102+1719
 rooms=3
 doors=7
 groups=2
@@ -37,6 +37,7 @@ electron-leckek/szobajelolo-escape	A `@@@` sor csak a sor elején jelöl
 szoba		
 #END
 #GRAPH
+electron-leckek	frontend-design-alapok	term	1.0
 electron-leckek/preload-bridge	frontend-design-alapok	link	1.0
 frontend-design-alapok/glass-gomb	electron-leckek/preload-bridge	link	1.0
 #END

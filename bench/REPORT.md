@@ -19,3 +19,21 @@ Megjegyzések:
 1. Az első mérésen a 3000 szobás build 64 s volt, mert a `term` élek minden szobapárt összevetettek (négyzetes). Az invertált változat (ritka kifejezésenként a szobapárok) ugyanazt az eredményt adja 2,1 s alatt; a skálázás most közel lineáris.
 2. A térkép/törzs arány a generált korpuszon 26–27%, mert a generált szobák kicsik (átlag kb. 80 token, alajtókkal együtt kb. 4 ajtó szobánként). Valódi skill-szobákon ez várhatóan jóval kisebb; lásd AGGALYOK A10.
 3. A fájl kb. 80%-a az `#INDEX` szakasz (kettős tövezés, szoba- és alajtó-posztingok); lásd AGGALYOK A11.
+
+## 2. Gráf és csoportok a vektormodellel (M4)
+
+- Dátum: 2026-10-23. Gép és build mint az 1. táblázatnál. Modell: `potion-multilingual-128M` (f32, 512 MB).
+- Parancs: `kapu-bench measure --rooms 30,300,3000 --runs 3 --model models/potion-multilingual-128M --dump-graph <mappa>`; Leiden-ellenőrzés: `tools/leiden_check.py <mappa>/graph-<n>.tsv`.
+
+| Szobák | Build (ms, medián) | Fájl (KiB) | link él | term él | sim él | Csoportok | Legnagyobb csoport | Medián csoport | Modularitás (Rust) | Modularitás (leidenalg, mag 42) |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 30 | 37 | 240.8 | 30 | 25 | 113 | 4 | 10 | 9 | 0.2460 | 0.2330 |
+| 300 | 388 | 2375.3 | 300 | 260 | 1298 | 8 | 47 | 40 | 0.3490 | 0.3456 |
+| 3000 | 5824 | 24697.2 | 3000 | 1308 | 13314 | 9 | 721 | 243 | 0.4095 | 0.4168 |
+
+Megjegyzések:
+
+1. A D43/D92 kritérium (a Rust nem lehet 0,01-nél rosszabb a `leidenalg`-nál) mindhárom méreten teljesül; 30 és 300 szobánál a Rust jobb. Az első változat (egy optimalizálási kör) 300 szobánál 0,3349-et adott (−0,0107); a második, az előző partícióból induló kör hozta be.
+2. A `sim` élek száma kb. 4,4 szobánként (k = 5, küszöb 0,6): a generált korpusz szókincse kicsi és ismétlődő, ezért sok szobapár hasonló. Valódi korpuszon ez várhatóan kevesebb.
+3. A 3000 szobás build modellel 5,8 s, ennek nagy része a `sim` élek páronkénti koszinusza (négyzetes, 3000² × 256). Elfogadható; ha a korpusz nő, közelítő kNN kellhet.
+4. A karateklub-gráfon (34 csúcs) a Rust a `leidenalg` 0,4198-ját ±0,01-en belül hozza (egységteszt).

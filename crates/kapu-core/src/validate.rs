@@ -71,11 +71,25 @@ fn err(code: ErrorCode, detail: impl Into<String>) -> Error {
     Error::new(code, detail)
 }
 
-/// Validates a whole file.
+/// Validates a whole file without a vector model: the rebuild comparison of
+/// [`Level::Full`] runs only for files built without one (`emb=none`).
 ///
 /// # Errors
 /// The first violated rule, with its FR-20 code.
 pub fn validate(file: &[u8], level: Level) -> Result<Report> {
+    validate_with(file, level, None)
+}
+
+/// Validates a whole file; with `model`, a file built with that same model
+/// (name and `embhash` equal) also gets the rebuild comparison (D89, D50).
+///
+/// # Errors
+/// The first violated rule, with its FR-20 code.
+pub fn validate_with(
+    file: &[u8],
+    level: Level,
+    model: Option<&crate::embed::Model>,
+) -> Result<Report> {
     let s = Sections::parse(file)?;
     let entries = s.doc_entries()?;
     let ids = check_ids(&entries)?;
@@ -108,9 +122,11 @@ pub fn validate(file: &[u8], level: Level) -> Result<Report> {
         }
         check_room_markers(&s, &entries)?;
     }
-    let rebuild_checked = level == Level::Full && s.header.emb == crate::build::NO_MODEL;
+    let matching_model = model.filter(|m| m.name() == s.header.emb && m.hash() == s.header.embhash);
+    let rebuild_checked = level == Level::Full
+        && (s.header.emb == crate::build::NO_MODEL || matching_model.is_some());
     if rebuild_checked {
-        let rebuilt = crate::build::rebuild(file)?;
+        let rebuilt = crate::build::rebuild_with(file, matching_model)?;
         if rebuilt.bytes != file {
             return Err(err(
                 ErrorCode::E005,

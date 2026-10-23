@@ -13,7 +13,7 @@ use std::process::ExitCode;
 use std::time::Instant;
 
 use clap::{Parser, Subcommand};
-use kapu_core::build::{RoomSource, build};
+use kapu_core::build::{RoomSource, build_with};
 
 #[derive(Parser)]
 #[command(
@@ -51,6 +51,13 @@ enum Command {
         /// Builds per size; the median time is reported.
         #[arg(long, default_value_t = 3)]
         runs: usize,
+        /// Vector model directory; without it the build runs without a model (D57).
+        #[arg(long)]
+        model: Option<PathBuf>,
+        /// Writes the room graph of every size to `<dir>/graph-<rooms>.tsv`
+        /// (`a b weight`, room indices) for the leidenalg comparison (D43).
+        #[arg(long)]
+        dump_graph: Option<PathBuf>,
     },
 }
 
@@ -72,7 +79,19 @@ fn main() -> ExitCode {
                 ExitCode::FAILURE
             }
         },
-        Command::Measure { rooms, seed, runs } => match measure(&rooms, seed, runs.max(1)) {
+        Command::Measure {
+            rooms,
+            seed,
+            runs,
+            model,
+            dump_graph,
+        } => match measure(
+            &rooms,
+            seed,
+            runs.max(1),
+            model.as_deref(),
+            dump_graph.as_deref(),
+        ) {
             Ok(table) => {
                 print!("{table}");
                 ExitCode::SUCCESS
@@ -87,7 +106,20 @@ fn main() -> ExitCode {
 
 /// One row per corpus size: rooms, doors, file size, build time (median),
 /// body tokens, map tokens and their ratio.
-fn measure(sizes: &[usize], seed: u64, runs: usize) -> kapu_core::Result<String> {
+fn measure(
+    sizes: &[usize],
+    seed: u64,
+    runs: usize,
+    model_dir: Option<&std::path::Path>,
+    dump: Option<&std::path::Path>,
+) -> kapu_core::Result<String> {
+    let model = model_dir.map(kapu_core::embed::Model::load).transpose()?;
+    let mut graph_table = String::from(
+        "
+| Szobák | link él | term él | sim él | Csoportok | Legnagyobb csoport | Medián csoport | Modularitás |
+|---:|---:|---:|---:|---:|---:|---:|---:|
+",
+    );
     let mut out = String::from(
         "| Szobák | Ajtók | Fájl (KiB) | Build (ms, medián) | Törzs (token) | Térkép (token) | Térkép/törzs |\n|---:|---:|---:|---:|---:|---:|---:|\n",
     );
@@ -100,7 +132,7 @@ fn measure(sizes: &[usize], seed: u64, runs: usize) -> kapu_core::Result<String>
         let mut bytes = Vec::new();
         for _ in 0..runs {
             let start = Instant::now();
-            bytes = build(&rooms)?.bytes;
+            bytes = build_with(&rooms, model.as_ref())?.bytes;
             times.push(start.elapsed().as_secs_f64() * 1000.0);
         }
         times.sort_by(f64::total_cmp);
@@ -117,6 +149,83 @@ fn measure(sizes: &[usize], seed: u64, runs: usize) -> kapu_core::Result<String>
             "| {n} | {} | {kib:.1} | {median:.0} | {body_tokens} | {map_tokens} | {ratio:.3} |",
             s.header.doors
         );
+        let _ = writeln!(graph_table, "{}", graph_row(n, &s, dump)?);
     }
+    out.push_str(&graph_table);
     Ok(out)
+}
+
+/// Edge counts by type, group sizes and the modularity of the grouping, from
+/// the built file alone (the room graph as Leiden saw it, D92).
+fn graph_row(
+    n: usize,
+    s: &kapu_core::Sections<'_>,
+    dump: Option<&std::path::Path>,
+) -> kapu_core::Result<String> {
+    use std::collections::BTreeMap;
+    let map = kapu_core::catalog::parse_map(s.map)?;
+    let edges = kapu_core::catalog::parse_graph(s.graph)?;
+    let rooms: Vec<&str> = map
+        .doors
+        .iter()
+        .filter(|d| d.is_room)
+        .map(|d| d.id)
+        .collect();
+    let index: BTreeMap<&str, usize> = rooms.iter().enumerate().map(|(i, id)| (*id, i)).collect();
+    let mut graph: BTreeMap<(usize, usize), f64> = BTreeMap::new();
+    let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
+    for e in &edges {
+        *counts.entry(e.kind).or_insert(0) += 1;
+        let room = |id: &str| id.split('/').next().and_then(|r| index.get(r)).copied();
+        if let (Some(a), Some(b)) = (room(e.from), room(e.to))
+            && a != b
+        {
+            *graph.entry((a.min(b), a.max(b))).or_insert(0.0) += e.weight;
+        }
+    }
+    // group of each room from the R lines
+    let mut gid_of: Vec<usize> = vec![0; rooms.len()];
+    for line in s.map.lines().filter(|l| l.starts_with("R ")) {
+        let mut f = line.split(" | ");
+        let id = f.next().and_then(|h| h.get(2..)).unwrap_or("");
+        let gid = f
+            .nth(2)
+            .and_then(|g| g.trim_start_matches('g').parse::<usize>().ok())
+            .unwrap_or(0);
+        if let Some(&i) = index.get(id)
+            && let Some(slot) = gid_of.get_mut(i)
+        {
+            *slot = gid;
+        }
+    }
+    let q = kapu_core::leiden::modularity(rooms.len(), &graph, &gid_of);
+    let mut sizes: BTreeMap<usize, usize> = BTreeMap::new();
+    for g in &gid_of {
+        *sizes.entry(*g).or_insert(0) += 1;
+    }
+    let mut size_list: Vec<usize> = sizes.values().copied().collect();
+    size_list.sort_unstable();
+    let largest = size_list.last().copied().unwrap_or(0);
+    let median = size_list.get(size_list.len() / 2).copied().unwrap_or(0);
+    if let Some(dir) = dump {
+        let mut text = String::new();
+        for ((a, b), w) in &graph {
+            let _ = writeln!(text, "{a} {b} {w}");
+        }
+        let _ = std::fs::create_dir_all(dir);
+        let path = dir.join(format!("graph-{n}.tsv"));
+        std::fs::write(&path, text).map_err(|e| {
+            kapu_core::Error::new(
+                kapu_core::ErrorCode::E005,
+                format!("{}: {e}", path.display()),
+            )
+        })?;
+    }
+    Ok(format!(
+        "| {n} | {} | {} | {} | {} | {largest} | {median} | {q:.4} |",
+        counts.get("link").copied().unwrap_or(0),
+        counts.get("term").copied().unwrap_or(0),
+        counts.get("sim").copied().unwrap_or(0),
+        sizes.len()
+    ))
 }

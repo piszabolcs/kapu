@@ -453,11 +453,13 @@ def build_graph(doors: list[Door]) -> list[tuple[str, str, str, float]]:
         for t in r.terms:
             df[t] = df.get(t, 0) + 1
     idf = {t: math.log((n - c + 0.5) / (c + 0.5) + 1) for t, c in df.items()}
-    if idf:
-        vals = sorted(idf.values(), reverse=True)
-        k = max(1, math.ceil(0.1 * len(vals)))
-        threshold = vals[k - 1]
-        rare = {t for t, v in idf.items() if v >= threshold}
+    # D93: the top-10% IDF threshold is taken among the terms that two or more
+    # rooms share; a term of a single room can never be a shared term
+    shared_vals = sorted((v for t, v in idf.items() if df[t] >= 2), reverse=True)
+    if shared_vals:
+        k = max(1, math.ceil(0.1 * len(shared_vals)))
+        threshold = shared_vals[k - 1]
+        rare = {t for t, v in idf.items() if df[t] >= 2 and v >= threshold}
         sums: dict[tuple[str, str], float] = {}
         for i, a in enumerate(rooms):
             for b in rooms[i + 1 :]:

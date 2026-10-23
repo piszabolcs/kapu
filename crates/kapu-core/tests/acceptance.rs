@@ -487,18 +487,57 @@ fn fr10_model_mismatch_falls_back_to_bm25_with_vector_unavailable() {
 }
 
 #[test]
-#[ignore = "M4: graph"]
 fn fr11_shared_rare_variable_creates_term_edge() {
-    pending("M4", "two rooms using `--turkiz` get a `term` edge");
+    use kapu_core::build::{RoomSource, build};
+    let mut rooms: Vec<RoomSource> = (0..12)
+        .map(|i| RoomSource {
+            id: format!("kitolto-{i}"),
+            content: format!(
+                "# Kitöltő {i}
+Általános szöveg a {i}. témáról, semmi különös.
+"
+            ),
+        })
+        .collect();
+    rooms.push(RoomSource {
+        id: "gomb".into(),
+        content: "# Gomb
+```css
+.btn { color: var(--turkiz); }
+```
+"
+        .into(),
+    });
+    rooms.push(RoomSource {
+        id: "fejlec".into(),
+        content: "# Fejléc
+```css
+h1 { border-color: var(--turkiz); }
+```
+"
+        .into(),
+    });
+    let built = build(&rooms).unwrap();
+    let s = kapu_core::Sections::parse(&built.bytes).unwrap();
+    assert!(
+        s.graph.lines().any(|l| l.starts_with("fejlec	gomb	term	")),
+        "{}",
+        s.graph
+    );
 }
 
 #[test]
-#[ignore = "M4: groups"]
 fn fr12_build_twice_gives_identical_groups_and_file() {
-    pending(
-        "M4",
-        "Leiden with seed 42 is deterministic; whole file identical",
+    use kapu_core::build::rebuild;
+    let data = vector("minta.kapu");
+    let once = rebuild(&data).unwrap().bytes;
+    let twice = rebuild(&once).unwrap().bytes;
+    assert_eq!(once, twice);
+    assert_eq!(
+        once, data,
+        "the Leiden grouping of the sample equals the reference"
     );
+    // with a model: see tests/determinism.rs (tiny model, golden hash on every platform)
 }
 
 #[test]

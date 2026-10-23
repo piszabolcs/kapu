@@ -150,15 +150,15 @@ Minden mérföldkő: `[ ]` feladatok → Ellenőrzés parancsai zöldek → `ALL
 - Ellenőrzés (zöld): import→export bájtra azonos; build×2 bájtra azonos; `validate --full` hibátlan; **a Rust build a `minta.kapu`-t bájtra reprodukálja**; FR-02/04/05/06/07/08/09/15(4 ajtó)/18 Acceptance tesztek zöldek
 - Mérés: `bench/REPORT.md` 1. táblázat (30/300/3000 szoba: 21 ms / 183 ms / 2,1 s build, térkép/törzs 0,26–0,27 a generált korpuszon)
 
-### M4 – Vektor, gráf, csoportok  (L)
-- [ ] Modell letöltése `models/potion-multilingual-128M/` alá (safetensors + tokenizer.json), `embhash` számítás (2.3)
-- [ ] Betöltő döntése (`model2vec-rs` vs saját) determinizmus-teszt alapján; i8 kvantált változat előállítása (`tools/distill/quantize.py`) és összevetése f32-vel (koszinusz-eltérés)
-- [ ] Vektor-gyorsítótár (2.12), kulcs: embhash + ajtó-BLAKE3
-- [ ] Élek FR-11: `link` (Markdown link parser, csak létező célra, figyelmeztetés), `term` (felső 10% IDF, 2.7 súly), `sim` (k=5, ≥0.6)
-- [ ] Leiden FR-12 saját implementációval (2.8), csoportnév (osztályszintű TF-IDF top 3), gid-sorrend, izolált szoba
-- [ ] Fejlesztői ellenőrzés: ugyanaz a gráf Python `leidenalg`-gal (venv) → modularitás egyezés ±0.01
-- Ellenőrzés: FR-10/11/12 Acceptance; build×2 bájtra azonos **vektorokkal együtt**; (GitHub után) Windows+Linux+macOS azonos `bodyhash`-sel azonos kimeneti fájl
-- Mérés: modularitás, csoportméret-eloszlás, él-darabszám típusonként 30/300/3000 szobán
+### M4 – Vektor, gráf, csoportok  (L)  — kész 2026-10-23
+- [x] Modell letöltve `models/potion-multilingual-128M/` alá (safetensors + tokenizer.json, SHA-256 a Hugging Face LFS-azonosítókkal egyezik), `embhash` (D38)
+- [x] Saját betöltő (`embed.rs`): safetensors-fejléc saját kóddal, `tokenizers` 0.22 (`fancy-regex`, hálózat és C-regex nélkül), f64 átlag (D46); a Python `model2vec`-kel 6 szövegen egyezik (D91). i8 kvantálás: a betöltő tudja, az előállítás M8/5-ben
+- [x] Vektor-gyorsítótár (`VectorCache`, D91), az olvasó M5-ben használja
+- [x] Élek FR-11: `link`, `term` (ritkasági küszöb a közös kifejezések között, D93, jóváhagyásra vár), `sim` (k=5, ≥0,6)
+- [x] Leiden FR-12 saját implementációval (`leiden.rs`, D92), csoportnév (osztályszintű TF-IDF), gid-sorrend, izolált szoba
+- [x] Fejlesztői ellenőrzés `leidenalg`-gal (`tools/leiden_check.py`): karateklub ±0,01, generált korpusz 30/300/3000 szobán a Rust nem rosszabb 0,01-nél
+- Ellenőrzés (zöld): FR-11 és FR-12 Acceptance; build×2 bájtra azonos modellel; a determinizmus-teszt egy commitolt tesztmodellel rögzített BLAKE3-at vár, a CI mindhárom platformon futtatja (D95); `validate --full` a modellel újraépít és összevet
+- Mérés: `bench/REPORT.md` 2. táblázat (modularitás 0,25 / 0,35 / 0,41; csoportok 4 / 8 / 9)
 
 ### M5 – Hibrid keresés  (M)
 - [ ] Lekérdezés-feldolgozás = index-tokenizálás; BM25 top-50; vektor top-50; RRF k=60; döntetlen → azonosító szerint

@@ -4,6 +4,25 @@ Minden commitnál frissül (TERV.md 8. fejezet). Legfrissebb bejegyzés felül.
 
 ---
 
+## 2026-10-23 – M4 kész: vektormodell, gráf, Leiden
+
+**Kész**
+- `embed.rs`: Model2Vec-betöltő (safetensors f32/i8, `tokenizers` 0.22 hálózat és C nélkül), kódolás a `model2vec` 0.10 szerint, koszinusz, modellkeresés (`KAPU_MODEL_DIR` vagy a futtatható mellett `models/<név>`), vektor-gyorsítótár. A Python `model2vec`-kel egyezik (D91).
+- `leiden.rs`: saját Leiden (lokális mozgatás, finomítás, aggregálás, 2 külső kör, D92); a `leidenalg`-gal összevetve nem rosszabb 0,01-nél.
+- `build.rs`: `build_with`/`rebuild_with` modellel: `sim` élek, Leiden-csoportok, `emb`/`embhash` a fejlécben. `validate_with`: a teljes ellenőrzés a modellel is újraépít.
+- **Spec-eltérés (D93, jóváhagyásra vár):** a `term` élek ritkasági küszöbe a közös kifejezések között számolódik, mert a spec szó szerinti szabálya soha nem ad élt. A `minta.kapu` ezért változott (új `term` él), a Rust továbbra is bájtra reprodukálja.
+- Tesztmodell a CI-hoz (`tests/model/kapu-test-tiny`), determinizmus-teszt rögzített BLAKE3-mal (D95).
+- `paste` advisory kivétel indoklással (D94). Új aggályok: A16–A20.
+- A modell (`models/`, 530 MB) letöltve, nincs gitben.
+
+**Ellenőrzés (2026-10-23, lefuttatva)**
+- `scripts/check.ps1` zöld: 55 egységteszt, 31+12+2+3 integrációs teszt (4 ignored: M5, M7, M8), deny, audit.
+- Mérés: `bench/REPORT.md` 2. táblázat.
+
+**Következő: M5 – hibrid keresés**
+
+---
+
 ## 2026-10-23 – M3 kész: build
 
 **Kész**

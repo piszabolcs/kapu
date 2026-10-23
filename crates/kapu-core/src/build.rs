@@ -10,8 +10,10 @@ use std::fmt::Write as _;
 use std::path::Path;
 
 use crate::docs::{blake3_of, strip_comments, unescape};
+use crate::embed::{Model, cosine, door_text};
 use crate::error::{Error, ErrorCode, Result};
 use crate::header::Hash;
+use crate::leiden::leiden;
 use crate::terms::{index_tokens, stems, tokens};
 use crate::text::{
     TITLE_MAX, code_fence_mask, escape, find_links, heading_title, indexed_text,
@@ -19,6 +21,11 @@ use crate::text::{
 };
 use crate::validate::is_valid_id;
 use crate::{FORMAT_VERSION, HEADER_LEN, yake};
+
+/// `sim` edges: nearest neighbours per room (FR-11/3, ASSUMPTION-06).
+pub const SIM_K: usize = 5;
+/// `sim` edges: minimum cosine similarity (FR-11/3, ASSUMPTION-06).
+pub const SIM_THRESHOLD: f64 = 0.6;
 
 /// Hard limit of a description in tokens (FR-06/2).
 pub const DESCRIPTION_MAX_TOKENS: u64 = 300;
@@ -434,10 +441,16 @@ fn term_edges(doors: &[Door]) -> Vec<EdgeRow> {
             )
         })
         .collect();
-    if idf.is_empty() {
+    // D93: the top-10% IDF threshold is taken among the terms that two or more
+    // rooms share; a term of a single room can never be a shared term
+    let mut values: Vec<f64> = idf
+        .iter()
+        .filter(|(t, _)| df.get(**t).copied().unwrap_or(0) >= 2)
+        .map(|(_, v)| *v)
+        .collect();
+    if values.is_empty() {
         return Vec::new();
     }
-    let mut values: Vec<f64> = idf.values().copied().collect();
     values.sort_by(|a, b| b.total_cmp(a));
     #[allow(
         clippy::cast_precision_loss,
@@ -448,7 +461,7 @@ fn term_edges(doors: &[Door]) -> Vec<EdgeRow> {
     let threshold = values.get(top_k - 1).copied().unwrap_or(f64::INFINITY);
     let rare: BTreeSet<&str> = idf
         .iter()
-        .filter(|&(_, v)| *v >= threshold)
+        .filter(|&(t, v)| *v >= threshold && df.get(*t).copied().unwrap_or(0) >= 2)
         .map(|(t, _)| *t)
         .collect();
 
@@ -488,10 +501,56 @@ fn term_edges(doors: &[Door]) -> Vec<EdgeRow> {
         .collect()
 }
 
+/// FR-11/3 `sim` edges: for every room its k = 5 nearest rooms by cosine
+/// similarity of the room vectors, if the similarity is at least 0.6;
+/// undirected, stored once with the smaller id first, weight = similarity.
+/// Ties in similarity go to the smaller id.
+fn sim_edges(rooms: &[(&str, Vec<f32>)]) -> Vec<EdgeRow> {
+    let mut pairs: BTreeMap<(String, String), f64> = BTreeMap::new();
+    for (i, (id, vector)) in rooms.iter().enumerate() {
+        let mut near: Vec<(f64, &str)> = rooms
+            .iter()
+            .enumerate()
+            .filter(|(j, _)| *j != i)
+            .map(|(_, (other, v))| (cosine(vector, v), *other))
+            .filter(|(sim, _)| *sim >= SIM_THRESHOLD)
+            .collect();
+        near.sort_by(|a, b| {
+            b.0.total_cmp(&a.0)
+                .then_with(|| a.1.as_bytes().cmp(b.1.as_bytes()))
+        });
+        for (sim, other) in near.into_iter().take(SIM_K) {
+            let key = if *id <= other {
+                ((*id).to_owned(), other.to_owned())
+            } else {
+                (other.to_owned(), (*id).to_owned())
+            };
+            pairs.insert(key, sim);
+        }
+    }
+    pairs
+        .into_iter()
+        .map(|((a, b), w)| (a, b, "sim", w))
+        .collect()
+}
+
 /// All edges, sorted by (source, target, type) (FR-11/5).
-fn build_graph(doors: &[Door], warnings: &mut Vec<Warning>) -> Vec<EdgeRow> {
+fn build_graph(
+    doors: &[Door],
+    vectors: Option<&[Vec<f32>]>,
+    warnings: &mut Vec<Warning>,
+) -> Vec<EdgeRow> {
     let mut edges = link_edges(doors, warnings);
     edges.extend(term_edges(doors));
+    if let Some(vectors) = vectors {
+        let rooms: Vec<(&str, Vec<f32>)> = doors
+            .iter()
+            .filter(|d| d.is_room)
+            .zip(vectors)
+            .map(|(d, v)| (d.id.as_str(), v.clone()))
+            .collect();
+        edges.extend(sim_edges(&rooms));
+    }
     edges.sort_by(|a, b| (&a.0, &a.1, a.2).cmp(&(&b.0, &b.1, b.2)));
     edges
 }
@@ -502,20 +561,12 @@ struct Group {
     rooms: Vec<usize>,
 }
 
-fn find_root(parent: &[usize], mut node: usize) -> usize {
-    while let Some(&up) = parent.get(node) {
-        if up == node {
-            break;
-        }
-        node = up;
-    }
-    node
-}
-
-/// Connected components of the room graph (sub-door endpoints projected to
-/// their room, D64), as indices into `doors`, ordered by smallest room id.
-/// D66: on the sample's graph Leiden gives the same; M4 replaces this.
-fn components(doors: &[Door], edges: &[EdgeRow]) -> Vec<Vec<usize>> {
+/// FR-12: Leiden on the room graph. Sub-door endpoints are projected to their
+/// room (D64), self-loops dropped, parallel edges summed; the weights are the
+/// ones written to `#GRAPH` (4 decimals, D92), so the grouping follows from
+/// the file alone. Returns groups as indices into `doors`, ordered by their
+/// smallest room id (FR-12/3). An edgeless graph gives one group (FR-12/4).
+fn communities(doors: &[Door], edges: &[EdgeRow]) -> Vec<Vec<usize>> {
     let room_idx: Vec<usize> = (0..doors.len())
         .filter(|&i| doors.get(i).is_some_and(|d| d.is_room))
         .collect();
@@ -524,21 +575,32 @@ fn components(doors: &[Door], edges: &[EdgeRow]) -> Vec<Vec<usize>> {
         .enumerate()
         .filter_map(|(k, &i)| doors.get(i).map(|d| (d.id.as_str(), k)))
         .collect();
-    let mut parent: Vec<usize> = (0..room_idx.len()).collect();
     let room_of = |id: &str| id.split('/').next().and_then(|r| position.get(r)).copied();
-    for (from, to, _, _) in edges {
-        if let (Some(a), Some(b)) = (room_of(from), room_of(to)) {
-            let (root_a, root_b) = (find_root(&parent, a), find_root(&parent, b));
-            if let Some(slot) = parent.get_mut(root_b).filter(|_| root_a != root_b) {
-                *slot = root_a;
-            }
+    let mut graph: BTreeMap<(usize, usize), f64> = BTreeMap::new();
+    for (from, to, _, w) in edges {
+        if let (Some(a), Some(b)) = (room_of(from), room_of(to))
+            && a != b
+        {
+            let weight: f64 = fmt_weight(*w).parse().unwrap_or(*w);
+            *graph.entry((a.min(b), a.max(b))).or_insert(0.0) += weight;
         }
     }
-    let mut comps: BTreeMap<usize, Vec<usize>> = BTreeMap::new();
-    for (k, &i) in room_idx.iter().enumerate() {
-        comps.entry(find_root(&parent, k)).or_default().push(i);
+    if graph.is_empty() {
+        return if room_idx.is_empty() {
+            Vec::new()
+        } else {
+            vec![room_idx]
+        };
     }
-    let mut ordered: Vec<Vec<usize>> = comps.into_values().collect();
+    let labels = leiden(room_idx.len(), &graph);
+    let mut groups: BTreeMap<usize, Vec<usize>> = BTreeMap::new();
+    for (k, &i) in room_idx.iter().enumerate() {
+        groups
+            .entry(labels.get(k).copied().unwrap_or(k))
+            .or_default()
+            .push(i);
+    }
+    let mut ordered: Vec<Vec<usize>> = groups.into_values().collect();
     ordered.sort_by_key(|rooms| {
         rooms
             .iter()
@@ -550,7 +612,7 @@ fn components(doors: &[Door], edges: &[EdgeRow]) -> Vec<Vec<usize>> {
     ordered
 }
 
-/// D66 group names: class-level TF-IDF `tf * (1 + ln(G / df))` over the
+// D66 group names: class-level TF-IDF `tf * (1 + ln(G / df))` over the
 /// unstemmed terms of at least 3 characters that are not all digits; the
 /// best three joined with `, `, ties in byte order.
 fn group_names(doors: &[Door], groups: &[Vec<usize>]) -> Vec<String> {
@@ -601,7 +663,7 @@ fn group_names(doors: &[Door], groups: &[Vec<usize>]) -> Vec<String> {
 }
 
 fn build_groups(doors: &mut [Door], edges: &[EdgeRow]) -> Vec<Group> {
-    let ordered = components(doors, edges);
+    let ordered = communities(doors, edges);
     let names = group_names(doors, &ordered);
     let groups: Vec<Group> = ordered
         .into_iter()
@@ -756,11 +818,13 @@ fn assemble(
     sections: [(&str, Vec<u8>); 5],
     body: &[u8],
     counts: (usize, usize, usize),
+    model: (&str, Hash),
 ) -> Result<Vec<u8>> {
     let (rooms, doors, groups) = counts;
+    let (emb, embhash) = model;
     let mut header = format!(
-        "%KAPU {FORMAT_VERSION}\neol=LF\nenc=UTF-8\ntok=o200k_base\nemb={NO_MODEL}\nembhash=b3:{}\n",
-        hex(&blake3_of(b""))
+        "%KAPU {FORMAT_VERSION}\neol=LF\nenc=UTF-8\ntok=o200k_base\nemb={emb}\nembhash=b3:{}\n",
+        hex(&embhash)
     );
     let mut pos = HEADER_LEN;
     for (name, bytes) in &sections {
@@ -794,6 +858,16 @@ fn assemble(
 /// characters in a room (with room, line and column), E002 if the header
 /// overflows 512 bytes (D39).
 pub fn build(rooms: &[RoomSource]) -> Result<Built> {
+    build_with(rooms, None)
+}
+
+/// Builds with a vector model (FR-10/2): `sim` edges from the room vectors
+/// and the model's name and fingerprint in the header (D29, D38). Without a
+/// model this is [`build`] (D57).
+///
+/// # Errors
+/// As [`build`], plus a tokenizer failure (E005).
+pub fn build_with(rooms: &[RoomSource], model: Option<&Model>) -> Result<Built> {
     let mut warnings = Vec::new();
     let mut seen = BTreeSet::new();
     for room in rooms {
@@ -812,7 +886,17 @@ pub fn build(rooms: &[RoomSource]) -> Result<Built> {
         check_content(room, &mut warnings)?;
     }
     let (mut doors, body) = build_doors(rooms)?;
-    let edges = build_graph(&doors, &mut warnings);
+    let vectors: Option<Vec<Vec<f32>>> = match model {
+        Some(m) => Some(
+            doors
+                .iter()
+                .filter(|d| d.is_room)
+                .map(|d| m.embed(&door_text(&d.title, &d.description, &d.served)))
+                .collect::<Result<_>>()?,
+        ),
+        None => None,
+    };
+    let edges = build_graph(&doors, vectors.as_deref(), &mut warnings);
     let groups = build_groups(&mut doors, &edges);
     let graph: Vec<String> = edges
         .iter()
@@ -826,7 +910,8 @@ pub fn build(rooms: &[RoomSource]) -> Result<Built> {
         ("docs", section("DOCS", &docs_lines(&doors))),
     ];
     let counts = (rooms.len(), doors.len(), groups.len());
-    let bytes = assemble(sections, &body, counts)?;
+    let model_id = model.map_or((NO_MODEL, blake3_of(b"")), |m| (m.name(), m.hash()));
+    let bytes = assemble(sections, &body, counts, model_id)?;
     Ok(Built { bytes, warnings })
 }
 
@@ -837,9 +922,17 @@ pub fn build(rooms: &[RoomSource]) -> Result<Built> {
 /// # Errors
 /// A broken header or layout, or any [`build`] error.
 pub fn rebuild(file: &[u8]) -> Result<Built> {
+    rebuild_with(file, None)
+}
+
+/// [`rebuild`] with a vector model (or without, `None`).
+///
+/// # Errors
+/// As [`rebuild`] and [`build_with`].
+pub fn rebuild_with(file: &[u8], model: Option<&Model>) -> Result<Built> {
     let s =
         crate::Sections::parse_with(file, &crate::Limits::default(), crate::BodyLength::Tolerate)?;
-    build(&parse_body(s.body)?)
+    build_with(&parse_body(s.body)?, model)
 }
 
 /// A free room id for a new room (FR-04/4): the slug of its title, with

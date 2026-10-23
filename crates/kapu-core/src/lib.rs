@@ -19,8 +19,10 @@ pub mod build;
 pub mod catalog;
 pub mod docs;
 pub mod edit;
+pub mod embed;
 pub mod error;
 pub mod header;
+pub mod leiden;
 pub mod reader;
 pub mod search;
 pub mod sections;
@@ -36,7 +38,7 @@ pub use reader::{
     Described, Neighbour, Opened, OpenedDoor, describe_bytes, frame, open_bytes, open_path,
 };
 pub use sections::{BodyLength, Limits, Sections};
-pub use validate::{Level, Report, is_valid_id, validate};
+pub use validate::{Level, Report, is_valid_id, validate, validate_with};
 
 /// Format version written on the first header line (`%KAPU 1.0`, FR-03).
 pub const FORMAT_VERSION: &str = "1.0";
