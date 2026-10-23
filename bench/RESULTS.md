@@ -137,7 +137,7 @@ An earlier run on a mixed English and Hungarian corpus (REPORT.md chapters 5-8) 
 - No baselines yet: full-context reading where it fits, chunk-based RAG, `grep`-style agentic file search and `llms.txt`.
 - One machine, one vector model, one agent model (Claude Sonnet), ten live questions.
 - The wrapper of the live run starts a new server for every call, so the guide and the content-scan notes appear more often than in a real session. Token counts are therefore slightly high.
-- Some labels in the tool output are still Hungarian ("szomszédok", "alajtó"); an English rendering is planned.
+- The runs used specification v1.0.2, whose tool output still had a few Hungarian labels ("szomszédok", "alajtó"); since v1.0.3 all agent-facing output is English.
 
 ## 8. Reproduce
 

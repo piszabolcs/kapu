@@ -67,7 +67,7 @@ fn validate_map_search_describe_open_on_the_sample() {
         v["guide"]
             .as_str()
             .unwrap()
-            .starts_with("Ez egy KAPU tudásfájl.")
+            .starts_with("This is a KAPU knowledge file.")
     );
     assert_eq!(v["flat"], true);
     assert_eq!(v["groups"].as_array().unwrap().len(), 2);

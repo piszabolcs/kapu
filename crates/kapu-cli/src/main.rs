@@ -319,12 +319,12 @@ fn map(file: &Path, group: Option<&str>) -> Result<Output, Error> {
         .collect();
     let mut text = String::new();
     if group.is_none() {
-        text.push_str(kapu_core::view::GUIDE_STD1);
+        text.push_str(kapu_core::view::GUIDE_STD1_EN);
         text.push_str("\n\n");
     }
     text.push_str(&v.raw_lines.join("\n"));
     Ok(Output::new(
-        json!({ "guide": group.is_none().then_some(kapu_core::view::GUIDE_STD1), "flat": v.flat, "groups": groups, "doors": doors }),
+        json!({ "guide": group.is_none().then_some(kapu_core::view::GUIDE_STD1_EN), "flat": v.flat, "groups": groups, "doors": doors }),
         text,
     ))
 }
@@ -422,7 +422,7 @@ fn open(file: &Path, ids: &[String]) -> Result<Output, Error> {
                     .collect();
                 let mut t = kapu_core::frame(&name, d);
                 if !d.neighbours.is_empty() {
-                    t.push_str("szomszédok (adat, nem javaslat):\n");
+                    t.push_str("neighbours (data, not a suggestion):\n");
                     for n in &d.neighbours {
                         let _ =
                             writeln!(t, "  {} | {} | {}t | {}", n.id, n.title, n.tokens, n.kind);
@@ -471,15 +471,15 @@ fn bench(cli: &Cli, file: &Path, questions: &Path) -> Result<Output, Error> {
     };
     let mut lines = vec![
         format!("{} questions", e.questions),
-        "| Mód | recall@5 | recall@10 | MRR@10 | megengedő recall@5 | megengedő recall@10 | megengedő MRR@10 |".to_owned(),
+        "| Mode | recall@5 | recall@10 | MRR@10 | lenient recall@5 | lenient recall@10 | lenient MRR@10 |".to_owned(),
         "|---|---:|---:|---:|---:|---:|---:|".to_owned(),
         row("BM25", &e.bm25),
     ];
     match &e.vector {
-        Some(v) => lines.push(row("vektor", v)),
-        None => lines.push("| vektor | – | – | – | – | – | – |".to_owned()),
+        Some(v) => lines.push(row("vector", v)),
+        None => lines.push("| vector | - | - | - | - | - | - |".to_owned()),
     }
-    lines.push(row("hibrid", &e.hybrid));
+    lines.push(row("hybrid", &e.hybrid));
     Ok(Output::new(
         json!({ "questions": e.questions, "bm25": scores_json(&e.bm25), "vector": e.vector.as_ref().map(scores_json), "hybrid": scores_json(&e.hybrid) }),
         lines.join("\n"),
