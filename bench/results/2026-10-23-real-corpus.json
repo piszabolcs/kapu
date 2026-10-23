@@ -1,0 +1,449 @@
+{
+ "date": "2026-10-23",
+ "machine": "Windows 11 Pro, release build (lto, codegen-units=1)",
+ "model": "potion-multilingual-128M-i8",
+ "corpus": {
+  "description": "Claude skills installed on the author's machine (217 rooms) and 34 frontend sample rooms (28 English, 6 Hungarian); the corpus itself is not published",
+  "rooms": 251,
+  "doors": 1960,
+  "groups": 10,
+  "source_markdown_characters": 2366350,
+  "body_characters": 2379043,
+  "body_tokens": 579794,
+  "file_bytes": 33392880,
+  "file_tokens": 9961477,
+  "index_share_of_file_bytes": 0.897,
+  "build_seconds": 4.76,
+  "second_build_byte_identical": true
+ },
+ "map_tokens": {
+  "first_call_with_guide": 762,
+  "later_call": 205,
+  "group_lists": [
+   {
+    "group": "g1",
+    "name": "the, and, css",
+    "rooms": 31,
+    "tokens": 5741
+   },
+   {
+    "group": "g2",
+    "name": "the, and, color",
+    "rooms": 27,
+    "tokens": 6849
+   },
+   {
+    "group": "g3",
+    "name": "motion, the, node",
+    "rooms": 11,
+    "tokens": 2609
+   },
+   {
+    "group": "g4",
+    "name": "the, and, superpowers",
+    "rooms": 32,
+    "tokens": 3472
+   },
+   {
+    "group": "g5",
+    "name": "the, skill, and",
+    "rooms": 32,
+    "tokens": 7489
+   },
+   {
+    "group": "g6",
+    "name": "the, and, pdf",
+    "rooms": 17,
+    "tokens": 4725
+   },
+   {
+    "group": "g7",
+    "name": "the, and, server",
+    "rooms": 22,
+    "tokens": 4863
+   },
+   {
+    "group": "g8",
+    "name": "figma, the, node",
+    "rooms": 50,
+    "tokens": 15756
+   },
+   {
+    "group": "g9",
+    "name": "the, diagram, figma",
+    "rooms": 9,
+    "tokens": 3903
+   },
+   {
+    "group": "g10",
+    "name": "text, the, figma",
+    "rooms": 20,
+    "tokens": 5910
+   }
+  ]
+ },
+ "retrieval": {
+  "questions_file": "118 questions, 60 Hungarian and 58 English, written with knowledge of the content",
+  "metrics": {
+   "all": {
+    "questions": 118,
+    "bm25": {
+     "lenient_mrr@10": 0.4594,
+     "lenient_recall@10": 0.6102,
+     "lenient_recall@5": 0.5593,
+     "mrr@10": 0.397,
+     "recall@10": 0.5763,
+     "recall@5": 0.5085
+    },
+    "vector": {
+     "lenient_mrr@10": 0.3642,
+     "lenient_recall@10": 0.6017,
+     "lenient_recall@5": 0.5085,
+     "mrr@10": 0.3434,
+     "recall@10": 0.5508,
+     "recall@5": 0.4915
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.4633,
+     "lenient_recall@10": 0.678,
+     "lenient_recall@5": 0.6102,
+     "mrr@10": 0.4196,
+     "recall@10": 0.6525,
+     "recall@5": 0.5763
+    }
+   },
+   "english": {
+    "questions": 58,
+    "bm25": {
+     "lenient_mrr@10": 0.7723,
+     "lenient_recall@10": 0.931,
+     "lenient_recall@5": 0.9138,
+     "mrr@10": 0.6568,
+     "recall@10": 0.8793,
+     "recall@5": 0.8103
+    },
+    "vector": {
+     "lenient_mrr@10": 0.4859,
+     "lenient_recall@10": 0.7069,
+     "lenient_recall@5": 0.6379,
+     "mrr@10": 0.4575,
+     "recall@10": 0.6379,
+     "recall@5": 0.6034
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.6807,
+     "lenient_recall@10": 0.8793,
+     "lenient_recall@5": 0.8621,
+     "mrr@10": 0.6197,
+     "recall@10": 0.8621,
+     "recall@5": 0.8103
+    }
+   },
+   "hungarian": {
+    "questions": 60,
+    "bm25": {
+     "lenient_mrr@10": 0.157,
+     "lenient_recall@10": 0.3,
+     "lenient_recall@5": 0.2167,
+     "mrr@10": 0.1459,
+     "recall@10": 0.2833,
+     "recall@5": 0.2167
+    },
+    "vector": {
+     "lenient_mrr@10": 0.2465,
+     "lenient_recall@10": 0.5,
+     "lenient_recall@5": 0.3833,
+     "mrr@10": 0.2331,
+     "recall@10": 0.4667,
+     "recall@5": 0.3833
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.2531,
+     "lenient_recall@10": 0.4833,
+     "lenient_recall@5": 0.3667,
+     "mrr@10": 0.2262,
+     "recall@10": 0.45,
+     "recall@5": 0.35
+    }
+   },
+   "skills": {
+    "questions": 50,
+    "bm25": {
+     "lenient_mrr@10": 0.4106,
+     "lenient_recall@10": 0.66,
+     "lenient_recall@5": 0.54,
+     "mrr@10": 0.3773,
+     "recall@10": 0.62,
+     "recall@5": 0.48
+    },
+    "vector": {
+     "lenient_mrr@10": 0.4307,
+     "lenient_recall@10": 0.66,
+     "lenient_recall@5": 0.6,
+     "mrr@10": 0.3907,
+     "recall@10": 0.6,
+     "recall@5": 0.56
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.4768,
+     "lenient_recall@10": 0.74,
+     "lenient_recall@5": 0.64,
+     "mrr@10": 0.4268,
+     "recall@10": 0.72,
+     "recall@5": 0.6
+    }
+   },
+   "frontend": {
+    "questions": 68,
+    "bm25": {
+     "lenient_mrr@10": 0.4953,
+     "lenient_recall@10": 0.5735,
+     "lenient_recall@5": 0.5735,
+     "mrr@10": 0.4115,
+     "recall@10": 0.5441,
+     "recall@5": 0.5294
+    },
+    "vector": {
+     "lenient_mrr@10": 0.3153,
+     "lenient_recall@10": 0.5588,
+     "lenient_recall@5": 0.4412,
+     "mrr@10": 0.3086,
+     "recall@10": 0.5147,
+     "recall@5": 0.4412
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.4533,
+     "lenient_recall@10": 0.6324,
+     "lenient_recall@5": 0.5882,
+     "mrr@10": 0.4143,
+     "recall@10": 0.6029,
+     "recall@5": 0.5588
+    }
+   },
+   "room-target": {
+    "questions": 86,
+    "bm25": {
+     "lenient_mrr@10": 0.4517,
+     "lenient_recall@10": 0.6163,
+     "lenient_recall@5": 0.5581,
+     "mrr@10": 0.4517,
+     "recall@10": 0.6163,
+     "recall@5": 0.5581
+    },
+    "vector": {
+     "lenient_mrr@10": 0.3652,
+     "lenient_recall@10": 0.593,
+     "lenient_recall@5": 0.5465,
+     "mrr@10": 0.3652,
+     "recall@10": 0.593,
+     "recall@5": 0.5465
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.4735,
+     "lenient_recall@10": 0.6977,
+     "lenient_recall@5": 0.6279,
+     "mrr@10": 0.4735,
+     "recall@10": 0.6977,
+     "recall@5": 0.6279
+    }
+   },
+   "section-target": {
+    "questions": 32,
+    "bm25": {
+     "lenient_mrr@10": 0.4802,
+     "lenient_recall@10": 0.5938,
+     "lenient_recall@5": 0.5625,
+     "mrr@10": 0.2501,
+     "recall@10": 0.4688,
+     "recall@5": 0.375
+    },
+    "vector": {
+     "lenient_mrr@10": 0.3615,
+     "lenient_recall@10": 0.625,
+     "lenient_recall@5": 0.4062,
+     "mrr@10": 0.2849,
+     "recall@10": 0.4375,
+     "recall@5": 0.3438
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.4358,
+     "lenient_recall@10": 0.625,
+     "lenient_recall@5": 0.5625,
+     "mrr@10": 0.2747,
+     "recall@10": 0.5312,
+     "recall@5": 0.4375
+    }
+   }
+  }
+ },
+ "mcp": {
+  "initialize_ms": 140.0,
+  "map": {
+   "ms": {
+    "n": 5,
+    "median": 80.6,
+    "p90": 85.1,
+    "max": 85.1
+   },
+   "tokens": 205
+  },
+  "map_group_g1": {
+   "ms": 70.9,
+   "tokens": 5740,
+   "error": false
+  },
+  "search_first_ms": 1289.7,
+  "search": {
+   "ms": {
+    "n": 117,
+    "median": 138.2,
+    "p90": 140.7,
+    "max": 150.5
+   },
+   "tokens": {
+    "n": 117,
+    "median": 178,
+    "p90": 220,
+    "max": 240
+   }
+  },
+  "open": {
+   "ms": {
+    "n": 25,
+    "median": 71.4,
+    "p90": 74.8,
+    "max": 76.4
+   },
+   "tokens": {
+    "n": 25,
+    "median": 1739,
+    "p90": 2877,
+    "max": 6209
+   }
+  },
+  "describe": {
+   "ms": {
+    "n": 25,
+    "median": 69.6,
+    "p90": 71.8,
+    "max": 80.4
+   },
+   "tokens": {
+    "n": 25,
+    "median": 53,
+    "p90": 104,
+    "max": 108
+   }
+  }
+ },
+ "live_evaluation": {
+  "agents": "5 Claude Sonnet agents, 2 questions each, only the KAPU MCP read tools (tools/kapu_mcp_call.py)",
+  "correct": 10,
+  "questions": 10,
+  "rows": [
+   {
+    "question": 1,
+    "topic": "design reference: button colour",
+    "correct": true,
+    "tool_calls": [
+     "kapu_search",
+     "kapu_search",
+     "kapu_map",
+     "kapu_search",
+     "kapu_open"
+    ],
+    "response_tokens": 2142
+   },
+   {
+    "question": 2,
+    "topic": "debugging: phase before a fix",
+    "correct": true,
+    "tool_calls": [
+     "kapu_search",
+     "kapu_open"
+    ],
+    "response_tokens": 3033
+   },
+   {
+    "question": 3,
+    "topic": "spreadsheet formula check script",
+    "correct": true,
+    "tool_calls": [
+     "kapu_search",
+     "kapu_open"
+    ],
+    "response_tokens": 712
+   },
+   {
+    "question": 4,
+    "topic": "MCP pagination default",
+    "correct": true,
+    "tool_calls": [
+     "kapu_search",
+     "kapu_open"
+    ],
+    "response_tokens": 2358
+   },
+   {
+    "question": 5,
+    "topic": "README badge limit",
+    "correct": true,
+    "tool_calls": [
+     "kapu_search",
+     "kapu_open"
+    ],
+    "response_tokens": 2335
+   },
+   {
+    "question": 6,
+    "topic": "the one Hungarian skill",
+    "correct": true,
+    "tool_calls": [
+     "kapu_map",
+     "kapu_map",
+     "kapu_describe"
+    ],
+    "response_tokens": 8788
+   },
+   {
+    "question": 7,
+    "topic": "total number of rooms",
+    "correct": true,
+    "tool_calls": [
+     "kapu_map",
+     "kapu_map"
+    ],
+    "response_tokens": 5061
+   },
+   {
+    "question": 8,
+    "topic": "anchor positioning: browser version",
+    "correct": true,
+    "tool_calls": [
+     "kapu_search",
+     "kapu_open"
+    ],
+    "response_tokens": 686
+   },
+   {
+    "question": 9,
+    "topic": "scheduler.yield(): missing browser",
+    "correct": true,
+    "tool_calls": [
+     "kapu_search",
+     "kapu_open"
+    ],
+    "response_tokens": 493
+   },
+   {
+    "question": 10,
+    "topic": "Hungarian question: AbortController room",
+    "correct": true,
+    "tool_calls": [
+     "kapu_search"
+    ],
+    "response_tokens": 221
+   }
+  ]
+ }
+}

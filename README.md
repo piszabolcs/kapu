@@ -56,6 +56,22 @@ KAPU packs the Markdown into one text file with a map of "doors" (rooms and thei
   </tr>
 </table>
 
+## Measurements
+
+On a local test corpus of 251 rooms (the Claude skills installed on the author's machine plus 34 frontend sample rooms; 2.4 million characters, about 580,000 tokens of Markdown), measured on 2026-10-23:
+
+| What | Result |
+|---|---|
+| Answering one question through the MCP tools (live run, median) | about 2,200 tokens, instead of reading 580,000 |
+| Live run: Claude agents that could only use the KAPU tools | 10 of 10 questions answered correctly |
+| One map call / one search with 5 hits | 205 / 178 tokens |
+| Search / open on the MCP server (median) | 138 ms / 71 ms |
+| Hybrid recall@10, English questions | 0.86 |
+| Hybrid recall@10, Hungarian questions on mostly English text | 0.45 (the open problem: cross-lingual retrieval) |
+| Build with the vector model / second build | 4.8 s / byte-identical |
+
+The `.kapu` file itself is 33 MB; about 90% of it is the search index, which the tools read and an agent never does. Method and every table: [bench/REPORT.md](bench/REPORT.md) (Hungarian); raw numbers: [bench/results/2026-10-23-real-corpus.json](bench/results/2026-10-23-real-corpus.json). The questions were written with knowledge of the content, so these are first measurements, not a benchmark.
+
 ## Architecture
 
 ```mermaid
@@ -219,6 +235,22 @@ A KAPU a Markdownt egyetlen szövegfájlba csomagolja. Ebben van az „ajtók”
 ### Képernyőképek
 
 A képek a fenti angol részben vannak: [Screenshots](#screenshots). Sorrendben: a szoba nézet, a hibrid keresés, a gráf, a teljes ellenőrzés, az aláírás mögötti app-info kártya, a világos téma és a parancssor.
+
+### Mérések
+
+Egy 251 szobás helyi próbakorpuszon (a szerző gépén telepített Claude-skillek és 34 frontend-mintakód-szoba; 2,4 millió karakter, kb. 580 000 token Markdown), 2026-10-23-án:
+
+| Mi | Eredmény |
+|---|---|
+| Egy kérdés megválaszolása az MCP eszközökkel (élő próba, medián) | kb. 2 200 token, 580 000 elolvasása helyett |
+| Élő próba: csak a KAPU eszközeit használó Claude-ügynökök | 10 kérdésből 10 helyes |
+| Egy térképhívás / egy 5 találatos keresés | 205 / 178 token |
+| Keresés / kinyitás az MCP szerveren (medián) | 138 ms / 71 ms |
+| Hibrid recall@10, angol kérdések | 0,86 |
+| Hibrid recall@10, magyar kérdés főleg angol szövegre | 0,45 (a nyitott kérdés: nyelvközi keresés) |
+| Build a vektormodellel / második build | 4,8 s / bájtra azonos |
+
+Maga a `.kapu` fájl 33 MB, ennek kb. 90%-a a keresőindex, amelyet az eszközök olvasnak, az ügynök soha. Módszer és minden táblázat: [bench/REPORT.md](bench/REPORT.md), nyers számok: [bench/results/2026-10-23-real-corpus.json](bench/results/2026-10-23-real-corpus.json). A kérdéseket a tartalom ismeretében írtuk, ezért ezek első mérések, nem benchmark.
 
 ### Architektúra
 
