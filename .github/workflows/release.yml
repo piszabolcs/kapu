@@ -31,11 +31,23 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      # The packages are cached: the runner's apt mirror can be very slow (D119).
+      - name: Linux webview libraries (cache)
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: ~/apt-cache
+          key: apt-webkit2gtk-4.1-${{ runner.os }}-v1
       - name: Linux webview libraries
         if: runner.os == 'Linux'
+        timeout-minutes: 25
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
+          mkdir -p ~/apt-cache/partial
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev librsvg2-dev
+          sudo apt-get install -y --no-install-recommends -o Dir::Cache::Archives="$HOME/apt-cache" libwebkit2gtk-4.1-dev libxdo-dev libssl-dev librsvg2-dev
+          sudo chown -R "$USER" ~/apt-cache
       - run: rustup show
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release --locked -p kapu-cli -p kapu-mcp -p kapu-gui --bins
