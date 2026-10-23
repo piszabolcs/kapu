@@ -12,6 +12,11 @@ Készült: `kapu-core/src/sections.rs`: a fejléc pozíciói alapján kijelöli 
 Döntés: a szakaszok kölcsönzött szeletek (`&str`, `&[u8]`), nem másolatok; két mód a törzshosszra (szigorú a validátornak, toleráns az olvasónak, D70); a korlátok túllépése E005 (D69).
 Fogalmak: szelet és kölcsönzés (lifetime), bájtszintű és karakterszintű ellenőrzés, bidi vezérlőkarakterek, parserkorlátok
 
+## 2026-10-23 | M2 3. lépés: ajtók olvasása, escape, BLAKE3
+Készült: `kapu-core/src/docs.rs`: a `#DOCS` sorainak beolvasása, egy ajtó tárolt bájtjainak kivágása a törzsből, BLAKE3 ellenőrzés (E006, E007), az escape visszafejtése és a megjegyzések eltávolítása; 5 egységteszt, 3 elfogadási teszt, köztük a minta mind a 7 ajtójának kiszolgált szövege a Python referencia ellen.
+Döntés: az első külső függőség a hivatalos `blake3` crate (D73); a hibás `#DOCS` sor E005 (D72); a hash-parser a fejléccel közös, csak a hibakódot kapja paraméterként.
+Fogalmak: kriptográfiai ujjlenyomat (BLAKE3), referencia-implementáció elleni teszt (differential testing), let-else
+
 ## Fogalomtár
 
 - **Result és a `?` operátor:** a Rust hibakezelése kivétel nélkül: a függvény `Ok(érték)`-et vagy `Err(hiba)`-t ad vissza. A `?` hibánál azonnal visszatér a hívóhoz, sikernél kicsomagolja az értéket.
@@ -24,3 +29,6 @@ Fogalmak: szelet és kölcsönzés (lifetime), bájtszintű és karakterszintű 
 - **Bájtszintű és karakterszintű ellenőrzés:** a CR, NUL és a C0 vezérlők egyetlen bájtból állnak, ezért dekódolás nélkül, bájtonként kereshetők. A bidi és a láthatatlan karakterek többbájtos UTF-8 sorozatok, ezekhez előbb `str`-re kell dekódolni, és `char`-onként vizsgálni.
 - **Bidi vezérlőkarakterek:** U+202A..U+202E és U+2066..U+2069 megfordítják a szöveg megjelenített irányát. Kódban ezzel el lehet rejteni, hogy egy sor valójában mit csinál („Trojan Source”), ezért a formátum tiltja őket.
 - **Parserkorlátok (NFR-01):** felső határ a szakaszméretre és a sorhosszra, amit a parser a memóriafoglalás és a beolvasás előtt ellenőriz. Egy hamis fejléc így nem kényszerítheti a programot gigabájtos foglalásra.
+- **Kriptográfiai ujjlenyomat (BLAKE3):** egy bájtsorból képzett 256 bites érték; egyetlen bit változása is teljesen más kivonatot ad, és gyakorlatilag lehetetlen két különböző bemenetet találni ugyanazzal a kivonattal. A KAPU sérülésészlelésre használja (D16), nem aláírásra.
+- **Referencia-implementáció elleni teszt (differential testing):** ugyanazt a bemenetet két független implementáció dolgozza fel (itt a Python `build_vectors.py` és a Rust olvasó), és a kimeneteknek bájtra egyezniük kell. Olyan hibákat fog meg, amelyekre külön-külön senki nem írt volna tesztet.
+- **let-else:** `let Some(x) = kifejezés else { return ...; };` alak: ha a minta illeszkedik, a változók élnek tovább, ha nem, az `else` ág kötelezően kilép. Sok egymásba ágyazott `match` helyett lapos hibakezelést ad.

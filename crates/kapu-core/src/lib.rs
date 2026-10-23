@@ -15,10 +15,12 @@
     )
 )]
 
+pub mod docs;
 pub mod error;
 pub mod header;
 pub mod sections;
 
+pub use docs::{DocEntry, blake3_of, served_text, strip_comments, unescape};
 pub use error::{Error, ErrorCode, Result};
 pub use header::{Hash, Header, Span};
 pub use sections::{BodyLength, Limits, Sections};

@@ -171,7 +171,7 @@ impl Header {
         }
         let header = Self {
             emb: take(&mut kv, "emb")?,
-            embhash: parse_hash("embhash", &take(&mut kv, "embhash")?)?,
+            embhash: parse_hash("embhash", &take(&mut kv, "embhash")?, ErrorCode::E002)?,
             map: parse_span("map", &take_span(&mut kv, "map")?)?,
             desc: parse_span("desc", &take_span(&mut kv, "desc")?)?,
             graph: parse_span("graph", &take_span(&mut kv, "graph")?)?,
@@ -181,7 +181,7 @@ impl Header {
             rooms: parse_count("rooms", &take(&mut kv, "rooms")?)?,
             doors: parse_count("doors", &take(&mut kv, "doors")?)?,
             groups: parse_count("groups", &take(&mut kv, "groups")?)?,
-            bodyhash: parse_hash("bodyhash", &take(&mut kv, "bodyhash")?)?,
+            bodyhash: parse_hash("bodyhash", &take(&mut kv, "bodyhash")?, ErrorCode::E002)?,
             guide: take(&mut kv, "guide")?,
             extra: kv,
         };
@@ -221,7 +221,7 @@ fn take_span(kv: &mut BTreeMap<String, String>, key: &str) -> Result<String> {
 }
 
 /// Strict decimal: ASCII digits only, no sign, no leading zero (except `0`).
-fn parse_decimal(text: &str) -> Option<u64> {
+pub(crate) fn parse_decimal(text: &str) -> Option<u64> {
     let canonical = !text.is_empty()
         && text.bytes().all(|b| b.is_ascii_digit())
         && (text == "0" || !text.starts_with('0'));
@@ -250,7 +250,8 @@ fn parse_count(key: &str, value: &str) -> Result<u64> {
 }
 
 /// Parses `b3:<64 lowercase hex>`. Another prefix is E011, a bad digest E002.
-fn parse_hash(key: &str, value: &str) -> Result<Hash> {
+/// `malformed` is the code for a bad digest: E002 in the header, E005 in `#DOCS`.
+pub(crate) fn parse_hash(key: &str, value: &str, malformed: ErrorCode) -> Result<Hash> {
     let (prefix, hex) = value.split_once(':').ok_or_else(|| {
         err(
             ErrorCode::E011,
@@ -263,12 +264,7 @@ fn parse_hash(key: &str, value: &str) -> Result<Hash> {
             format!("`{key}` uses unknown hash prefix `{prefix}:`"),
         ));
     }
-    let bad = || {
-        err(
-            ErrorCode::E002,
-            format!("`{key}` is not 64 lowercase hex digits"),
-        )
-    };
+    let bad = || err(malformed, format!("`{key}` is not 64 lowercase hex digits"));
     if hex.len() != 64 {
         return Err(bad());
     }

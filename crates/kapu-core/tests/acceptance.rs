@@ -159,8 +159,57 @@ fn e005_section_span_mismatch() {
     let err = kapu_core::Sections::parse(&vector("E005-span.kapu")).unwrap_err();
     assert_eq!(err.code.as_str(), "E005", "{err}");
 }
-error_code_test!(e006_bodyhash_mismatch, "E006-bodyhash.kapu", "E006");
-error_code_test!(e007_door_fingerprint_mismatch, "E007-doorhash.kapu", "E007");
+#[test]
+fn e006_bodyhash_mismatch() {
+    // M2 step 3: sections parse, the body fingerprint does not.
+    let data = vector("E006-bodyhash.kapu");
+    let s = kapu_core::Sections::parse(&data).unwrap();
+    assert_eq!(s.check_bodyhash().unwrap_err().code.as_str(), "E006");
+}
+#[test]
+fn e007_door_fingerprint_mismatch() {
+    // M2 step 3: exactly the door named in expected.json fails, the rest read fine.
+    let data = vector("E007-doorhash.kapu");
+    let bad = expected()["E007-doorhash.kapu"]["door"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    let s = kapu_core::Sections::parse(&data).unwrap();
+    s.check_bodyhash().unwrap();
+    for entry in s.doc_entries().unwrap() {
+        let result = s.stored(&entry);
+        if entry.id == bad {
+            assert_eq!(result.unwrap_err().code.as_str(), "E007");
+        } else {
+            assert!(result.is_ok(), "{}", entry.id);
+        }
+    }
+}
+
+#[test]
+fn every_door_of_the_sample_reads_and_serves_the_expected_text() {
+    let data = vector("minta.kapu");
+    let s = kapu_core::Sections::parse(&data).unwrap();
+    s.check_bodyhash().unwrap();
+    let exp = expected();
+    let doors = exp["minta.kapu"]["doors"].as_array().unwrap();
+    let entries = s.doc_entries().unwrap();
+    assert_eq!(entries.len(), doors.len());
+    for want in doors {
+        let id = want["id"].as_str().unwrap();
+        let entry = entries.iter().find(|e| e.id == id).unwrap();
+        assert_eq!(entry.span.start, want["offset"].as_u64().unwrap(), "{id}");
+        assert_eq!(entry.span.len, want["length"].as_u64().unwrap(), "{id}");
+        let stored = s.stored(entry).unwrap();
+        let served = kapu_core::served_text(stored).unwrap();
+        assert_eq!(served, want["served"].as_str().unwrap(), "{id}");
+        assert_eq!(
+            entry.chars,
+            u64::try_from(served.chars().count()).unwrap(),
+            "{id}"
+        );
+    }
+}
 error_code_test!(e008_invalid_identifier, "E008-id.kapu", "E008");
 error_code_test!(e009_dangling_reference, "E009-dangling.kapu", "E009");
 error_code_test!(e010_caption_over_hard_limit, "E010-caption.kapu", "E010");
