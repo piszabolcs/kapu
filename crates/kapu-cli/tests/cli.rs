@@ -233,3 +233,26 @@ fn bench_reports_recall_and_mrr() {
     assert!(v["bm25"]["lenient_recall@10"].as_f64().unwrap() > 0.99);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn version_prints_the_info_card_and_help_ends_with_the_signature() {
+    let run = |arg: &str| {
+        let out = Command::new(env!("CARGO_BIN_EXE_kapu"))
+            .arg(arg)
+            .output()
+            .expect("kapu runs");
+        assert!(out.status.success(), "{arg} fails");
+        String::from_utf8(out.stdout).expect("UTF-8 output")
+    };
+    let signature = kapu_core::about::SIGNATURE;
+    let card = run("--version");
+    assert!(card.starts_with(&format!("kapu {}", kapu_core::about::version_line())));
+    assert!(card.contains("Repositories"));
+    assert_eq!(card.trim_end().lines().last(), Some(signature));
+    assert_eq!(
+        run("-V").trim_end(),
+        format!("kapu {}", kapu_core::about::VERSION)
+    );
+    // Not a terminal, so clap strips the dim style.
+    assert_eq!(run("--help").trim_end().lines().last(), Some(signature));
+}

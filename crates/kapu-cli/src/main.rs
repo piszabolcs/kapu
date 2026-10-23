@@ -10,7 +10,9 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Instant;
 
-use clap::{Parser, Subcommand};
+use clap::builder::styling::{Effects, Style};
+use clap::{CommandFactory, FromArgMatches, Parser, Subcommand};
+use kapu_core::about;
 use kapu_core::build::{Built, Warning, rebuild_with, write_atomic};
 use kapu_core::embed::{DEFAULT_MODEL, Model, VectorCache, find_default_model_dir, find_model_dir};
 use kapu_core::search::{SearchOptions, VectorStatus};
@@ -484,8 +486,19 @@ fn bench(cli: &Cli, file: &Path, questions: &Path) -> Result<Output, Error> {
     ))
 }
 
+/// Parses the command line; `--version` prints the app info card and `--help`
+/// ends with the author signature.
+fn parse_cli() -> Cli {
+    let dim = Style::new().effects(Effects::DIMMED);
+    let matches = Cli::command()
+        .long_version(about::card())
+        .after_help(format!("{dim}{}{dim:#}", about::SIGNATURE))
+        .get_matches();
+    Cli::from_arg_matches(&matches).unwrap_or_else(|e| e.exit())
+}
+
 fn main() -> ExitCode {
-    let cli = Cli::parse();
+    let cli = parse_cli();
     let start = Instant::now();
     let result = run(&cli);
     let elapsed = start.elapsed().as_secs_f64() * 1000.0;

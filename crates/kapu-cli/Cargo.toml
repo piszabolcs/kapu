@@ -14,7 +14,7 @@ path = "src/main.rs"
 
 [dependencies]
 kapu-core = { path = "../kapu-core" }
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "string"] }
 serde_json = "1"
 
 [lints]

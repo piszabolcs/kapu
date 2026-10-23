@@ -15,6 +15,7 @@
     )
 )]
 
+pub mod about;
 pub mod build;
 pub mod catalog;
 pub mod docs;

@@ -338,7 +338,12 @@ impl KapuServer {
 impl ServerHandler for KapuServer {
     fn get_info(&self) -> ServerConfig {
         ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
-            .with_server_info(Implementation::new("kapu-mcp", env!("CARGO_PKG_VERSION")))
+            .with_server_info(
+                Implementation::new("kapu-mcp", env!("CARGO_PKG_VERSION"))
+                    .with_title("KAPU")
+                    .with_description(kapu_core::about::PURPOSE)
+                    .with_website_url(kapu_core::about::REPOSITORY),
+            )
             .with_instructions(format!("{GUIDE_STD1}\n\n{GUIDE_STD1_EN}"))
     }
 }
@@ -346,11 +351,7 @@ impl ServerHandler for KapuServer {
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
     if std::env::args().nth(1).as_deref() == Some("--version") {
-        println!(
-            "kapu-mcp {} (KAPU format {})",
-            env!("CARGO_PKG_VERSION"),
-            kapu_core::FORMAT_VERSION
-        );
+        println!("kapu-mcp {}", kapu_core::about::card());
         return std::process::ExitCode::SUCCESS;
     }
     let server = match KapuServer::new().serve(rmcp::transport::stdio()).await {
