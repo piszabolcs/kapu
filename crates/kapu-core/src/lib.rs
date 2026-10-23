@@ -15,13 +15,19 @@
     )
 )]
 
+pub mod build;
 pub mod catalog;
 pub mod docs;
+pub mod edit;
 pub mod error;
 pub mod header;
 pub mod reader;
+pub mod search;
 pub mod sections;
+pub mod terms;
+pub mod text;
 pub mod validate;
+pub mod yake;
 
 pub use docs::{DocEntry, blake3_of, served_text, strip_comments, unescape};
 pub use error::{Error, ErrorCode, Result};

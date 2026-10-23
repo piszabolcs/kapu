@@ -294,10 +294,12 @@ class Door:
 
 
 def heading_title(text: str) -> str:
+    """FR-06/1: the first `# ` line; if it is empty or missing, the first
+    non-empty line that is not a heading marker, `>` or `tags:` line (D87)."""
     lines = strip_comments(text).split("\n")
-    for line in lines:
-        if line.startswith("# "):
-            return line[2:].strip()
+    first = next((line[2:].strip() for line in lines if line.startswith("# ")), "")
+    if first:
+        return first
     for line in lines:
         s = line.strip()
         if s and s not in ("#", ">") and not s.startswith(("# ", "> ", "tags:")):
@@ -383,7 +385,9 @@ def build_doors(rooms: list[str], id_override: dict[int, str] | None = None) -> 
         served = strip_comments(unescape(stored))
         room = Door(rid, title[:TITLE_MAX], "", [], stored, served, offset, True)
         room.tokens, room.chars = tokens(served), len(served)
-        room.description = manual_description(raw) or auto_description(raw, room.tokens, False)
+        manual = manual_description(raw)
+        # D88: a manual description is cut only at the 300-token hard limit
+        room.description = cut_to_tokens(manual, 300) if manual else auto_description(raw, room.tokens, False)
         room.tags = manual_tags(raw)  # YAKE fallback is not exercised by the sample (D63)
         doors.append(room)
 

@@ -4,6 +4,24 @@ Minden commitnál frissül (TERV.md 8. fejezet). Legfrissebb bejegyzés felül.
 
 ---
 
+## 2026-10-23 – M3 kész: build
+
+**Kész**
+- `kapu-core` új modulok: `text.rs` (slug, escape, kódblokk, bekezdés, cím/leírás/tag, linkek), `terms.rs` (index-tokenizálás, kettős Snowball-tövezés, o200k_base ár), `yake.rs` (automatikus tagek, D84), `build.rs` (szobák, alajtók, feliratok, index, `link`/`term` gráf, csoportok, szakaszok, fejléc, atomi mentés), `search.rs` (BM25, D85), `edit.rs` (`new`, `import`, `export`, `add`, `rm`).
+- Új függőségek: `tiktoken-rs` 0.12, `rust-stemmers` 1.2, `unicode-normalization` 0.1 (a `cargo-deny` elfogadta).
+- **A Rust build a `tests/vectors/minta.kapu`-t bájtra reprodukálja.**
+- A validátor teljes szintje újraépít és bájtra összevet (D89); a leírás 300 tokenes korlátja E010 (D88).
+- Python referencia javítva két spec-eltérésre (D87, D88); a vektorok változatlanok.
+- `kapu-bench measure`: első mérés, `bench/REPORT.md` 1. táblázat. A `term` élek invertált számítása a 3000 szobás buildet 64 s-ról 2,1 s-ra vitte le.
+- `AGGALYOK.md`: A1 és A3 lezárva, új: A10–A15.
+
+**Ellenőrzés (2026-10-23, lefuttatva)**
+- `scripts/check.ps1` zöld: 50 egységteszt, 29+12 integrációs teszt (6 ignored: M4, M5, M7, M8), clippy pedantic `-D warnings`, deny, audit.
+
+**Következő: M4 – vektor, gráf, csoportok**
+
+---
+
 ## 2026-10-23 – M2 kész: olvasás, validálás, fuzz
 
 **Kész**

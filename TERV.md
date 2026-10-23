@@ -138,16 +138,17 @@ Minden mérföldkő: `[ ]` feladatok → Ellenőrzés parancsai zöldek → `ALL
 - [x] Fuzz célpontok: `header`, `sections`, `docs`, `catalog` (map/desc/graph), `validate`, `reader` (teljes fájl): `fuzz/`, `scripts/fuzz.ps1`, D86
 - Ellenőrzés: minden M1 vektor a várt eredményt adja (zöld); fuzz célpontonként 2 perc hiba nélkül (kb. 6,4 millió bemenet). **Nyitott:** célpontonként 1 óra (`scripts/fuzz.ps1 -Seconds 3600`, kb. 6 óra gépidő), a kiadás (M9) előtt kötelező.
 
-### M3 – Build alapok  (L)
-- [ ] Szobahatárok, azonosítóképzés (FR-04/4, NFKD), ütközéskezelés, escape íráskor
-- [ ] Feliratok FR-06: cím, leírás (szóhatáron vágás, D9 képlet), tagek (kézi / YAKE – döntés 1.1 szerint), rövid tagek
-- [ ] Alajtók FR-07 (kódblokk-felismerés: ``` és ~~~ kerítés)
-- [ ] Árak FR-08 (`tiktoken-rs` o200k_base, megjegyzések nélkül) + karakterszám
-- [ ] Index FR-09: tokenizálás (camelCase, számhatár, teljes azonosító), NFC, kettős stemmer, 3× cím/tag súly, rendezett sorok, BM25 pontozás
-- [ ] `#DOCS`, `#MAP`, `#DESC`, fejléc kiírás; atomi mentés (temp + rename)
-- [ ] `import`, `export`, `add`, `new`, `build` (CRLF-kezelés a 2.5 döntés szerint)
-- Ellenőrzés: import→export bájtra azonos; build×2 bájtra azonos; `validate --full` hibátlan; M1 `minta.kapu`-t a Rust build **bájtra** reprodukálja; FR-05/06/07/08/09 Acceptance tesztek zöldek
-- Mérés (első adatok): build idő 30/300/3000 generált szobán, térkép/fájl tokenarány → `bench/REPORT.md` első táblázata
+### M3 – Build alapok  (L)  — kész 2026-10-23
+- [x] Szobahatárok, azonosítóképzés (FR-04/4, NFKD), ütközéskezelés, escape íráskor: `text.rs`, `build.rs` (`parse_body`, D36)
+- [x] Feliratok FR-06: cím (D87), leírás (szóhatáron vágás, D9 képlet, kézi leírás 300 tokennél, D88), tagek (kézi / YAKE, D84), rövid tagek
+- [x] Alajtók FR-07 (kódblokk-felismerés: ``` és ~~~ kerítés)
+- [x] Árak FR-08 (`tiktoken-rs` 0.12 o200k_base, megjegyzések nélkül) + karakterszám
+- [x] Index FR-09: tokenizálás, NFC, kettős stemmer (`rust-stemmers` 1.2, D80), 3× cím/tag súly, rendezett sorok; BM25 keresés (`search.rs`, D85)
+- [x] `#DOCS`, `#MAP`, `#DESC`, `#GRAPH` (`link`, `term`), fejléc; atomi mentés (`write_atomic`)
+- [x] `import`, `export`, `add`, `new`, `rm` a core-ban (`edit.rs`, D90); CRLF-kezelés (D40, W004); a CLI-parancsok M6-ban
+- [x] `validate --full` újraépítés-összevetés (D89), leírás-korlát a validátorban (E010)
+- Ellenőrzés (zöld): import→export bájtra azonos; build×2 bájtra azonos; `validate --full` hibátlan; **a Rust build a `minta.kapu`-t bájtra reprodukálja**; FR-02/04/05/06/07/08/09/15(4 ajtó)/18 Acceptance tesztek zöldek
+- Mérés: `bench/REPORT.md` 1. táblázat (30/300/3000 szoba: 21 ms / 183 ms / 2,1 s build, térkép/törzs 0,26–0,27 a generált korpuszon)
 
 ### M4 – Vektor, gráf, csoportok  (L)
 - [ ] Modell letöltése `models/potion-multilingual-128M/` alá (safetensors + tokenizer.json), `embhash` számítás (2.3)

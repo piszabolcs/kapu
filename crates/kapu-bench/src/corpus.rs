@@ -224,7 +224,18 @@ fn room_title(rng: &mut Xoshiro256, i: usize) -> (String, String) {
 /// Any I/O error while creating the directory or writing a file.
 pub fn generate(rooms: usize, seed: u64, out: &Path) -> std::io::Result<usize> {
     std::fs::create_dir_all(out)?;
+    let list = markdown_rooms(rooms, seed);
+    for (id, md) in &list {
+        std::fs::write(out.join(format!("{id}.md")), md)?;
+    }
+    Ok(list.len())
+}
+
+/// The same rooms as [`generate`], in memory: `(id, markdown)` in order.
+#[must_use]
+pub fn markdown_rooms(rooms: usize, seed: u64) -> Vec<(String, String)> {
     let mut rng = Xoshiro256::from_seed(seed);
+    let mut out = Vec::with_capacity(rooms);
     let titles: Vec<(String, String)> = (0..rooms).map(|i| room_title(&mut rng, i)).collect();
 
     for (i, (title, id)) in titles.iter().enumerate() {
@@ -260,9 +271,9 @@ pub fn generate(rooms: usize, seed: u64, out: &Path) -> std::io::Result<usize> {
             }
         }
 
-        std::fs::write(out.join(format!("{id}.md")), md)?;
+        out.push((id.clone(), md));
     }
-    Ok(titles.len())
+    out
 }
 
 fn rng_coin(rng: &mut Xoshiro256) -> bool {

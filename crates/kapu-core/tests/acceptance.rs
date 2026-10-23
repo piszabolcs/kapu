@@ -414,6 +414,10 @@ fn open_path_reads_the_file_from_disk() {
 // ---------------------------------------------------------------------------
 // Spec Acceptance points
 // ---------------------------------------------------------------------------
+//
+// The builder's Acceptance points (FR-02, FR-04..FR-09, FR-15 four-door open,
+// FR-18, the M3 byte-identity and import/export checks) live in
+// `tests/build.rs` and `src/edit.rs`.
 
 #[test]
 fn fr01_sections_in_order_without_overlap_or_overrun() {
@@ -427,15 +431,6 @@ fn fr01_sections_in_order_without_overlap_or_overrun() {
 "
     ));
     assert_eq!(u64::try_from(s.body.len()).unwrap(), s.header.body.len);
-}
-
-#[test]
-#[ignore = "M3: builder"]
-fn fr02_esc_in_body_gives_e004_with_position_and_no_output_file() {
-    pending(
-        "M3",
-        "build of a body with ESC fails with E004 line:col and writes nothing",
-    );
 }
 
 #[test]
@@ -482,57 +477,6 @@ fn fr03_every_section_reachable_with_one_seek_from_the_header() {
 }
 
 #[test]
-#[ignore = "M3: builder"]
-fn fr04_room_marker_in_content_round_trips_without_new_room() {
-    pending(
-        "M3",
-        "a content line `@@@ hamis` survives build+open byte for byte, no extra room",
-    );
-}
-
-#[test]
-#[ignore = "M3: builder"]
-fn fr05_unfilled_template_room_gets_captions_from_text() {
-    pending(
-        "M3",
-        "room with empty template fields but content gets title, description, tags",
-    );
-}
-
-#[test]
-#[ignore = "M3: builder"]
-fn fr06_auto_description_of_4000_token_room_is_180_to_200_tokens() {
-    pending(
-        "M3",
-        "description target clamp(round(0.05*tokens),15,300), cut on a word boundary",
-    );
-}
-
-#[test]
-#[ignore = "M3: builder"]
-fn fr07_two_subdoors_and_a_heading_inside_a_code_fence() {
-    pending(
-        "M3",
-        "exactly two sub-doors; the `## ` line inside ``` is ignored",
-    );
-}
-
-#[test]
-#[ignore = "M3: builder"]
-fn fr08_price_matches_o200k_base_reference() {
-    pending(
-        "M3",
-        "token count of a known text equals tiktoken o200k_base (expected.json tokens)",
-    );
-}
-
-#[test]
-#[ignore = "M3: builder"]
-fn fr09_search_gomb_finds_uvegszeru_gomb_and_gombok() {
-    pending("M3", "Hungarian stemming makes both doors hits for `gomb`");
-}
-
-#[test]
 #[ignore = "M5: search"]
 fn fr10_model_mismatch_falls_back_to_bm25_with_vector_unavailable() {
     let _data = vector("minta.kapu"); // built with emb=none, so every reader mismatches
@@ -558,29 +502,11 @@ fn fr12_build_twice_gives_identical_groups_and_file() {
 }
 
 #[test]
-#[ignore = "M3: needs a built 30-room file"]
-fn fr15_open_four_doors_returns_four_frames_sized_like_their_prices() {
-    pending(
-        "M2",
-        "kapu_open with 4 ids on a 30-room file: 4 frames, size ~ sum of prices",
-    );
-}
-
-#[test]
 #[ignore = "M5: search"]
 fn fr16_semantic_hit_for_uvegszeru_homalyos_gomb() {
     pending(
         "M5",
         "`backdrop-filter: blur` room is in the top 10 with source vec or both",
-    );
-}
-
-#[test]
-#[ignore = "M3: builder"]
-fn fr18_notepad_edited_room_builds_to_a_valid_file() {
-    pending(
-        "M3",
-        "build after an external edit yields a file the validator accepts",
     );
 }
 
@@ -596,25 +522,6 @@ fn fr19_write_with_injection_text_saves_and_warns() {
 // ---------------------------------------------------------------------------
 // Milestone-level checks from TERV.md
 // ---------------------------------------------------------------------------
-
-#[test]
-#[ignore = "M3: builder"]
-fn m3_rust_build_reproduces_minta_kapu_byte_for_byte() {
-    let _reference = vector("minta.kapu");
-    pending(
-        "M3",
-        "building the three sample rooms yields exactly tests/vectors/minta.kapu",
-    );
-}
-
-#[test]
-#[ignore = "M3: builder"]
-fn m3_import_then_export_is_byte_identical() {
-    pending(
-        "M3",
-        "kapu import <dir> then kapu export gives the same .md bytes",
-    );
-}
 
 #[test]
 #[ignore = "M8: measurement"]

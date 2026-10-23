@@ -22,8 +22,8 @@ use crate::sections::Sections;
 pub enum Level {
     /// Header and derived sections (the default of `kapu validate`).
     Basic,
-    /// Also the body: `bodyhash`, every door fingerprint, room markers.
-    /// The rebuild comparison of `--full` arrives with the builder (M3).
+    /// Also the body: `bodyhash`, every door fingerprint, room markers, and
+    /// whether a rebuild gives the same bytes (D89).
     Full,
 }
 
@@ -43,6 +43,9 @@ pub struct Report {
     pub doors: usize,
     /// Whether the body checks of [`Level::Full`] ran.
     pub full: bool,
+    /// Whether the rebuild comparison ran. It is skipped, with warning W001,
+    /// when the file was built with a model this reader does not have (D50).
+    pub rebuild_checked: bool,
 }
 
 /// FR-04/3: `[a-z0-9][a-z0-9-]{0,63}`, and for a sub-door `<room>/<sub>` with
@@ -105,11 +108,22 @@ pub fn validate(file: &[u8], level: Level) -> Result<Report> {
         }
         check_room_markers(&s, &entries)?;
     }
+    let rebuild_checked = level == Level::Full && s.header.emb == crate::build::NO_MODEL;
+    if rebuild_checked {
+        let rebuilt = crate::build::rebuild(file)?;
+        if rebuilt.bytes != file {
+            return Err(err(
+                ErrorCode::E005,
+                "the derived sections differ from what a build of this body gives (run `kapu build`)",
+            ));
+        }
+    }
 
     Ok(Report {
         rooms: rooms.len(),
         doors: ids.len(),
         full: level == Level::Full,
+        rebuild_checked,
     })
 }
 
@@ -214,6 +228,17 @@ fn check_captions(map: &Map<'_>, desc: &[DescLine<'_>]) -> Result<()> {
         }
     }
     for line in desc {
+        let tokens = crate::terms::tokens(line.description)?;
+        if tokens > crate::build::DESCRIPTION_MAX_TOKENS {
+            return Err(err(
+                ErrorCode::E010,
+                format!(
+                    "description of `{}` is {tokens} tokens, the limit is {}",
+                    line.id,
+                    crate::build::DESCRIPTION_MAX_TOKENS
+                ),
+            ));
+        }
         if line.tags.len() > TAGS_MAX {
             return Err(err(
                 ErrorCode::E010,

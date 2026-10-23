@@ -10,6 +10,9 @@ publish.workspace = true
 
 [dependencies]
 blake3 = "1"
+rust-stemmers = "1.2"
+tiktoken-rs = "0.12"
+unicode-normalization = "0.1"
 
 [lints]
 workspace = true
