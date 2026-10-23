@@ -4,8 +4,7 @@ Fejlesztés közben talált kérdések, kockázatok és spec-rések a végső á
 
 ## A) Döntést igényel
 
-| # | Hol | Aggály | Mostani állapot | Javaslat |
-|---|---|---|---|---|
+Jelenleg nincs nyitott döntés (a 2026-10-23-i áttekintés döntései: D93, D97, D106–D111).
 
 ## B) Nyitott munka
 
