@@ -1,6 +1,6 @@
 # KAPU measurements
 
-English summary of the measurements. The full log of every measurement, including the earlier synthetic-corpus runs and the Hungarian-question track, is in [REPORT.md](REPORT.md) (Hungarian). Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json).
+English summary of the measurements. The full log of every measurement, including the earlier synthetic-corpus runs and the Hungarian-question track, is in [REPORT.md](REPORT.md) (Hungarian). Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file.
 
 - **Date:** 2026-10-23
 - **Version:** tools 0.1.0 with specification v1.0.2
@@ -139,7 +139,76 @@ An earlier run on a mixed English and Hungarian corpus (REPORT.md chapters 5-8) 
 - The wrapper of the live run starts a new server for every call, so the guide and the content-scan notes appear more often than in a real session. Token counts are therefore slightly high.
 - The runs used specification v1.0.2, whose tool output still had a few Hungarian labels ("szomszédok", "alajtó"); since v1.0.3 all agent-facing output is English.
 
-## 8. Reproduce
+## 8. Pilot on public documentation
+
+This is a first run of the study design. Raw numbers are in [results/2026-10-23-study-pilot.json](results/2026-10-23-study-pilot.json); the full log is in REPORT.md chapter 11 (Hungarian).
+
+**Corpora:**
+- S: The Rust Programming Language, 0.32M tokens;
+- M: the Kubernetes docs, 3.9M tokens;
+- L: MDN Web Docs, 13.0M tokens.
+
+**Questions:** real Stack Overflow questions whose accepted answer links exactly one page of the corpus. There are 68, 201 and 395 of them.
+
+**Run setup:** Claude Sonnet agents, Sonnet and Haiku judges, one run.
+
+### Scale
+
+| | S | M | L |
+|---|---:|---:|---:|
+| Rooms / doors / groups | 111 / 231 / 7 | 1,722 / 6,370 / 104 | 14,719 / 84,910 / 99 |
+| Build, peak memory | 3.4 s, 0.7 GB | 24 s, 1.4 GB | 190 s, 4.0 GB * |
+| File size | 7.6 MB | 117 MB | 542 MB * |
+| Search response (tokens, ms) | 249, 58 | 265, 666 | 213, 3,192 * |
+| Map (tokens) | 151 | 1,948 | 1,919 * |
+| Largest group list (tokens) | 804 | 6,957 | 30,118 * |
+
+\* L does not build with the released tools: one search-index line of a common word exceeds the 1 MiB line limit. The L column comes from an experimental build with a 64 MiB limit.
+
+What this shows:
+- A search response stays around 200-270 tokens at every size.
+- The map and the latency grow with the file, because the server reads the whole file on every call.
+- These are open items for the next specification version.
+
+### Retrieval without an agent
+
+The table gives room-level recall@10. A hit is any door or chunk of the gold page in the top 10 units.
+
+| | KAPU hybrid | KAPU BM25 | KAPU vector | 512-token chunks, BM25 | 512-token chunks, vector |
+|---|---:|---:|---:|---:|---:|
+| S (68) | 0.46 | 0.44 | 0.32 | 0.49 | 0.43 |
+| M (201) | 0.44 | 0.45 | 0.28 | 0.45 | 0.32 |
+| L (395) | 0.28 | 0.28 | 0.15 | 0.30 | 0.19 |
+
+- KAPU's hybrid search is on par with BM25 over chunks.
+- Its vector search is weaker than chunk vectors, because one static vector per long door blurs the content.
+
+### Agents on S, 30 questions
+
+| System | Correct (Sonnet / Haiku judge) | Tokens read per question (median) |
+|---|---:|---:|
+| Closed book, no tools | 30 / 28 | 0 |
+| Agentic chunk RAG | 30 / 27 | 4,150 |
+| grep/read on the Markdown folder | 29 / 28 | 1,290 |
+| llms.txt | 30 / 29 | 8,739 |
+| KAPU | 30 / 29 | 3,983 |
+
+The model answers these popular questions from memory, so accuracy cannot separate the systems. On a small, well-known corpus, grep reads the fewest tokens.
+
+### Same content as KAPU, one Markdown file and a PDF
+
+This test uses the PixelLab knowledge file, content the model does not know: 0.21M tokens and 12 beginner requests. The answers were graded blind against the documentation.
+
+| Format | Correct | Supported claims | Tokens read per request (median) |
+|---|---:|---:|---:|
+| KAPU | 12/12 | 122/123 | 2,624 |
+| One `.md` file, with search and line reads | 12/12 | 134/138 | 8,280 |
+| PDF (219 pages), with search and page reads | 11/12 | 146/151 | 8,207 |
+| Whole `.md` pasted into the conversation | - | - | 206,899 |
+
+Accuracy is the same. KAPU read about a third of the tokens of the searchable file formats, and about 1/79 of pasting the whole file.
+
+## 9. Reproduce
 
 ```bash
 python tools/collect_skills.py bench/korpusz/rooms           # the installed skills as rooms (local only)

@@ -248,7 +248,7 @@ Ha szűkebb terv kell, ezek a karok:
 Fejezetek:
 
 1. Introduction: a probléma (a tudás nem fér a kontextusba, a RAG darabol, az ügynöki fájlkeresés drága) és a hozzájárulások.
-2. Related work (12. fejezet).
+2. Related work (13. fejezet).
 3. The KAPU format:
    - tervezési célok: egy fájl, determinisztikus build, ujjlenyomatok;
    - a térkép tokenárakkal;
@@ -348,7 +348,16 @@ Fontossági sorrendben. Az első négy a közeli munkát határozza meg (F0.5–
 9. **MI-használat a cikkben.** A javaslatom: a módszertanban és a köszönetnyilvánításban leírjuk, hogy a szoftver és a mérések MI-segítséggel készültek, és a szerző minden állítást ellenőrzött. Ez megfelel az arXiv szabályának; a commitokra vonatkozó szabályodat nem érinti.
 10. **Célhely később.** Csak arXiv, vagy később egy konferencia is (pl. SIGIR resource track vagy ECIR)? Ez a sablont és az anonimitási szabályokat befolyásolja.
 
-## 12. Kiinduló irodalom (az írás közben ellenőrizendő)
+## 12. A pilot eredménye (2026-10-23)
+
+Lefutott a terv API-keret nélkül futtatható része (REPORT 11. fejezet, RESULTS 8. fejezet). Ami ebből a tervet érinti:
+
+- **F0.5: az L a kiadási eszközzel nem épül meg** (A42). A térkép és a válaszidő a mérettel nő (A43, A44). A 11. fejezet 3. kérdése (mérnöki munka vagy az L elhagyása) ezzel valós döntés lett, nem feltételezés.
+- **Kontamináció.** A népszerű Stack Overflow-kérdéseken a zárt könyv 30/30. A fő pontossági összevetéshez nem ismert tartalom kell: a 9. fejezet módosított korpusza vagy egy friss, kevéssé ismert dokumentáció.
+- **A KAPU előnye ma ismeretlen tartalomnál az olvasott tokeneken látszik, nem a pontosságon.** A PixelLab-próbán a KAPU kb. harmadannyit olvasott, mint az egy `.md` fájl kereséssel vagy a PDF, azonos pontosság mellett. Kis, ismert korpuszon a grep olvasott a legkevesebbet.
+- **Bírálat.** A két Claude-bíráló 94,7%-ban egyezett, egy-egy válasznál pedig két bíráló eltérő osztályzatot adott. A nem Claude bíráló és az emberi minta (5.5) továbbra is kell.
+
+## 13. Kiinduló irodalom (az írás közben ellenőrizendő)
 
 **Ügynöki és visszakereséssel kiegészített hozzáférés**
 

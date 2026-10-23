@@ -4,12 +4,14 @@ answer, for an agent that may only reach KAPU through the MCP server.
     python tools/kapu_mcp_call.py list
     python tools/kapu_mcp_call.py call kapu_search '{"file": "...", "query": "..."}' [--tag q3]
 
-Every call is appended to bench/korpusz/mcp-calls.jsonl (tag, tool, arguments,
-time, response tokens) so a live run can be measured afterwards.
+Every call is appended to bench/korpusz/mcp-calls.jsonl, or to the path in
+`KAPU_CALL_LOG` (tag, tool, arguments, time, response tokens), so a live run
+can be measured afterwards.
 """
 
 import asyncio
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -19,7 +21,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 ROOT = Path(__file__).resolve().parent.parent
-LOG = ROOT / "bench" / "korpusz" / "mcp-calls.jsonl"
+LOG = Path(os.environ.get("KAPU_CALL_LOG") or ROOT / "bench" / "korpusz" / "mcp-calls.jsonl")
 ENC = tiktoken.get_encoding("o200k_base")
 
 
@@ -46,6 +48,7 @@ async def main(argv):
             result = await session.call_tool(tool, args)
             ms = (time.perf_counter() - start) * 1000
             text = "".join(getattr(c, "text", "") for c in result.content)
+            sys.stdout.reconfigure(encoding="utf-8")  # a piped Windows console is cp1250
             print(text)
             LOG.parent.mkdir(parents=True, exist_ok=True)
             with LOG.open("a", encoding="utf-8") as log:

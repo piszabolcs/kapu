@@ -203,3 +203,116 @@ Megfigyelések:
 - **Csoportnevek:** az API-referencia csoportja "image, optional, str", egy másiké "pixel, pixellab, let"; a YAKE a paramétertáblák szavait és a "let" szót is kulcsszónak veszi (A41).
 
 Nyers számok: `results/2026-10-23-pixellab-live.json`.
+
+## 11. Kísérleti mérés nyilvános dokumentációkon (a tanulmányterv pilotja, 2026-10-23)
+
+A tanulmányterv (`docs/research/2026-10-23-arxiv-study-design.md`) mindazon része, ami API-keret és emberi bíráló nélkül lefuttatható. Végrehajtási terv: `docs/research/2026-10-23-pilot-measurement-plan.md`, eszközök: `tools/study/`, nyers számok: `results/2026-10-23-study-pilot.json`. A korpuszok és a kérdések szövege harmadik fél tartalma, a repón kívül maradt.
+
+**Eltérések a tervtől:**
+- ügynök és bíráló is csak Claude (Sonnet, a bíráló mellett Haiku);
+- egy ismétlés;
+- a teljes kontextusú rendszer (C1) nem futott;
+- a Q-gen és a Q-eset kérdéssor nem készült, csak valódi Stack Overflow-kérdések.
+
+### 11.1 Korpuszok és kérdések
+
+| Méret | Forrás (commit) | Szoba | Tudás (token) | Kérdés |
+|---|---|---:|---:|---:|
+| S | The Rust Programming Language (`rust-lang/book` 1500248) | 111 | 321 618 | 68 |
+| M | Kubernetes-dokumentáció, angol (`kubernetes/website` bf999f0) | 1 722 | 3 873 333 | 201 |
+| L | MDN Web Docs, en-US (`mdn/content` 8557706) | 14 719 | 12 995 138 | 395 |
+
+**Kérdésgyűjtés:** a Stack Overflow legtöbb szavazatot kapott, elfogadott választ tartalmazó kérdései közül azok kellettek, amelyek elfogadott válasza pontosan egy korpuszoldalra hivatkozik. Ez az oldal lett az arany oldal; a régi útvonalakat az átirányítások és az `aliases` feloldják. Rust: 2 132 kérdésből 68, Kubernetes: 1 324-ből 201, MDN: 3 282-ből 395. A kérdés a cím.
+
+### 11.2 Skálázás (F0.5)
+
+A buildek a kiadási binárissal készültek. Az L az 1 MiB-os sorhatár miatt nem épül meg (E005, lásd lent), ezért a táblázat L oszlopa egy kísérleti, 64 MiB-os sorhatárú buildből van; ez nincs a repóban.
+
+| | S | M | L (kísérleti) |
+|---|---:|---:|---:|
+| Szoba / ajtó / csoport | 111 / 231 / 7 | 1 722 / 6 370 / 104 | 14 719 / 84 910 / 99 |
+| Build (idő, memóriacsúcs) | 3,4 s, 721 MB | 23,8 s, 1,38 GB | 190 s, 4,0 GB |
+| Fájlméret | 7,6 MB | 117 MB | 542 MB |
+| Teljes ellenőrzés | 2,5 s | 13,7 s | 123 s |
+| Térkép (token, ms) | 151, 19 | 1 948, 269 | 1 919, 1 378 |
+| Első térképhívás (token) | 299 | 4 989 | 4 139 |
+| Csoportlista (medián / legnagyobb, token) | 661 / 804 | 63 / 6 957 | 4 118 / 30 118 |
+| Keresés, k = 5 (token, ms) | 249, 58 | 265, 666 | 213, 3 192 |
+| Első keresés a munkamenetben | 1,2 s | 1,7 s | 36 s |
+| Kinyitás, egy ajtó (token, ms) | 3 052, 18 | 238, 236 | 364, 1 112 |
+
+- **A keresés ára állandó, a térképé nem.** Egy keresési válasz 213–265 token mindhárom méretnél. A térkép viszont a csoportok számával nő, és L-en a csoportlisták átlagosan is több ezer tokenesek. Az M első térképhívásának zöme 113 tartalomvizsgálati sor: `curl` a Kubernetes-példákban, plusz egy S1-találat egy közreműködői oldalon (A43).
+- **A válaszidő a fájlmérettel nő,** mert a szerver minden hívásnál beolvassa és ellenőrzi a teljes fájlt (A44). A `kapu bench` az L 395 kérdésén 30 perc 41 másodpercig futott, kérdésenként kb. 4,7 s.
+- **Az L kiadási binárissal nem épül meg.** Az MDN 13 millió tokenes változata és egy 8,4 millió tokenes részhalmaza (`web/api` nélkül, 6 613 szoba) egyaránt E005-tel áll meg: az `#INDEX` egy sora 1 MiB-nál hosszabb. Az M leghosszabb sora a "the" találati listája, 5 561 ajtó és 404 KB, mert minden bejegyzés a teljes ajtóazonosítót tárolja. A határ kb. 14 ezer ajtónál van (A42).
+
+### 11.3 Visszakeresés ügynök nélkül: KAPU kontra darabolós RAG
+
+Szobaszintű találat (D130): a várt oldal bármely ajtaja vagy darabja a top k-ban. A darabolós alapvonal 512 tokenes darabokkal dolgozik (64 átfedés). A top k egység, tehát k darab vagy k ajtó, így a két oldal ugyanannyi találati sort ad vissza.
+
+| Méret (n) | KAPU hibrid | KAPU BM25 | KAPU vektor | Darab BM25 | Darab vektor |
+|---|---|---|---|---|---|
+| S (68) | 0,32 / 0,46 / 0,21 | 0,34 / 0,44 / 0,26 | 0,18 / 0,32 / 0,15 | 0,43 / 0,49 / 0,28 | 0,37 / 0,43 / 0,23 |
+| M (201) | 0,35 / 0,44 / 0,23 | 0,35 / 0,45 / 0,22 | 0,19 / 0,28 / 0,12 | 0,34 / 0,45 / 0,22 | 0,25 / 0,32 / 0,15 |
+| L (395) | 0,18 / 0,28 / 0,13 | 0,22 / 0,28 / 0,14 | 0,10 / 0,15 / 0,06 | 0,23 / 0,30 / 0,16 | 0,12 / 0,19 / 0,08 |
+
+A cellák sorrendje: recall@5 / recall@10 / MRR@10.
+
+- **A KAPU hibrid keresése a darabos BM25 szintjén van** (r@10: 0,46 / 0,44 / 0,28 kontra 0,49 / 0,45 / 0,30). A különbség S-en és L-en a 95%-os bizonytalanságon belül van.
+- **A KAPU vektoros keresése mindhárom méretnél gyengébb a darabos vektorkeresésnél.** Egy hosszú ajtó egyetlen statikus vektora elmossa a tartalmat (A46). A hibrid rangsort ezért a BM25 viszi; S-en a vektor r@10-en kissé javít (0,44 → 0,46), MRR-en ront (0,26 → 0,21).
+- **Az abszolút értékek alacsonyak,** mert a kérdés csak egy fórumcím. Az arany oldal egy hivatkozás, nem az egyetlen jó oldal.
+
+### 11.4 Élő próba S-en: öt rendszer, 30 valódi kérdés
+
+**Elrendezés:**
+- 30 véletlen kérdés a 68-ból (mag 20261023), cím és törzs, Sonnet-ügynökök, ügynökönként 10 kérdés;
+- a zárt könyves rendszer (C0) egy ügynökben kapta mind a 30 kérdést;
+- minden hívás naplózva, a tokenszám az eszköz által visszaadott szöveg (o200k_base);
+- vak bírálat: a bíráló kérdésenként véletlen sorrendben, A–E betűvel kapta az öt választ, a mércéje az elfogadott Stack Overflow-válasz;
+- két bíráló (Sonnet és Haiku), az egyezés 94,7%.
+
+| Rendszer | Helyes, Sonnet bíráló | Helyes, Haiku bíráló | Olvasott token/kérdés (medián) | Hívás/kérdés (medián) | Ügynök összes tokenje/kérdés |
+|---|---:|---:|---:|---:|---:|
+| C0 zárt könyv | 30/30 | 28/30 | 0 | 0 | 2,7 ezer |
+| C2b ügynöki darabolós RAG | 30/30 | 27/30 | 4 150 | 1 | 12,6 ezer |
+| C3 grep/read a Markdown-mappán | 29/30 | 28/30 | 1 290 | 2 | 9,3 ezer |
+| C4 `llms.txt` | 30/30 | 29/30 | 8 739 | 2 | 11,6 ezer |
+| C5 KAPU | 30/30 | 29/30 | 3 983 | 2 | 10,1 ezer |
+
+- **Plafonhatás.** A népszerű Stack Overflow-kérdésekre a modell eszköz nélkül is jól válaszol (30/30). A pontosság ezért itt nem különbözteti meg a rendszereket. A kontamináció elleni védelem (a terv 9. fejezete) nem elhagyható: nem ismert vagy módosított tartalom kell.
+- **Kis korpuszon a grep a legolcsóbb.** A grep/read ügynök kérdésenként mediánban 1 290 tokent olvasott, a KAPU-ügynök 3 983-at, mert a Rust Book ajtói nagyok (kinyitás mediánban 3 ezer token). Az ügynökök a kinyitott ajtót `sed`-del vágták (A45).
+- **Egyéb.** Két KAPU-ügynöknél a `kapu_mcp_call.py` kiírása elszállt a Windows cp1250 kódlapja miatt; javítva. Az ügynök összes tokenje a teljes ügynökfutás összege tíz kérdésre elosztva, csak közelítés.
+
+### 11.5 Ugyanaz a tartalom KAPU-ként, egyetlen `.md` fájlként és PDF-ként (PixelLab)
+
+A felhasználó kérdése: mi a különbség, ha ugyanaz a tartalom nem KAPU-fájlban, hanem egyszerű Markdown- vagy PDF-fájlban van? Ehhez a PixelLab-tudásfájl kellett, mert annak tartalmát a modell nem ismeri: 206 899 token, a 10. fejezet 12 amatőr kérése.
+
+**A három forma:**
+- **`.md`:** egyetlen fájl a szobákból, ugyanannyi tokennel, 13 850 sorral. Az ügynök kereshetett benne (legfeljebb 50 sor) és sorokat olvashatott (hívásonként legfeljebb 400).
+- **PDF:** ugyanez Edge-dzsel nyomtatva, 219 oldal. Az ügynök hívásonként legfeljebb 20 oldalt olvashatott, és kereshetett benne, ami oldalszámot ad, mint egy PDF-olvasóban.
+- **KAPU:** a 10. fejezet válaszai.
+
+Mindhárom Sonnet-ügynök, kérésenként 3 kérés. A 36 választ három bíráló vakon pontozta: forrásjelölés nélkül, véletlen sorrendben, minden állítást a dokumentációhoz mérve.
+
+| Forma | Helyes | Alátámasztott állítás | Hasznosság (1–5) | Olvasott token/kérés (medián) | Összesen 12 kérésre | Hívás/kérés (medián) |
+|---|---:|---:|---:|---:|---:|---:|
+| KAPU | 12/12 | 122/123 | 4,08 | 2 624 | 34 953 | 3 |
+| Egy `.md` fájl, kereséssel | 12/12 | 134/138 | 4,25 | 8 280 | 101 452 | 8 |
+| PDF, kereséssel | 11/12 (+1 részben) | 146/151 | 4,33 | 8 207 | 109 675 | 6 |
+| A teljes `.md` a beszélgetésbe másolva (számolt) | – | – | – | 206 899 | 2 482 788 | – |
+
+- **Pontosság.** A három forma gyakorlatilag egyformán pontos. A PDF egyetlen részben helyes válasza a háttéreltávolításé (p10): az ügynök nem találta az Aseprite-bővítmény eszközét.
+- **Tokenek.** A KAPU kb. harmadannyi tokent olvasott, mint a `.md` vagy a PDF kereséssel, és kb. 79-ed annyit, mint a teljes fájl bemásolása.
+- **Hasznosság.** A `.md`- és a PDF-válaszok kicsit teljesebbek: többet olvastak, és ritkábban maradt ki egy kezdőnek fontos lehetőség.
+- **Az ügynökök teljes futása** (rendszerprompt, eszközleírások és minden kör együtt), kérésenként: `.md` kb. 36 ezer, PDF kb. 39 ezer, KAPU kb. 29 ezer (ez csak a p1–p3 ügynökből ismert). A rögzített többlet tehát az olvasott tokenek különbségének egy részét elnyeli.
+- **Torzítás.** A KAPU-válaszok egy korábbi futásból valók, 200 szavas felső korlát nélkül. Ugyanazt a p12-es KAPU-választ az első bíráló (10. fejezet) „részben”-re, a vak bíráló „igen”-re értékelte; ez a bírálói szórás nagyságrendjét mutatja.
+
+### 11.6 Mit tanultunk
+
+1. **A KAPU értéke a nagy, a modell által nem ismert tartalomnál jön ki.** Ott (PixelLab) azonos pontosság mellett harmadannyi olvasott tokent kér, mint egy fájl kereséssel, és nagyságrendekkel kevesebbet, mint a teljes szöveg. Kis, ismert tartalomnál (Rust Book) nincs előnye: a modell fejből is tud, a grep pedig kevesebbet olvas.
+2. **A nagy méret három ponton nem skálázódik ma:**
+   - a találati sor 1 MiB-os korlátja (A42);
+   - a térkép és a tartalomvizsgálat mérete (A43);
+   - a hívásonkénti teljes fájlolvasás (A44).
+   A „méretfüggetlen költség” állítás ma csak a keresési válaszra igaz, a térképre és a válaszidőre nem.
+3. **A visszakeresés a darabos BM25 szintjén van.** A vektoros rész ajtószinten gyenge (A46), a nagy ajtók drágák (A45).
+4. **A tanulmányhoz kell a kontamináció elleni kérdéssor és egy nem Claude bíráló.** A népszerű kérdések plafonhatást adnak, a bírálók közti szórás pedig egy-egy válasznál látható.

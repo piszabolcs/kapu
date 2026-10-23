@@ -5,7 +5,8 @@
 //! "nyelv"}` (`Archive/tesztkorpusz_prompt.md`). The expected door is
 //! `slug(file name without extension)/slug(section)`, or the room when the
 //! section is empty. A strict hit is the expected door in the top k; a
-//! lenient hit is the expected door or its room (D49).
+//! lenient hit is the expected door or its room (D49); a room-level hit is any
+//! door of the expected room (D130).
 
 use crate::embed::VectorCache;
 use crate::error::{Error, ErrorCode, Result};
@@ -95,6 +96,13 @@ pub struct Scores {
     pub lenient_recall10: f64,
     /// Lenient MRR@10.
     pub lenient_mrr10: f64,
+    /// Room-level recall@5: a hit is any door of the expected door's room
+    /// (D130), the unit a chunk baseline is scored with.
+    pub room_recall5: f64,
+    /// Room-level recall@10.
+    pub room_recall10: f64,
+    /// Room-level MRR@10.
+    pub room_mrr10: f64,
 }
 
 /// The benchmark result.
@@ -135,12 +143,19 @@ fn score(lists: &[(Vec<String>, String)]) -> Scores {
         let room = expected.split('/').next().unwrap_or(expected).to_owned();
         let strict = first_rank(list, &|id| id == expected);
         let lenient = first_rank(list, &|id| id == expected || id == room);
+        let room_level = first_rank(list, &|id| id.split('/').next() == Some(room.as_str()));
         add_rank(strict, &mut s.recall5, &mut s.recall10, &mut s.mrr10);
         add_rank(
             lenient,
             &mut s.lenient_recall5,
             &mut s.lenient_recall10,
             &mut s.lenient_mrr10,
+        );
+        add_rank(
+            room_level,
+            &mut s.room_recall5,
+            &mut s.room_recall10,
+            &mut s.room_mrr10,
         );
     }
     #[allow(clippy::cast_precision_loss)]
@@ -152,6 +167,9 @@ fn score(lists: &[(Vec<String>, String)]) -> Scores {
         &mut s.lenient_recall5,
         &mut s.lenient_recall10,
         &mut s.lenient_mrr10,
+        &mut s.room_recall5,
+        &mut s.room_recall10,
+        &mut s.room_mrr10,
     ] {
         *v /= n;
     }
@@ -230,5 +248,19 @@ mod tests {
         assert!((s.mrr10 - 0.25).abs() < 1e-12);
         assert!((s.lenient_recall10 - 1.0).abs() < 1e-12);
         assert!((s.lenient_mrr10 - 0.75).abs() < 1e-12);
+    }
+
+    #[test]
+    fn room_level_counts_any_door_of_the_room() {
+        // D130: a sub-door of the expected room is a room-level hit, not a lenient one
+        let lists = vec![
+            (vec!["x".to_owned(), "a/z".to_owned()], "a".to_owned()),
+            (vec!["b/c".to_owned()], "a/c".to_owned()),
+        ];
+        let s = score(&lists);
+        assert!(s.lenient_recall10.abs() < 1e-12);
+        assert!((s.room_recall10 - 0.5).abs() < 1e-12);
+        assert!((s.room_mrr10 - 0.25).abs() < 1e-12);
+        assert!((s.room_recall5 - 0.5).abs() < 1e-12);
     }
 }

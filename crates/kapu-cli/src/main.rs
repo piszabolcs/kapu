@@ -453,6 +453,7 @@ fn scores_json(s: &kapu_core::evaluate::Scores) -> Value {
     json!({
         "recall@5": s.recall5, "recall@10": s.recall10, "mrr@10": s.mrr10,
         "lenient_recall@5": s.lenient_recall5, "lenient_recall@10": s.lenient_recall10, "lenient_mrr@10": s.lenient_mrr10,
+        "room_recall@5": s.room_recall5, "room_recall@10": s.room_recall10, "room_mrr@10": s.room_mrr10,
     })
 }
 
