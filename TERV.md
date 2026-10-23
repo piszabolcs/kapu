@@ -189,6 +189,7 @@ Minden mérföldkő: `[ ]` feladatok → Ellenőrzés parancsai zöldek → `ALL
 5. [~] D28: i8 kvantálás kész és alapértelmezett (D102); saját desztillált modell és az összevetés a korpuszon nyitott; az FR-16 eset a jelenlegi modellel nem teljesül (A21).
 6. [ ] Végponttól végpontig Claude Code-dal. Nyitott (A25).
 - Mérés közben: a `leidenalg`-összevetés (2. táblázat) és a Python–Rust keresztellenőrzés (D99) is lefutott.
+- 2026-10-23, helyettesítő valódi korpuszon (telepített skillek + frontend-minták, 251 szoba, 118 kérdés): `kapu bench` (REPORT 6.), MCP válaszidők (7.), élő próba Claude-ügynökökkel 10/10 (8.); három hiba javítva (D120-D122), öt formátumjavaslat az AGGALYOK A részében (A32-A36).
 
 ### M9 – Kiadás  (M)  — részben kész 2026-10-23
 - [x] Portable csomag Windowsra: `scripts/package.ps1` (`kapu.exe` + `kapu-mcp.exe` + `models/potion-multilingual-128M-i8/`, 123,5 MB zip, füstteszttel); Linux/macOS: `.github/workflows/release.yml` címkére, piszkozat kiadással (D103; helyben nem futtatható, A28)

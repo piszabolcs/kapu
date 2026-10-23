@@ -4,6 +4,23 @@ Minden commitnál frissül (TERV.md 8. fejezet). Legfrissebb bejegyzés felül.
 
 ---
 
+## 2026-10-23 este – Teszt- és mérési kör valódi korpuszon, MCP-ellenőrzés
+
+**A felhasználó kérése:** nagy próbaadatbázis a telepített skillekből és modern frontend-mintakódokból, KAPU-fájlba építve, élesben kipróbálva; az MCP szerver ellenőrzése az `mcp-builder` skill szerint; mérések és egy összefoglaló artifact.
+
+**Kész**
+- Korpusz (`bench/korpusz/`, nincs gitben): 217 skill-szoba (`tools/collect_skills.py`) és 34 frontend-szoba (háttér-ügynök írta, webes forrásokkal), 251 szoba, 1960 ajtó, 33,4 MB; a build 4,8 s, a teljes ellenőrzés hibátlan, a második build bájtra azonos.
+- Keresés 118 kérdésen (REPORT 6.): hibrid r@10 0,65 összesen, angolul 0,86, magyarul 0,45.
+- MCP (REPORT 7.): keresés medián 138 ms, kinyitás 71 ms, térkép 81 ms; az eszközök annotáltak, a hibák tippet adnak (D120). Élő próba 5 Claude-ügynökkel valódi MCP-hívásokon át (REPORT 8.): 10/10 helyes, mediánban 2 hívás és kb. 2,2 ezer token kérdésenként.
+- Javított hibák: angol stopszavak a csoportnevekben (D121), téves S5 tartalomvizsgálati találatok részszóra (D122).
+- Új eszközök: `tools/collect_skills.py`, `tools/mcp_probe.py`, `tools/kapu_mcp_call.py`, `tools/mcp_eval.py`.
+
+**Ellenőrzés (lefuttatva):** clippy tiszta, `cargo test --workspace` zöld, tesztvektorok és determinizmus-ujjlenyomat változatlan, 300 szobás Python–Rust keresztellenőrzés bájtazonos.
+
+**Nyitott:** A32-A36 formátumjavaslatok döntésre; A25 `claude -p` futtatás a CLI újbóli bejelentkezése után; A26 a te repóidból.
+
+---
+
 ## 2026-10-23 – Portfólió-véglegesítés: M10 asztali ablak, aláírás, README
 
 **A felhasználó kérése:** a repót a `github-portfolio-publisher` és a `signature` skillel kell véglegesíteni, és a KAPU kapjon grafikus felületet (`frontend-design-2026` skill). Döntései: a commitok szerzője a GitHub noreply cím lesz, a történet átíródik (D112, felváltja a D111-et); az aláírás parancssori formája jóváhagyva (D113); a GUI-t saját javaslat alapján kellett megépíteni.

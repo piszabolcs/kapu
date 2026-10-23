@@ -74,3 +74,80 @@ Megjegyzések:
 | 3000 | 12024 | 127,5 | 81,0 | 145 | 3352 / 3205 | 213 / 141 |
 
 Következtetés: az i8 modell negyedakkora, a vektorai gyakorlatilag azonosak, a sebesség nem változik; a csomagolt alapmodell az i8 lett (D102). A térkép és a négyajtós kinyitás 3000 szobán is 150 ms alatt van; ennek nagy része a 24 MB-os fájl beolvasása és szakaszellenőrzése (AGGALYOK A8).
+
+## 5. Valódi korpusz: telepített skillek és frontend-mintakódok (M8, 2026-10-23)
+
+- Gép és build mint fent, release. Modell: `potion-multilingual-128M-i8`.
+- Korpusz (helyben, `bench/korpusz/`, nincs gitben, mert harmadik féltől származó szöveg): a gépen telepített Claude-skillek (`tools/collect_skills.py`: anthropic-skills 52, superpowers 56, figma 101, claude-md-management 4, github-portfolio-publisher 3, frontend-design 1 szoba; pluginonként a legfrissebb verzió, érzékeny kifejezés szűrve, 0 kizárva) és 34 saját írású frontend-mintakód-szoba (28 angol, 6 magyar, források MDN, web.dev, caniuse).
+- Parancs: `kapu import bench/korpusz/rooms bench/korpusz/kapu-corpus.kapu --model models/potion-multilingual-128M-i8 --json`.
+
+| Mérőszám | Érték |
+|---|---:|
+| Szobák / ajtók / csoportok | 251 / 1960 / 10 |
+| Törzs (token, o200k_base) | 579 794 |
+| Fájl (bájt / token) | 33 392 880 / 9 961 477 |
+| Build modellel | 4,8 s |
+| `validate --full` (újraépítés-összevetéssel) | 6,1 s, hibátlan |
+| Második build | bájtra azonos (NFR-02) |
+| Első térképhívás (útmutató, csoportlista, tartalomvizsgálat) | 762 token (D122 előtt 2971) |
+| Későbbi térképhívás | 205 token |
+| Egy csoport ajtólistája | 2 609 - 15 756 token, összesen 61 317 (a törzs 10,6%-a) |
+| W003 (link hiányzó ajtóra) | 274, mind fájlon belüli horgony (AGGALYOK A32) |
+
+Csoportnevek a D121 előtt és után (ugyanaz a beosztás): „the, and, css” → „css, rem, element”; „the, and, color” → „color, figma, css”; „motion, the, node” → „motion, node, keyframe”; „the, and, superpowers” → „superpowers, plan, task”; „the, skill, and” → „skill, claude, skills”; „the, and, server” → „server, mcp, modelcontextprotocol”.
+
+## 6. Keresési minőség a valódi korpuszon (`kapu bench`, M8/2)
+
+- Kérdések: 118 (`bench/korpusz/all-questions.jsonl`): 50 a skillekre (én írtam, a tartalom ismeretében), 68 a frontend-szobákra (a szobákat író ügynök írta, a cím és az API neve nélkül); 60 magyar, 58 angol; 32 egy alajtóra, 86 egy szobára mutat. Torzítás: a kérdések szerzői ismerték a tartalmat; a te repóidból készülő korpusz (A26) ezt nem váltja ki.
+- Szigorú: a várt ajtó a top k-ban; megengedő: a várt ajtó vagy a szobája (D49).
+
+| Kérdések | n | BM25 r@10 | vektor r@10 | hibrid r@5 | hibrid r@10 | hibrid MRR@10 | hibrid megengedő r@10 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| összes | 118 | 0,58 | 0,55 | 0,58 | 0,65 | 0,42 | 0,68 |
+| angol | 58 | 0,88 | 0,64 | 0,81 | 0,86 | 0,62 | 0,88 |
+| magyar | 60 | 0,28 | 0,47 | 0,35 | 0,45 | 0,23 | 0,48 |
+| skillek | 50 | 0,62 | 0,60 | 0,60 | 0,72 | 0,43 | 0,74 |
+| frontend | 68 | 0,54 | 0,51 | 0,56 | 0,60 | 0,41 | 0,63 |
+| szobára mutat | 86 | 0,62 | 0,59 | 0,63 | 0,70 | 0,47 | 0,70 |
+| alajtóra mutat | 32 | 0,47 | 0,44 | 0,44 | 0,53 | 0,27 | 0,62 |
+
+Megjegyzések:
+
+1. A hibrid rangsor összességében mindkét önálló rangsornál jobb. Angol kérdésen a BM25 egymagában is erős (r@10 0,88), a hibrid ezt tartja (0,86).
+2. A magyar kérdés angol szövegre a gyenge pont: a BM25 a nyelvhatáron nem lát át (0,28), a statikus többnyelvű modell részben igen (0,47), a hibrid ebből 0,45-öt tart meg. Ez az A21 és az M8/5 (modellválasztás, desztillált modell) mérhető célja.
+3. Csak a skillekkel (217 szoba, 50 kérdés) a hibrid r@10 0,80 volt; a 34 frontend-szoba új zavaró jelöltként 0,72-re vitte le.
+
+## 7. MCP szerver: válaszidő és válaszméret (`tools/mcp_probe.py`)
+
+- Hivatalos Python MCP kliens (`mcp` 2.3) stdio-n, egy munkamenet, a 118 kérdés keresésként, az első 25 találat kinyitva és leírva. Tokenek o200k_base szerint.
+
+| Eszköz | Medián idő | p90 idő | Válasz (token, medián) | Megjegyzés |
+|---|---:|---:|---:|---|
+| initialize | 140 ms | | | |
+| `kapu_map` | 81 ms | 85 ms | 205 | csoportlista; csoporttal 71 ms és 5 740 token (g1) |
+| `kapu_search` (k=5) | 138 ms | 141 ms | 178 | az első hívás 1,29 s (modellbetöltés) |
+| `kapu_open` (1 ajtó) | 71 ms | 75 ms | 1 739 | p90 2 877, max 6 209 token |
+| `kapu_describe` (1 ajtó) | 70 ms | 72 ms | 53 | |
+
+Az eszközleírások tokenje: `kapu_map` 297 (benne az std-1 útmutató), `kapu_search` 128, `kapu_open` 98, `kapu_write` 100, `kapu_describe` 37. Minden eszköz annotált (D120).
+
+## 8. Élő próba: Claude-ügynökök csak a KAPU MCP eszközeivel (mcp-builder értékelés)
+
+- 10 kérdés az mcp-builder formátumában (`bench/korpusz/mcp-evaluation.xml`), egyértelmű, ellenőrizhető válasszal. 5 Claude Sonnet ügynök, ügynökönként 2 kérdés; csak `tools/kapu_mcp_call.py`-on át érhették el a szervert (valódi MCP-hívás, naplózva), a fájlt közvetlenül nem olvashatták, `kapu_write` tiltva.
+- A `claude -p` alapú, teljesen elszigetelt futtatás (`tools/mcp_eval.py`) kész, de a gép önálló Claude CLI-bejelentkezése lejárt (401); újra kell futtatni a bejelentkezés után (A25).
+- A burkoló minden hívásnál új szervert indít, ezért az útmutató és a tartalomvizsgálat minden térképhívásban megjelent; valódi munkamenetben egyszer.
+
+| # | Téma | Helyes | Hívások | Eszközök | Válaszok tokenje |
+|---:|---|:---:|---:|---|---:|
+| 1 | terrakotta helyett gombszín (design-referencia) | igen | 5 | search, search, map, search, open | 2 142 |
+| 2 | hibakeresés: melyik fázis előzi meg a javítást | igen | 2 | search, open | 3 033 |
+| 3 | táblázat-képletek ellenőrző szkriptje | igen | 2 | search, open | 712 |
+| 4 | MCP lapozás alapértelmezett mérete | igen | 2 | search, open | 2 358 |
+| 5 | README jelvények maximuma | igen | 2 | search, open | 2 335 |
+| 6 | az egyetlen magyar skill azonosítója | igen | 3 | map, map, describe | 8 788 |
+| 7 | hány szoba van összesen | igen | 2 | map, map | 5 061 |
+| 8 | anchor positioning: melyik böngészőverzió | igen | 2 | search, open | 686 |
+| 9 | `scheduler.yield()`: melyik böngésző hiányzik | igen | 2 | search, open | 493 |
+| 10 | magyar kérdés: AbortController szoba | igen | 1 | search | 221 |
+
+Eredmény: 10/10 helyes, mediánban 2 hívás és kb. 2,2 ezer token kérdésenként, miközben a törzs 579 794, a fájl 9,96 millió token. Az ügynökök visszajelzései (AGGALYOK A33-A36): a keresési találatok mellé rövid kivonat kellene; egy csoport ajtólistája túl hosszú; a kinyitáskor kapott szomszédlista zajos; a térképről hiányzik az összes szoba száma.
