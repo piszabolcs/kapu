@@ -32,6 +32,10 @@ pub enum ErrorCode {
     E010,
     /// Unknown hash prefix (only `b3:` exists in v1).
     E011,
+    /// Environment error, not a fault of the `.kapu` file: a file that cannot
+    /// be read or written, a missing or broken vector model, a malformed
+    /// question file (D109).
+    E012,
 }
 
 impl ErrorCode {
@@ -50,6 +54,7 @@ impl ErrorCode {
             Self::E009 => "E009",
             Self::E010 => "E010",
             Self::E011 => "E011",
+            Self::E012 => "E012",
         }
     }
 }

@@ -21,7 +21,7 @@ use crate::header::Hash;
 pub const MAX_TOKENS: usize = 512;
 
 fn model_err(detail: impl Into<String>) -> Error {
-    Error::new(ErrorCode::E005, format!("vector model: {}", detail.into()))
+    Error::new(ErrorCode::E012, format!("vector model: {}", detail.into()))
 }
 
 /// A loaded static embedding model.
@@ -52,7 +52,7 @@ impl std::fmt::Debug for Model {
 /// `tokenizer.json`, streamed.
 ///
 /// # Errors
-/// I/O errors (E005).
+/// I/O errors (E012).
 pub fn model_hash(dir: &Path) -> Result<Hash> {
     let mut hasher = blake3::Hasher::new();
     for name in ["model.safetensors", "tokenizer.json"] {
@@ -199,7 +199,7 @@ impl Model {
     /// at most 64 characters).
     ///
     /// # Errors
-    /// Missing or malformed files (E005).
+    /// Missing or malformed files (E012).
     pub fn load(dir: &Path) -> Result<Self> {
         let name = dir
             .file_name()
@@ -276,7 +276,7 @@ impl Model {
     /// Token ids of a text, as `model2vec` would use them.
     ///
     /// # Errors
-    /// A tokenizer failure (E005).
+    /// A tokenizer failure (E012).
     pub fn token_ids(&self, text: &str) -> Result<Vec<u32>> {
         let cut: String = text.chars().take(self.max_chars).collect();
         let encoding = self
@@ -295,7 +295,7 @@ impl Model {
     /// vector for a text without known tokens).
     ///
     /// # Errors
-    /// A tokenizer failure (E005).
+    /// A tokenizer failure (E012).
     pub fn embed(&self, text: &str) -> Result<Vec<f32>> {
         let ids = self.token_ids(text)?;
         let mut sum = vec![0f64; self.dim];
@@ -452,7 +452,7 @@ impl<'m> VectorCache<'m> {
     /// The vector of one text (not cached on disk).
     ///
     /// # Errors
-    /// A tokenizer failure (E005).
+    /// A tokenizer failure (E012).
     pub fn vector(&self, text: &str) -> Result<Vec<f32>> {
         self.model.embed(text)
     }
@@ -464,7 +464,7 @@ impl<'m> VectorCache<'m> {
     /// silent (the cache can be deleted any time).
     ///
     /// # Errors
-    /// A tokenizer failure (E005), or an error of `texts`.
+    /// A tokenizer failure (E012), or an error of `texts`.
     pub fn door_vectors(
         &self,
         bodyhash: &Hash,

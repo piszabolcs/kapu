@@ -165,43 +165,40 @@ pub fn unescape(stored: &str) -> String {
     out
 }
 
-/// D59: removes every `<!-- ... -->` span. A line that held something and is
-/// blank after the removal is dropped with its LF. If a comment spans lines,
-/// the line structure changes, and then only whitespace-only lines are
-/// dropped (empty lines stay). An unclosed `<!--` is left as it is.
+/// D59/D108: removes every `<!-- ... -->` span, also across lines. A line of
+/// the result that had a comment removed and is now blank is dropped with its
+/// LF; every other line stays as it is. An unclosed `<!--` is kept.
 #[must_use]
 pub fn strip_comments(text: &str) -> String {
-    let mut removed = String::with_capacity(text.len());
+    let mut out = String::with_capacity(text.len());
+    let mut touched: Vec<usize> = Vec::new();
+    let mut line = 0usize;
     let mut rest = text;
-    while let Some(open) = rest.find("<!--") {
-        let after_open = rest.get(open + 4..).unwrap_or("");
-        let Some(close) = after_open.find("-->") else {
+    loop {
+        let Some(open) = rest.find("<!--") else {
+            out.push_str(rest);
             break;
         };
-        removed.push_str(rest.get(..open).unwrap_or(""));
+        let before = rest.get(..open).unwrap_or("");
+        line += before.matches('\n').count();
+        out.push_str(before);
+        let after_open = rest.get(open + 4..).unwrap_or("");
+        let Some(close) = after_open.find("-->") else {
+            out.push_str(rest.get(open..).unwrap_or(""));
+            break;
+        };
+        touched.push(line);
         rest = after_open.get(close + 3..).unwrap_or("");
     }
-    removed.push_str(rest);
-
-    let before: Vec<&str> = text.split('\n').collect();
-    let after: Vec<&str> = removed.split('\n').collect();
-    let kept: Vec<&str> = if before.len() == after.len() {
-        before
-            .iter()
-            .zip(&after)
-            .filter(|(b, a)| b.trim().is_empty() || !a.trim().is_empty())
-            .map(|(_, a)| *a)
-            .collect()
-    } else {
-        after
-            .into_iter()
-            .filter(|l| !l.trim().is_empty() || l.is_empty())
-            .collect()
-    };
-    kept.join("\n")
+    out.split('\n')
+        .enumerate()
+        .filter(|(k, l)| !(touched.contains(k) && l.trim().is_empty()))
+        .map(|(_, l)| l)
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
-/// The text a reader serves for stored door bytes: escape undone, comments
+// The text a reader serves for stored door bytes: escape undone, comments
 /// removed (FR-15/2).
 ///
 /// # Errors
@@ -278,7 +275,12 @@ mod tests {
         assert_eq!(strip_comments("x <!-- c --> y"), "x  y");
         // unclosed comment stays
         assert_eq!(strip_comments("a <!-- open"), "a <!-- open");
-        // multi-line comment: whitespace-only lines go, empty lines stay
-        assert_eq!(strip_comments("a\n<!-- 1\n2 -->\n  \n\nb"), "a\n\n\nb");
+        // D108: a multi-line comment is removed like a single-line one; the
+        // line it leaves blank goes, untouched blank lines stay
+        assert_eq!(strip_comments("a\n<!-- 1\n2 -->\n  \n\nb"), "a\n  \n\nb");
+        assert_eq!(strip_comments("x <!-- 1\n2 --> y\nz"), "x  y\nz");
+        assert_eq!(strip_comments("a\n<!-- c -->"), "a");
+        assert_eq!(strip_comments("<!-- a -->\n<!-- b -->\nc"), "c");
+        assert_eq!(strip_comments("  <!-- c -->  \n   \nd"), "   \nd");
     }
 }

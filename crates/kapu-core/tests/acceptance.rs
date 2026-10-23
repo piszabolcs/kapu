@@ -360,15 +360,11 @@ fn open_sample_uses_the_fast_path_and_reports_unknown_ids_per_id() {
                 && n.tokens == 102)
     );
     assert_eq!(opened.doors[1].as_ref().unwrap_err().code.as_str(), "E009");
-    let framed = kapu_core::frame("minta.kapu", door);
+    let framed = kapu_core::frame_with_boundary("minta.kapu", door, "c0ffee");
     assert!(framed.starts_with(
-        "<kapu-room file=\"minta.kapu\" id=\"frontend-design-alapok/glass-gomb\" tokens=\"108\">
-"
+        "<kapu-room file=\"minta.kapu\" id=\"frontend-design-alapok/glass-gomb\" tokens=\"108\" boundary=\"c0ffee\">\n"
     ));
-    assert!(framed.ends_with(
-        "</kapu-room>
-"
-    ));
+    assert!(framed.ends_with("</kapu-room boundary=\"c0ffee\">\n"));
     assert!(!framed.contains("<!--"), "comments are never served");
 }
 

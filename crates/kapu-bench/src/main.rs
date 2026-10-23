@@ -59,6 +59,12 @@ enum Command {
         #[arg(long)]
         dump_graph: Option<PathBuf>,
     },
+    /// Runs the Rust Leiden on room graphs dumped by `measure --dump-graph`
+    /// and prints the modularity, to compare with `tools/leiden_check.py` (D43).
+    Leiden {
+        /// `a b weight` files.
+        graphs: Vec<PathBuf>,
+    },
     /// Times `search` on generated corpora: BM25 only, then hybrid with a
     /// cold and a warm vector cache (NFR-05, M5).
     Search {
@@ -95,6 +101,18 @@ fn main() -> ExitCode {
                 ExitCode::FAILURE
             }
         },
+        Command::Leiden { graphs } => {
+            for g in &graphs {
+                match leiden_on(g) {
+                    Ok(line) => println!("{line}"),
+                    Err(e) => {
+                        eprintln!("kapu-bench leiden: {}: {e}", g.display());
+                        return ExitCode::FAILURE;
+                    }
+                }
+            }
+            ExitCode::SUCCESS
+        }
         Command::Search {
             rooms,
             seed,
@@ -247,7 +265,7 @@ fn graph_row(
         let path = dir.join(format!("graph-{n}.tsv"));
         std::fs::write(&path, text).map_err(|e| {
             kapu_core::Error::new(
-                kapu_core::ErrorCode::E005,
+                kapu_core::ErrorCode::E012,
                 format!("{}: {e}", path.display()),
             )
         })?;
@@ -328,4 +346,33 @@ fn search_times(
         );
     }
     Ok(out)
+}
+
+/// Modularity and group count of the Rust Leiden on one dumped graph.
+fn leiden_on(path: &std::path::Path) -> std::io::Result<String> {
+    use std::collections::BTreeMap;
+    let text = std::fs::read_to_string(path)?;
+    let mut edges: BTreeMap<(usize, usize), f64> = BTreeMap::new();
+    let mut nodes = 0usize;
+    for line in text.lines() {
+        let fields: Vec<&str> = line.split_whitespace().collect();
+        let (Some(from), Some(to), Some(weight)) = (
+            fields.first().and_then(|x| x.parse::<usize>().ok()),
+            fields.get(1).and_then(|x| x.parse::<usize>().ok()),
+            fields.get(2).and_then(|x| x.parse::<f64>().ok()),
+        ) else {
+            continue;
+        };
+        nodes = nodes.max(from + 1).max(to + 1);
+        *edges.entry((from.min(to), from.max(to))).or_insert(0.0) += weight;
+    }
+    let start = Instant::now();
+    let labels = kapu_core::leiden::leiden(nodes, &edges);
+    let ms = start.elapsed().as_secs_f64() * 1000.0;
+    let q = kapu_core::leiden::modularity(nodes, &edges, &labels);
+    let groups = labels.iter().copied().max().map_or(0, |m| m + 1);
+    Ok(format!(
+        "{}: Rust Q={q:.4} ({groups} groups, {ms:.0} ms)",
+        path.display()
+    ))
 }

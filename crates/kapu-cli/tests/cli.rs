@@ -112,8 +112,17 @@ fn validate_map_search_describe_open_on_the_sample() {
     assert_eq!(v["index"], "ok");
     let frame = v["doors"][0]["frame"].as_str().unwrap();
     assert!(frame.starts_with(
-        "<kapu-room file=\"minta.kapu\" id=\"frontend-design-alapok/glass-gomb\" tokens=\"108\">"
+        "<kapu-room file=\"minta.kapu\" id=\"frontend-design-alapok/glass-gomb\" tokens=\"108\" boundary=\""
     ));
+    // the closing tag carries the same boundary as the opening one (D106)
+    let boundary = frame
+        .split("boundary=\"")
+        .nth(1)
+        .unwrap()
+        .split('"')
+        .next()
+        .unwrap();
+    assert!(frame.ends_with(&format!("</kapu-room boundary=\"{boundary}\">\n")));
     assert_eq!(v["doors"][0]["neighbours"][0]["type"], "link");
 }
 

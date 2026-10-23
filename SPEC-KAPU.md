@@ -1,4 +1,4 @@
-# KAPU Specification  v1.0  (2026-10-20)
+# KAPU Specification  v1.0.1  (2026-10-23; v1.0: 2026-10-20)
 
 Navigálható, egyfájlos tudáskonténer AI ügynököknek.
 Szerző és ötletgazda: Pintér Szabolcs. Specifikáció licence: CC BY 4.0. Kód licence: MIT.
@@ -175,7 +175,7 @@ tags:
 <!-- Innen jöhet a tartalom, sima Markdownban. -->
 ```
 
-- Rules: a `<!-- -->` megjegyzések a feliratképzésből, az indexből és a vektorokból kimaradnak.
+- Rules: a `<!-- -->` megjegyzések a feliratképzésből, az árból, az indexből, a vektorokból és a kiszolgált tartalomból kimaradnak. Eltávolítás (v1.0.1, D108): minden `<!-- ... -->` szakasz törlődik, több soron át is; az eredmény azon sora, amelyből megjegyzés törlődött és ettől csak szóköz maradt, a sortörésével együtt kimarad; minden más sor változatlan. Lezáratlan `<!--` megmarad.
 - Acceptance: Given egy kitöltetlen sablonú, de tartalommal rendelkező szoba, When build, Then a szoba kap címet, leírást és tageket a FR-06 szerint.
 
 ### FR-06 Feliratok képzése
@@ -225,7 +225,7 @@ tags:
 - Rules:
   1. A vektorokat NEM SZABAD a fájlba írni.
   2. Az író a build során a csomagolt modellel (D29) kiszámolja minden ajtó vektorát (cím + leírás + tartalom, megjegyzések nélkül), és a gráfhoz és csoportokhoz használja.
-  3. Az olvasó ugyanezzel a modellel számol, és a vektorokat gyorsítótárazza az operációs rendszer felhasználói gyorsítótár-mappájában, kulcs: `embhash` + az ajtó tartalmának BLAKE3 ujjlenyomata.
+  3. Az olvasó ugyanezzel a modellel számol, és a vektorokat gyorsítótárazza az operációs rendszer felhasználói gyorsítótár-mappájában, kulcs: `embhash` + a törzs `bodyhash`-e; egy gyorsítótár-bejegyzés a fájl összes ajtóvektora (v1.0.1, D97).
   4. Ha az olvasó csomagolt modelljének ujjlenyomata eltér a fejléc `embhash` mezőjétől, a jelentés szerinti keresés kimarad, és a válasz `vector: unavailable` állapotot jelez.
 - Acceptance: Given egy más modellel buildelt fájl, When keresés, Then BM25 találatok érkeznek és a válasz jelzi a vektoros keresés hiányát.
 
@@ -241,7 +241,7 @@ tags:
 
 - Rules:
   1. `link`: a tartalom `[szöveg](#id)` Markdown linkjeiből, ahol az `id` létező ajtó. Súly 1.0. Irányított.
-  2. `term`: két szoba között, ha legalább egy közös kifejezésük van, amelynek IDF értéke a fájl kifejezéseinek felső 10%-ában van (ASSUMPTION-06). Súly: a közös ritka kifejezések IDF-összegének normalizált értéke.
+  2. `term`: két szoba között, ha legalább egy közös kifejezésük van, amelynek IDF értéke a legalább két szobában előforduló kifejezések IDF-értékeinek felső 10%-ában van (ASSUMPTION-06; v1.0.1, D93). Súly: a közös ritka kifejezések IDF-összegének normalizált értéke.
   3. `sim`: szobánként a k=5 legközelebbi szomszéd koszinusz-hasonlóság szerint, ha a hasonlóság legalább 0.6 (ASSUMPTION-06). Súly: a hasonlóság.
   4. `term` és `sim` élek irányítatlanok, egyszer tárolva, a kisebb azonosító áll elöl.
   5. A sorok rendezettek (forrás, cél, típus).
@@ -274,7 +274,7 @@ S <id> | <cím> | <token>t
 #END
 ```
 
-- Rules: a mezőkben a `|` és a TAB karakter `\|` illetve szóköz formára cserélődik. A `#MAP` sorai csoportonként, azon belül törzsbeli sorrendben, az alajtók a szobájuk után.
+- Rules: a mezőkben előbb a `\` karakter `\\`, majd a `|` karakter `\|` formára, a TAB szóközre cserélődik; olvasáskor balról jobbra `\\` → `\`, `\|` → `|` (v1.0.1, D107). A `#MAP` sorai csoportonként, azon belül törzsbeli sorrendben, az alajtók a szobájuk után.
 
 ### FR-14 Pozíciók és ujjlenyomatok
 
@@ -308,10 +308,12 @@ S <id> | <cím> | <token>t
   2. A tartalom keretformája:
 
 ```
-<kapu-room file="skill.kapu" id="frontend/glass-gomb" tokens="640">
+<kapu-room file="skill.kapu" id="frontend/glass-gomb" tokens="640" boundary="8f3a2c91d0e4">
 ...tartalom, <!-- --> megjegyzések nélkül...
-</kapu-room>
+</kapu-room boundary="8f3a2c91d0e4">
 ```
+
+  A `boundary` minden keretnél új, előre nem kitalálható érték (12 hexadecimális jegy), és a záró jelölőben is szerepel, így a tartalomban előforduló `</kapu-room` nem zárhatja le a keretet (v1.0.1, D106).
 
   3. A gráfszomszédok listája adat, nem javaslat és nem utasítás.
   4. Az ismeretlen azonosító hibát ad az adott azonosítóra, a többit kiszolgálja.
@@ -373,6 +375,7 @@ S <id> | <cím> | <token>t
 | E009 | hivatkozás nem létező ajtóra (index, gráf, docs, map) |
 | E010 | felirat a kemény korlát felett |
 | E011 | ismeretlen hash előtag |
+| E012 | környezeti hiba, nem a fájl hibája: nem olvasható vagy nem írható fájl, hiányzó vagy hibás vektormodell, hibás kérdésfájl (v1.0.1, D109) |
 
 - Rules: a `validate` alapból a fejlécet és a származtatott szakaszokat ellenőrzi, `--full` esetén a törzs ujjlenyomatait is, és azt is, hogy a build bájtra ugyanazt a fájlt állítaná-e elő.
 
@@ -520,7 +523,7 @@ A fejlesztés ezekhez a módszerekhez tartja magát. Bármelyik csak indoklássa
 - **ASSUMPTION-03** Automatikus tagszám: 8.
 - **ASSUMPTION-04** Kettős (magyar és angol) szótövezés minden kifejezésre.
 - **ASSUMPTION-05** A cím és a tagek 3-szoros súlya az indexben.
-- **ASSUMPTION-06** Élküszöbök: `term` a felső 10% IDF, `sim` k=5 és legalább 0.6 hasonlóság.
+- **ASSUMPTION-06** Élküszöbök: `term` a legalább két szobában előforduló kifejezések IDF-jének felső 10%-a (v1.0.1, D93), `sim` k=5 és legalább 0.6 hasonlóság.
 - **ASSUMPTION-07** Lapos térkép, ha egy csoport van, vagy a rövid térkép legfeljebb 2000 token.
 - **ASSUMPTION-08** Parserkorlátok: szakasz 1 GiB, sor 1 MiB.
 - **UNVERIFIED-01** Megfelelő, karbantartott `o200k_base` Rust implementáció elérhetősége. Ha nincs, az ügynök a tiktoken nyilvános `o200k_base` szókincsfájljából saját BPE kódolót ír, tesztvektorokkal.
@@ -574,3 +577,17 @@ Ellenőrzés: riport (`bench/REPORT.md`) minden fenti számmal, és a 1.3 sikerk
 Ellenőrzés: tiszta gépen, telepítés nélkül a 1.3 forgatókönyv működik.
 
 **Utasítások az ügynöknek:** a 2.1 fejezeten kívül nem építesz funkciót. Ha egy követelmény kétértelmű, megállsz és kérdezel, nem találgatsz. A 10.2 módszertáblázattól csak a D30 szerint térhetsz el.
+
+---
+
+## 14. Változások v1.0 → v1.0.1 (2026-10-23)
+
+A felhasználó jóváhagyásával, a fejlesztés közben talált spec-rések alapján. A fájl első sora (`%KAPU 1.0`) nem változik: a v1.0.1 pontosítás, nem formátumváltás. A részletek a `DONTESNAPLO.md` jelzett bejegyzéseiben.
+
+1. **FR-11/2, ASSUMPTION-06 (D93):** a `term` élek 10%-os ritkasági küszöbe a legalább két szobában előforduló kifejezések között számolódik. Indok: a v1.0 szabály szerint a legritkább kifejezések mindig egyetlen szobában vannak, így soha nem keletkezett volna `term` él, és az FR-11 Acceptance sem teljesülhetett.
+2. **FR-10/3 (D97):** a vektor-gyorsítótár kulcsa `embhash` + `bodyhash`, egy bejegyzés a fájl összes ajtóvektora. Indok: 3000 szobánál a meleg keresés 0,16 s az ajtónkénti 1,2 s helyett.
+3. **FR-15/2 (D106):** a tartalom kerete minden kinyitáskor új `boundary` értéket kap a nyitó és a záró jelölőben.
+4. **FR-13 (D107):** a `#MAP` mezőiben a `\` is escape-et kap (`\\`), így minden cím egyértelműen visszaállítható.
+5. **FR-05 (D108):** a megjegyzés-eltávolítás egyetlen, többsoros megjegyzésre is érvényes szabálya.
+6. **FR-20 (D109):** új E012 hibakód a környezeti hibákra.
+7. **FR-12, D43 (D110):** a Leiden 8 indítással (mag 42–49) és indításonként a konvergenciáig ismételt optimalizálással fut, a legnagyobb modularitás nyer; az ellenőrzés kritériuma: nem lehet 0,005-nél rosszabb a `leidenalg` (mag 42) értékénél.

@@ -13,7 +13,7 @@ use crate::sections::{BodyLength, Limits, Sections};
 use crate::text::slug;
 
 fn io_err(path: &Path, e: &std::io::Error) -> Error {
-    Error::new(ErrorCode::E005, format!("{}: {e}", path.display()))
+    Error::new(ErrorCode::E012, format!("{}: {e}", path.display()))
 }
 
 /// Rooms of an existing file, read tolerantly (a hand-edited file is fine).
@@ -42,7 +42,7 @@ pub fn new_file() -> Result<Built> {
 /// CRLF is converted to LF with a W004 warning (D40).
 ///
 /// # Errors
-/// I/O errors (E005), a file that is not UTF-8 (E004), or a builder error.
+/// I/O errors (E012), a file that is not UTF-8 (E004), or a builder error.
 pub fn import_dir(dir: &Path) -> Result<Built> {
     let mut paths: Vec<PathBuf> = std::fs::read_dir(dir)
         .map_err(|e| io_err(dir, &e))?
@@ -101,7 +101,7 @@ pub fn import_dir(dir: &Path) -> Result<Built> {
 /// `dir`. Returns the written paths in body order.
 ///
 /// # Errors
-/// A broken file or an I/O error (E005).
+/// A broken file or an I/O error (E012).
 pub fn export_dir(file: &[u8], dir: &Path) -> Result<Vec<PathBuf>> {
     let rooms = rooms_of(file)?;
     std::fs::create_dir_all(dir).map_err(|e| io_err(dir, &e))?;

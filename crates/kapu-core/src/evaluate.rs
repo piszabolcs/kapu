@@ -45,7 +45,7 @@ impl Question {
 /// Parses the JSON-lines question file; empty lines are skipped.
 ///
 /// # Errors
-/// E005 with the line number for a line that is not a JSON object with a
+/// E012 with the line number for a line that is not a JSON object with a
 /// string `kerdes` and `valasz_fajl`.
 pub fn parse_questions(text: &str) -> Result<Vec<Question>> {
     let mut out = Vec::new();
@@ -55,7 +55,7 @@ pub fn parse_questions(text: &str) -> Result<Vec<Question>> {
         }
         let bad = || {
             Error::new(
-                ErrorCode::E005,
+                ErrorCode::E012,
                 format!("question line {}: not a valid question object", n + 1),
             )
         };
@@ -215,7 +215,7 @@ mod tests {
         assert_eq!(parse_questions(text).unwrap().len(), 2);
         assert_eq!(
             parse_questions("{\"kerdes\":\"a\"}").unwrap_err().code,
-            ErrorCode::E005
+            ErrorCode::E012
         );
     }
 

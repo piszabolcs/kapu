@@ -4,6 +4,22 @@ Minden commitnál frissül (TERV.md 8. fejezet). Legfrissebb bejegyzés felül.
 
 ---
 
+## 2026-10-23 – Közös áttekintés: döntések átvezetve, spec v1.0.1
+
+**A felhasználó döntései (AGGALYOK.md A rész):** A21 (FR-16) az M8 modellmérés dönt; D93 (`term` küszöb) és D97 (törzsenkénti vektor-gyorsítótár) jóváhagyva; A2, A4, A5, A18 átvezetve; A20 szigorúbb Leiden-kritérium; A27 kétnyelvű README.
+
+**Kész**
+- `SPEC-KAPU.md` v1.0.1: FR-05 (megjegyzés-szabály), FR-10/3 (gyorsítótár-kulcs), FR-11/2 és ASSUMPTION-06 (`term` küszöb), FR-13 (`\\` escape), FR-15/2 (keret határolóval), FR-20 (E012), 14. fejezet: változáslista. A fájlok első sora marad `%KAPU 1.0`.
+- D106 keret `boundary`-vel; D107 mező-escape; D108 új megjegyzés-szabály (Python és Rust); D109 E012 a környezeti hibákra; D110 Leiden 8 indítással, konvergenciáig (3000 szobán 0,4153 a `leidenalg` 0,3949-ével szemben; `kapu-bench leiden` alparancs).
+- A minta és a tesztvektorok bájtra változatlanok; a tesztmodelles ujjlenyomat sem változott.
+- README kétnyelvű (angol, majd magyar).
+- Új aggály: A30 (a commitok szerzői e-mailje gmail, a portfólió-szokás a GitHub noreply cím).
+
+**Ellenőrzés (2026-10-23, lefuttatva)**
+- `scripts/check.ps1` zöld; minden munkaterület-teszt zöld (az FR-16 teszt indoklással `ignored`).
+
+---
+
 ## 2026-10-23 – M8 részben, M9 részben: i8 modell, mérések, csomag
 
 **Kész**

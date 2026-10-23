@@ -695,8 +695,13 @@ fn build_groups(doors: &mut [Door], edges: &[EdgeRow]) -> Vec<Group> {
 // Sections and header
 // ---------------------------------------------------------------------------
 
+/// FR-13 field escape (D107): `\` becomes `\\` first, then `|` becomes `\|`;
+/// TAB becomes a space.
 fn esc_field(s: &str) -> String {
-    nfc(s).replace('|', "\\|").replace('\t', " ")
+    nfc(s)
+        .replace('\\', "\\\\")
+        .replace('|', "\\|")
+        .replace('\t', " ")
 }
 
 fn section(name: &str, lines: &[String]) -> Vec<u8> {
@@ -868,7 +873,7 @@ pub fn build(rooms: &[RoomSource]) -> Result<Built> {
 /// model this is [`build`] (D57).
 ///
 /// # Errors
-/// As [`build`], plus a tokenizer failure (E005).
+/// As [`build`], plus a tokenizer failure (E012).
 pub fn build_with(rooms: &[RoomSource], model: Option<&Model>) -> Result<Built> {
     let mut warnings = Vec::new();
     let mut seen = BTreeSet::new();
@@ -955,11 +960,11 @@ pub fn new_room_id(content: &str, used: &BTreeSet<String>) -> String {
 /// `path` (replacing an existing file on every platform).
 ///
 /// # Errors
-/// I/O errors, reported as E005 with the OS message.
+/// I/O errors, reported as E012 with the OS message.
 pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
     let io = |e: std::io::Error| {
         Error::new(
-            ErrorCode::E005,
+            ErrorCode::E012,
             format!("cannot write {}: {e}", path.display()),
         )
     };

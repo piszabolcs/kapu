@@ -114,7 +114,7 @@ impl Output {
 }
 
 fn io_err(path: &Path, e: &std::io::Error) -> Error {
-    Error::new(ErrorCode::E005, format!("{}: {e}", path.display()))
+    Error::new(ErrorCode::E012, format!("{}: {e}", path.display()))
 }
 
 fn read(path: &Path) -> Result<Vec<u8>, Error> {
@@ -206,7 +206,7 @@ fn run(cli: &Cli) -> Result<Output, Error> {
         Command::New { file } => {
             if file.exists() {
                 return Err(Error::new(
-                    ErrorCode::E005,
+                    ErrorCode::E012,
                     format!("{} already exists", file.display()),
                 ));
             }

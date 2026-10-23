@@ -256,3 +256,19 @@ fn fr15_open_four_doors_returns_four_frames_sized_like_their_prices() {
         "response {size} vs body {body_tokens}"
     );
 }
+
+#[test]
+fn map_fields_round_trip_backslashes_and_pipes() {
+    // D107: a title with `\`, `|` and `\|` comes back exactly from #MAP
+    let title = r"C:\temp | a\|b \ end\";
+    let built = build(&[RoomSource {
+        id: "esc".into(),
+        content: format!("# {title}\nszöveg\n"),
+    }])
+    .unwrap();
+    let v = kapu_core::view::map_view(&built.bytes, None).unwrap();
+    assert_eq!(v.doors[0].title, title.trim_end());
+    let d = kapu_core::describe_bytes(&built.bytes, &["esc"]).unwrap();
+    assert_eq!(d[0].as_ref().unwrap().title, title.trim_end());
+    kapu_core::validate(&built.bytes, kapu_core::Level::Full).unwrap();
+}

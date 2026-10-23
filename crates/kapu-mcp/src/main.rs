@@ -86,7 +86,7 @@ fn failure(e: &kapu_core::Error) -> CallToolResult {
 
 fn read(file: &str) -> Result<Vec<u8>, kapu_core::Error> {
     std::fs::read(file)
-        .map_err(|e| kapu_core::Error::new(kapu_core::ErrorCode::E005, format!("{file}: {e}")))
+        .map_err(|e| kapu_core::Error::new(kapu_core::ErrorCode::E012, format!("{file}: {e}")))
 }
 
 fn hex(h: &kapu_core::Hash) -> String {

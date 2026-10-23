@@ -166,10 +166,10 @@ fn bpe() -> Option<&'static CoreBPE> {
 /// ordinary text.
 ///
 /// # Errors
-/// E005 if the embedded vocabulary cannot be loaded (never expected).
+/// E012 if the embedded vocabulary cannot be loaded (never expected).
 pub fn tokens(text: &str) -> Result<u64> {
     let bpe =
-        bpe().ok_or_else(|| Error::new(ErrorCode::E005, "o200k_base tokenizer unavailable"))?;
+        bpe().ok_or_else(|| Error::new(ErrorCode::E012, "o200k_base tokenizer unavailable"))?;
     Ok(u64::try_from(bpe.encode_ordinary(text).len()).unwrap_or(u64::MAX))
 }
 

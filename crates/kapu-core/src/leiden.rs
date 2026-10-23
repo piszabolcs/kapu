@@ -17,8 +17,10 @@ use std::collections::{BTreeMap, VecDeque};
 pub const SEED: u64 = 42;
 /// At most this many aggregation levels per run (D43).
 pub const MAX_ITERATIONS: usize = 10;
-/// Full optimisation runs, each from the previous partition (D92).
-pub const OUTER_RUNS: usize = 2;
+/// At most this many full optimisation runs, each from the previous partition (D92, D110).
+pub const OUTER_RUNS: usize = 10;
+/// Independent optimisations with seeds 42, 43, ...; the best modularity wins (D110).
+pub const RESTARTS: u64 = 8;
 const GAMMA: f64 = 1.0;
 
 /// xoshiro256** seeded through splitmix64; platform independent.
@@ -316,21 +318,31 @@ fn renumber(labels: &[usize]) -> Vec<usize> {
 /// edges must already be summed, keys with `a <= b`. Returns a community
 /// index per node, numbered 0.. in order of first appearance.
 ///
-/// Like `leidenalg`'s default, the whole multi-level optimisation runs up to
-/// [`OUTER_RUNS`] times, each run starting from the previous partition on the
-/// original graph, until the partition no longer changes (D92).
+/// [`RESTARTS`] independent optimisations run with the seeds 42, 43, ...;
+/// in each, the whole multi-level optimisation repeats from the previous
+/// partition until it no longer changes (at most [`OUTER_RUNS`] times). The
+/// partition with the highest modularity wins; on a tie the earlier seed
+/// (D110). Everything is deterministic.
 #[must_use]
 pub fn leiden(n: usize, edges: &BTreeMap<(usize, usize), f64>) -> Vec<usize> {
-    let mut rng = Rng::new(SEED);
-    let mut partition: Vec<usize> = (0..n).collect();
-    for _ in 0..OUTER_RUNS {
-        let next = leiden_run(n, edges, partition.clone(), &mut rng);
-        if next == partition {
-            break;
+    let mut best: Option<(f64, Vec<usize>)> = None;
+    for restart in 0..RESTARTS {
+        let mut rng = Rng::new(SEED.wrapping_add(restart));
+        let mut partition: Vec<usize> = (0..n).collect();
+        for _ in 0..OUTER_RUNS {
+            let next = leiden_run(n, edges, partition.clone(), &mut rng);
+            if next == partition {
+                break;
+            }
+            partition = next;
         }
-        partition = next;
+        let partition = renumber(&partition);
+        let q = modularity(n, edges, &partition);
+        if best.as_ref().is_none_or(|(best_q, _)| q > *best_q) {
+            best = Some((q, partition));
+        }
     }
-    renumber(&partition)
+    best.map_or_else(|| (0..n).collect(), |(_, p)| p)
 }
 
 /// One multi-level Leiden optimisation starting from `initial`.
@@ -472,7 +484,7 @@ mod tests {
     }
 
     #[test]
-    fn karate_club_matches_leidenalg_within_d43_tolerance() {
+    fn karate_club_matches_leidenalg_within_d110_tolerance() {
         // Zachary's karate club; Python leidenalg 0.12 (seed 42) reaches 0.4198
         let list: [(usize, usize); 78] = [
             (0, 1),
@@ -557,6 +569,7 @@ mod tests {
         let g = edges(&list.iter().map(|&(a, b)| (a, b, 1.0)).collect::<Vec<_>>());
         let c = leiden(34, &g);
         let q = modularity(34, &g, &c);
-        assert!((q - 0.4198).abs() <= 0.01, "modularity {q}");
+        // D110: never more than 0.005 below leidenalg
+        assert!(q >= 0.4198 - 0.005, "modularity {q}");
     }
 }

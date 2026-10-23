@@ -140,22 +140,33 @@ def escape_body(content: str) -> str:
     )
 
 
-_COMMENT = re.compile(r"<!--.*?-->", re.S)
 
 
 def strip_comments(text: str) -> str:
-    """D59: remove `<!-- -->` spans; drop lines that held nothing but comments."""
-    before = text.split("\n")
-    stripped = _COMMENT.sub("", text).split("\n")
-    # Multi-line comments change the line count; fall back to a simple rule then.
-    if len(before) != len(stripped):
-        return "\n".join(l for l in stripped if l.strip() or not l)
-    out = []
-    for b, a in zip(before, stripped):
-        if b.strip() and not a.strip():
+    """D59/D108: remove every `<!-- ... -->` span (also across lines); a line of
+    the result that had a comment removed and is now blank is dropped with its
+    LF; every other line stays. An unclosed `<!--` is kept as it is."""
+    out: list[str] = []
+    touched: set[int] = set()
+    line = 0
+    i, n = 0, len(text)
+    while i < n:
+        if text.startswith("<!--", i):
+            close = text.find("-->", i + 4)
+            if close == -1:
+                rest = text[i:]
+                out.append(rest)
+                break
+            touched.add(line)
+            i = close + 3
             continue
-        out.append(a)
-    return "\n".join(out)
+        c = text[i]
+        out.append(c)
+        if c == "\n":
+            line += 1
+        i += 1
+    lines = "".join(out).split("\n")
+    return "\n".join(l for k, l in enumerate(lines) if not (k in touched and not l.strip()))
 
 
 def tokens(text: str) -> int:
@@ -533,8 +544,9 @@ def build_groups(doors: list[Door], edges) -> list[tuple[str, str, list[Door]]]:
 
 
 def esc_field(s: str) -> str:
-    """FR-13 field escape on NFC text (FR-02/6, D82)."""
-    return nfc(s).replace("|", "\\|").replace("\t", " ")
+    """FR-13 field escape on NFC text (FR-02/6, D82): `\\` -> `\\\\` first,
+    then `|` -> `\\|` (D107), TAB -> space."""
+    return nfc(s).replace("\\", "\\\\").replace("|", "\\|").replace("\t", " ")
 
 
 def section(name: str, lines: list[str]) -> bytes:

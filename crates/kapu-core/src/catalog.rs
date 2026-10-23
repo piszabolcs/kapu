@@ -67,10 +67,27 @@ fn e005(section: &str, n: usize, what: &str) -> Error {
     Error::new(ErrorCode::E005, format!("{section} line {n}: {what}"))
 }
 
-/// FR-13: `\|` stands for a literal `|` in a `#MAP` field.
+/// FR-13 (D107): in a `#MAP` field `\\` stands for `\` and `\|` for `|`,
+/// read left to right. Any other `\` is kept as it is.
 #[must_use]
 pub fn unescape_field(field: &str) -> String {
-    field.replace("\\|", "|")
+    let mut out = String::with_capacity(field.len());
+    let mut chars = field.chars();
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            match chars.next() {
+                Some(next @ ('\\' | '|')) => out.push(next),
+                Some(other) => {
+                    out.push('\\');
+                    out.push(other);
+                }
+                None => out.push('\\'),
+            }
+        } else {
+            out.push(c);
+        }
+    }
+    out
 }
 
 /// Parses the inner text of `#MAP`.

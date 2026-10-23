@@ -20,23 +20,25 @@ Megjegyzések:
 2. A térkép/törzs arány a generált korpuszon 26–27%, mert a generált szobák kicsik (átlag kb. 80 token, alajtókkal együtt kb. 4 ajtó szobánként). Valódi skill-szobákon ez várhatóan jóval kisebb; lásd AGGALYOK A10.
 3. A fájl kb. 80%-a az `#INDEX` szakasz (kettős tövezés, szoba- és alajtó-posztingok); lásd AGGALYOK A11.
 
-## 2. Gráf és csoportok a vektormodellel (M4)
+## 2. Gráf és csoportok a vektormodellel (M4, frissítve D110 után)
 
-- Dátum: 2026-10-23. Gép és build mint az 1. táblázatnál. Modell: `potion-multilingual-128M` (f32, 512 MB).
-- Parancs: `kapu-bench measure --rooms 30,300,3000 --runs 3 --model models/potion-multilingual-128M --dump-graph <mappa>`; Leiden-ellenőrzés: `tools/leiden_check.py <mappa>/graph-<n>.tsv`.
+- Dátum: 2026-10-23. Gép és build mint az 1. táblázatnál. Modell: `potion-multilingual-128M-i8` (az alapmodell, D102).
+- Parancs: `kapu-bench measure --rooms 30,300,3000 --runs 3 --model models/potion-multilingual-128M-i8 --dump-graph <mappa>`; Leiden-ellenőrzés: `tools/leiden_check.py <mappa>/graph-<n>.tsv`.
+- Leiden: 8 indítás (mag 42–49), indításonként a konvergenciáig ismételt optimalizálás, a legnagyobb modularitás nyer (D110).
 
-| Szobák | Build (ms, medián) | Fájl (KiB) | link él | term él | sim él | Csoportok | Legnagyobb csoport | Medián csoport | Modularitás (Rust) | Modularitás (leidenalg, mag 42) |
-|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 30 | 37 | 240.8 | 30 | 25 | 113 | 4 | 10 | 9 | 0.2460 | 0.2330 |
-| 300 | 388 | 2375.3 | 300 | 260 | 1298 | 8 | 47 | 40 | 0.3490 | 0.3456 |
-| 3000 | 5824 | 24697.2 | 3000 | 1308 | 13314 | 9 | 721 | 243 | 0.4095 | 0.4168 |
+| Szobák | Build (ms, medián) | Fájl (KiB) | link él | term él | sim él | Csoportok | Legnagyobb csoport | Medián csoport | Modularitás (Rust) | leidenalg, mag 42 | leidenalg, legjobb a 10 magból |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 30 | 30 | 240.8 | 30 | 25 | 113 | 4 | 10 | 9 | 0.2664 | 0.2330 | 0.2330 |
+| 300 | 323 | 2375.2 | 300 | 260 | 1298 | 7 | 61 | 48 | 0.3601 | 0.3421 | 0.3584 |
+| 3000 | 5594 | 24696.8 | 3000 | 1308 | 13306 | 8 | 773 | 486 | 0.4153 | 0.3949 | 0.4171 |
 
 Megjegyzések:
 
-1. A D43/D92 kritérium (a Rust nem lehet 0,01-nél rosszabb a `leidenalg`-nál) mindhárom méreten teljesül; 30 és 300 szobánál a Rust jobb. Az első változat (egy optimalizálási kör) 300 szobánál 0,3349-et adott (−0,0107); a második, az előző partícióból induló kör hozta be.
-2. A `sim` élek száma kb. 4,4 szobánként (k = 5, küszöb 0,6): a generált korpusz szókincse kicsi és ismétlődő, ezért sok szobapár hasonló. Valódi korpuszon ez várhatóan kevesebb.
-3. A 3000 szobás build modellel 5,8 s, ennek nagy része a `sim` élek páronkénti koszinusza (négyzetes, 3000² × 256). Elfogadható; ha a korpusz nő, közelítő kNN kellhet.
-4. A karateklub-gráfon (34 csúcs) a Rust a `leidenalg` 0,4198-ját ±0,01-en belül hozza (egységteszt).
+1. A D110 kritérium (a Rust nem lehet 0,005-nél rosszabb a `leidenalg` 42-es magjánál) mindhárom méreten bőven teljesül; a `leidenalg` 10 magból vett legjobbjától is legfeljebb 0,002-vel marad el. Az első változat (egy optimalizálási kör, egy mag) 300 szobánál −0,011-gyel, a második (két kör, egy mag) 3000 szobánál −0,007-tel maradt el.
+2. Az eredmény a csúcsok sorrendjétől is függ: ugyanazon a gráfon, a térkép sorrendjében indexelve a Rust 3000 szobánál 0,4114-et ad (a `leidenalg` 42-es magja 0,3949). A build mindig a törzs sorrendjét használja, így a fájl determinisztikus.
+3. A `sim` élek száma kb. 4,4 szobánként (k = 5, küszöb 0,6): a generált korpusz szókincse kicsi és ismétlődő.
+4. A 3000 szobás build modellel 5,6 s, nagy része a `sim` élek páronkénti koszinusza (négyzetes); a Leiden kb. 0,4 s.
+5. A karateklub-gráfon (34 csúcs) a Rust a `leidenalg` 0,4198-ja − 0,005 felett van (egységteszt).
 
 ## 3. Keresési válaszidő (M5)
 

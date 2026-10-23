@@ -9,6 +9,7 @@
 //! response carries `index_stale = true`. The reader never writes the file
 //! (D16).
 
+use std::fmt::Write as _;
 use std::path::Path;
 
 use crate::catalog::{Map, parse_desc, parse_graph, parse_map, unescape_field};
@@ -89,7 +90,7 @@ pub fn open_bytes(file: &[u8], ids: &[&str]) -> Result<Opened> {
 /// one re-read on inconsistency, then the in-memory rebuild.
 ///
 /// # Errors
-/// I/O errors are reported as E005 with the OS message; a broken header or
+/// I/O errors are reported as E012 with the OS message; a broken header or
 /// layout as its own code.
 pub fn open_path(path: &Path, ids: &[&str]) -> Result<Opened> {
     let first = read(path)?;
@@ -106,7 +107,7 @@ pub fn open_path(path: &Path, ids: &[&str]) -> Result<Opened> {
 fn read(path: &Path) -> Result<Vec<u8>> {
     std::fs::read(path).map_err(|e| {
         Error::new(
-            ErrorCode::E005,
+            ErrorCode::E012,
             format!("cannot read {}: {e}", path.display()),
         )
     })
@@ -141,24 +142,56 @@ pub fn describe_bytes(
         .collect())
 }
 
-/// The FR-15/2 frame around one door's content. `file_name` is the name the
-/// caller shows (normally the file name without directories).
+/// A boundary nobody can know when writing the content (D106): BLAKE3 of
+/// the time, the process id, a counter and the door id, 12 hex digits.
+#[must_use]
+pub fn new_boundary(id: &str) -> String {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_nanos());
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(&nanos.to_le_bytes());
+    hasher.update(&std::process::id().to_le_bytes());
+    hasher.update(&COUNTER.fetch_add(1, Ordering::Relaxed).to_le_bytes());
+    hasher.update(id.as_bytes());
+    hasher
+        .finalize()
+        .to_hex()
+        .get(..12)
+        .unwrap_or("")
+        .to_owned()
+}
+
+/// The FR-15/2 frame around one door's content, with a fresh boundary
+/// (D106). `file_name` is the name the caller shows (normally the file name
+/// without directories).
 #[must_use]
 pub fn frame(file_name: &str, door: &OpenedDoor) -> String {
+    frame_with_boundary(file_name, door, &new_boundary(&door.id))
+}
+
+/// The frame with a given boundary: `<kapu-room file="…" id="…" tokens="…"
+/// boundary="…">`, the content, `</kapu-room boundary="…">`. A
+/// `</kapu-room` inside the content cannot close it, because it cannot carry
+/// the boundary (AGGALYOK A2).
+#[must_use]
+pub fn frame_with_boundary(file_name: &str, door: &OpenedDoor, boundary: &str) -> String {
     let file = file_name.replace('&', "&amp;").replace('"', "&quot;");
     let mut out = format!(
-        "<kapu-room file=\"{file}\" id=\"{}\" tokens=\"{}\">\n",
+        "<kapu-room file=\"{file}\" id=\"{}\" tokens=\"{}\" boundary=\"{boundary}\">\n",
         door.id, door.tokens
     );
     out.push_str(&door.text);
     if !door.text.ends_with('\n') {
         out.push('\n');
     }
-    out.push_str("</kapu-room>\n");
+    let _ = writeln!(out, "</kapu-room boundary=\"{boundary}\">");
     out
 }
 
-/// Context shared by both paths: titles, prices and edges of the file.
+// Context shared by both paths: titles, prices and edges of the file.
 struct Catalog<'a> {
     map: Map<'a>,
     edges: Vec<crate::catalog::Edge<'a>>,
@@ -381,8 +414,13 @@ mod tests {
             neighbours: vec![],
         };
         assert_eq!(
-            frame("my \"f\".kapu", &door),
-            "<kapu-room file=\"my &quot;f&quot;.kapu\" id=\"a\" tokens=\"3\">\nx\n</kapu-room>\n"
+            frame_with_boundary("my \"f\".kapu", &door, "b0"),
+            "<kapu-room file=\"my &quot;f&quot;.kapu\" id=\"a\" tokens=\"3\" boundary=\"b0\">\nx\n</kapu-room boundary=\"b0\">\n"
         );
+        // every frame gets a different, 12-hex-digit boundary
+        let (a, b) = (new_boundary("a"), new_boundary("a"));
+        assert_ne!(a, b);
+        assert_eq!(a.len(), 12);
+        assert!(a.bytes().all(|c| c.is_ascii_hexdigit()));
     }
 }
