@@ -91,6 +91,14 @@ async fn conformance_and_core_flow_on_the_sample() {
             "kapu_write"
         ]
     );
+    // mcp-builder: every tool carries annotations; only kapu_write changes the file (D120)
+    for tool in &tools {
+        let a = tool.annotations.as_ref().expect("annotations");
+        let writes = tool.name == "kapu_write";
+        assert_eq!(a.read_only_hint, Some(!writes), "{}", tool.name);
+        assert_eq!(a.destructive_hint, Some(writes), "{}", tool.name);
+        assert_eq!(a.open_world_hint, Some(false), "{}", tool.name);
+    }
     let map_tool = tools.iter().find(|t| t.name == "kapu_map").unwrap();
     assert!(
         map_tool
