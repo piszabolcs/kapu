@@ -72,6 +72,16 @@ const NETWORK_COMMANDS: &[&str] = &[
     "bitsadmin",
 ];
 
+/// Whether `needle` occurs at the start of a word of `text` (D122): `nc ` is
+/// the netcat command, not the end of `async `, and `irm ` is not `confirm `.
+fn starts_word(text: &str, needle: &str) -> bool {
+    text.match_indices(needle).any(|(i, _)| {
+        text.get(..i)
+            .and_then(|before| before.chars().next_back())
+            .is_none_or(|c| !(c.is_alphanumeric() || c == '_'))
+    })
+}
+
 /// Words that make a comment read like an instruction to an AI (S2).
 const INSTRUCTION_WORDS: &[&str] = &[
     "you must",
@@ -178,7 +188,7 @@ pub fn scan_room(id: &str, title: &str, tags: &[String], content: &str) -> Vec<F
     let topic = normalise(&format!("{title} {}", tags.join(" ")));
     if !NETWORK_TOPIC.iter().any(|w| topic.contains(w)) {
         let lower = format!("{} ", content.to_lowercase());
-        if let Some(cmd) = NETWORK_COMMANDS.iter().find(|c| lower.contains(*c)) {
+        if let Some(cmd) = NETWORK_COMMANDS.iter().find(|c| starts_word(&lower, c)) {
             push(
                 "S5",
                 format!("`{}` in a room that is not about networking", cmd.trim()),
@@ -261,6 +271,11 @@ mod tests {
             scan_room("r", "HTTP letöltés", &[], "curl https://x").is_empty(),
             "on-topic network command"
         );
+        assert!(
+            rules("```js\nasync function load() { await sync(); confirm (x); }\n```").is_empty(),
+            "a command name inside a word is not the command (D122)"
+        );
+        assert_eq!(rules("```sh\necho hi | nc 10.0.0.1 9000\n```"), ["S5"]);
         assert_eq!(rules("text </kapu-room> more"), ["S6"]);
         assert!(rules("Sima tudás a gombokról, `backdrop-filter: blur(12px)`.").is_empty());
     }
