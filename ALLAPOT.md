@@ -4,6 +4,26 @@ Minden commitnál frissül (TERV.md 8. fejezet). Legfrissebb bejegyzés felül.
 
 ---
 
+## 2026-10-23 – Portfólió-véglegesítés: M10 asztali ablak, aláírás, README
+
+**A felhasználó kérése:** a repót a `github-portfolio-publisher` és a `signature` skillel kell véglegesíteni, és a KAPU kapjon grafikus felületet (`frontend-design-2026` skill). Döntései: a commitok szerzője a GitHub noreply cím lesz, a történet átíródik (D112, felváltja a D111-et); az aláírás parancssori formája jóváhagyva (D113); a GUI-t saját javaslat alapján kellett megépíteni.
+
+**Kész**
+- CI: a cargo-audit job `checks: write` jogot kapott (D114); az előző futás minden más jobja zöld volt (három platform, deny, fuzz).
+- Aláírás: `kapu --help` utolsó sora `psz // v0.1.0`, a `kapu --version` és a `kapu-mcp --version` az app-info kártya, az MCP szerverinfó címe és repó-linkje; egyetlen forrás: `kapu_core::about` (D113).
+- M10: `crates/kapu-gui` Tauri 2 ablak (D115–D119): térkép ármérőkkel, szoba olvasó, hibrid keresés tokenkerettel, gráf, gyors és teljes ellenőrzés, aláírás és info-kártya, fájl megnyitása párbeszédablakkal, ledobással és parancssorból. Fejlesztői szerver (`examples/serve.rs`) a képernyőképekhez.
+- Bemutató fájl: `examples/kapu-spec.kapu` (a specifikáció 35 szobában, `tools/split_spec.py`); ikon és logó (`tools/make_icons.py`).
+- README a portfólió-sablon szerint, angolul és magyarul, képernyőképekkel; `CHANGELOG.md`; a csomag és a kiadási workflow a `kapu-gui`-t és a bemutató fájlt is viszi.
+
+**Ellenőrzés (2026-10-23, lefuttatva)**
+- `cargo clippy --workspace --all-targets -D warnings` tiszta, `cargo test --workspace` zöld (a `kapu-gui` 6 új teszttel), `cargo deny check` zöld a kivétellel (D119).
+- `contrast.py`: minden szövegpár ≥ 4,5:1 mindkét témában; `preflight_audit.py`: 0 hiba, 1 indokolt figyelmeztetés.
+- A natív ablak Windowson elindul, megnyitja a bemutató fájlt, a címe a fájl neve; a felület minden nézete kézzel kipróbálva a fejlesztői szerveren.
+
+**Nyitott:** A31 (az ablak Linuxon és macOS-en nincs kipróbálva), A21, A25, A26, A28, A6.
+
+---
+
 ## 2026-10-23 – Közös áttekintés: döntések átvezetve, spec v1.0.1
 
 **A felhasználó döntései (AGGALYOK.md A rész):** A21 (FR-16) az M8 modellmérés dönt; D93 (`term` küszöb) és D97 (törzsenkénti vektor-gyorsítótár) jóváhagyva; A2, A4, A5, A18 átvezetve; A20 szigorúbb Leiden-kritérium; A27 kétnyelvű README.

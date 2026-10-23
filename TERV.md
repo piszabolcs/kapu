@@ -197,6 +197,16 @@ Minden mérföldkő: `[ ]` feladatok → Ellenőrzés parancsai zöldek → `ALL
 - [~] Fuzz: a CI-ban minden pushnál 30 s/célpont (D104); helyben 10 perc/célpont, kb. 26,7 millió bemenet, nincs találat; az 1 óra/célpont kiadás előtt nyitott
 - Ellenőrzés: tiszta gépen, telepítés nélkül az 1.3 forgatókönyv működik — **nyitott** (A25, A28)
 
+### M10 – Asztali ablak (`kapu-gui`)  (M)  — kész 2026-10-23 (a felhasználó kérése a portfólió-véglegesítéshez)
+A spec v1 nem ír elő grafikus felületet; ez kiegészítés, a formátumot és a többi eszközt nem érinti.
+- **Cél:** a `.kapu` fájl úgy nézhető meg, ahogy egy ügynök látja: térkép a tokenárakkal, kinyitott ajtó a leírással, címkékkel és szomszédokkal, hibrid keresés tokenkerettel, gráf a csoportokkal, gyors és teljes ellenőrzés; alul a szerzői aláírás (`psz // v{verzió}`) az app-info kártyával; ebből készülnek a README képernyőképei.
+- **Nem cél (v1):** írás (új szoba, import, build): az a `kapu` és a `kapu-mcp` dolga; több fájl egyszerre; magyar felület.
+- **Felépítés (D115):** `crates/kapu-gui`, Tauri 2 a rendszer webview-jával. A felület az `ui/` mappában sima HTML, CSS és JavaScript, build-lépés és Node nélkül, a binárisba ágyazva. Egyetlen parancsréteg (`src/api.rs`, `Session::dispatch`) szolgálja ki az ablakot és a fejlesztői szervert (`examples/serve.rs`, csak 127.0.0.1), így a böngészős képernyőképek és a felület-tesztek ugyanazt a kódot futtatják.
+- **Biztonság (D116):** a szobák szövege nem megbízható. Markdown → HTML Rustban (`pulldown-cmark`); a nyers HTML szövegként jelenik meg, a kép csak alt-szövegként, a link csak `http`, `https`, `mailto` vagy ajtó-link lehet. CSP `default-src 'self'`; a JavaScript csak a saját három parancsot hívja (`kapu`, `pick`, `open_external`), a capability csak `core:default`.
+- **Design (D117, frontend-design-2026):** regiszter: Precision Linear / Dense Utility (fejlesztői eszköz, sűrű adat). Paletta: obszidián / tinta / egyetlen kiemelés, a kapu-ikon cinóbere (OKLCH, hue 38), sötét és világos téma a rendszer szerint. Betű: Geist + Geist Mono (OFL, változó, latin-ext, a binárisba ágyazva). Elrendezés: felső sáv nézetváltóval, bal oldalt a térkép, középen a nézet, jobbra az ajtó adatai, alul állapotsor az aláírással. Kockázat: minden ajtósorban ármérő, a legdrágább ajtóhoz mérve, mert a KAPU lényege, hogy csak azt nyisd ki, amit megfizetsz.
+- **Bemutató fájl (D118):** `examples/kapu-spec.kapu`, a specifikáció KAPU-fájlba csomagolva (`tools/split_spec.py`, 35 szoba, 42 ajtó, 4 csoport, i8 modellel).
+- **Ellenőrzés:** `api` és `markdown` egységtesztek (megnyitás, szoba, keresés, gráf, ellenőrzés, hibakódok, nem megbízható jelölés); `contrast.py`: 0 pár 4,5:1 alatt, mindkét témában; `preflight_audit.py`: 0 hiba, 1 indokolt figyelmeztetés (több `h1`, de egyszerre csak egy nézet látszik); kézi végigkattintás a fejlesztői szerveren; a Tauri ablak Windowson elindul.
+
 ---
 
 ## 5. Mérési terv (összefoglaló)
