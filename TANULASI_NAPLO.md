@@ -22,6 +22,11 @@ Készült: `kapu-core/src/validate.rs`: a `validate(fájl, Level)` összefogja a
 Döntés: rögzített ellenőrzési sorrend, hogy minden vektor a saját hibakódját adja (D74); a leírás tokenkorlátja M3-ra marad (D75); a túl hosszú függvény a clippy jelzésére öt kis függvényre bomlott.
 Fogalmak: invariáns és kereszthivatkozás-ellenőrzés, ellenőrzési sorrend mint specifikáció, slice pattern
 
+## 2026-10-23 | M2 5. lépés: olvasó, keret, stale újraépítés
+Készült: `catalog.rs` (a `#MAP`, `#DESC`, `#GRAPH` közös sorparsere) és `reader.rs`: `open_bytes`/`open_path`, `describe_bytes`, `frame`; gyors út, egyszeri újraolvasás, majd a pozíciók újraépítése a `@@@` és `## ` sorokból `index_stale` jelzéssel. Mindkét FR-15 edge-teszt és az FR-03 egy-seek teszt éles.
+Döntés: a gyors út feltétele a `bodyhash` is, mert a szoba végére írt sor ajtószinten nem látszik (D77); az alajtót sorszám alapján találjuk meg újra (D77); a parserek közös modulba kerültek (D79).
+Fogalmak: fast path és fallback, graceful degradation, refaktor tesztháló mellett
+
 ## Fogalomtár
 
 - **Result és a `?` operátor:** a Rust hibakezelése kivétel nélkül: a függvény `Ok(érték)`-et vagy `Err(hiba)`-t ad vissza. A `?` hibánál azonnal visszatér a hívóhoz, sikernél kicsomagolja az értéket.
@@ -40,3 +45,6 @@ Fogalmak: invariáns és kereszthivatkozás-ellenőrzés, ellenőrzési sorrend 
 - **Invariáns és kereszthivatkozás-ellenőrzés:** az invariáns olyan állítás, aminek egy érvényes fájlra mindig igaznak kell lennie (pl. „minden `#INDEX` posztingban szereplő azonosító létezik a `#DOCS`-ban”). A kereszthivatkozás-ellenőrzés két szakasz közötti invariánst néz, ezért csak azután futhat, hogy mindkét szakaszt külön beolvastuk.
 - **Ellenőrzési sorrend mint specifikáció:** ha egy hibás bemenet több szabályt is sért, az első ellenőrzés nyer. A sorrend így a viselkedés része, nem mellékes részlet: rögzíteni kell (D74), és teszttel védeni.
 - **Slice pattern:** `let [a, b, c] = f.as_slice() else { ... }` egyszerre ellenőrzi, hogy pontosan három elem van, és nevet ad nekik. Indexelés (`f[0]`) nélkül, így pánik sem lehet belőle.
+- **Fast path és fallback:** a gyakori, olcsó eset (a fájl friss, a pozíciók igazak) külön ágon fut; csak ha egy ellenőrzés elbukik, akkor jön a drágább, de mindig működő út (újraépítés). A helyesség a fallbackből jön, a sebesség a fast pathből.
+- **Graceful degradation:** hiba esetén a rendszer csökkentett, de használható módban működik tovább, és ezt jelzi is (`index: stale`), ahelyett hogy elutasítaná a kérést. Az AI így kézzel szerkesztett fájlból is olvashat, a következő build pedig rendbe teszi.
+- **Refaktor tesztháló mellett:** a kód szerkezetének átalakítása viselkedésváltozás nélkül (itt: a parserek áthelyezése). A meglévő tesztek garantálják, hogy semmi nem romlott el; ezért kellett előbb a teszt, utána az áthelyezés.

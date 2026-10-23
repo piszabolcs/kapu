@@ -11,6 +11,7 @@
 
 use std::collections::BTreeSet;
 
+use crate::catalog::{DescLine, Map, parse_desc, parse_map, unescape_field};
 use crate::docs::DocEntry;
 use crate::error::{Error, ErrorCode, Result};
 use crate::header::parse_decimal;
@@ -309,75 +310,6 @@ fn check_room_markers(s: &Sections<'_>, entries: &[DocEntry<'_>]) -> Result<()> 
     Ok(())
 }
 
-/// One door line of `#MAP` (`R` or `S`).
-#[derive(Debug)]
-struct MapDoor<'a> {
-    id: &'a str,
-    title: &'a str,
-}
-
-#[derive(Debug)]
-struct Map<'a> {
-    groups: usize,
-    doors: Vec<MapDoor<'a>>,
-}
-
-fn parse_map(text: &str) -> Result<Map<'_>> {
-    let mut map = Map {
-        groups: 0,
-        doors: Vec::new(),
-    };
-    for (n, line) in text.lines().enumerate() {
-        let bad = |what: &str| err(ErrorCode::E005, format!("#MAP line {}: {what}", n + 1));
-        let fields: Vec<&str> = line.split(" | ").collect();
-        match line.get(..2) {
-            Some("G ") if fields.len() == 4 => map.groups += 1,
-            Some("R ") if fields.len() == 5 => map.doors.push(door(&fields)),
-            Some("S ") if fields.len() == 3 => map.doors.push(door(&fields)),
-            _ => return Err(bad("not a `G`, `R` or `S` line with the right fields")),
-        }
-    }
-    Ok(map)
-}
-
-fn door<'a>(fields: &[&'a str]) -> MapDoor<'a> {
-    MapDoor {
-        id: fields.first().and_then(|f| f.get(2..)).unwrap_or(""),
-        title: fields.get(1).copied().unwrap_or(""),
-    }
-}
-
-/// FR-13: `\|` stands for a literal `|` in a `#MAP` field.
-fn unescape_field(field: &str) -> String {
-    field.replace("\\|", "|")
-}
-
-#[derive(Debug)]
-struct DescLine<'a> {
-    id: &'a str,
-    tags: Vec<&'a str>,
-}
-
-fn parse_desc(text: &str) -> Result<Vec<DescLine<'_>>> {
-    let mut out = Vec::new();
-    for (n, line) in text.lines().enumerate() {
-        let f: Vec<&str> = line.split('\t').collect();
-        let [id, _description, tags] = f.as_slice() else {
-            return Err(err(
-                ErrorCode::E005,
-                format!("#DESC line {}: expected 3 fields", n + 1),
-            ));
-        };
-        let tags = if tags.is_empty() {
-            Vec::new()
-        } else {
-            tags.split(", ").collect()
-        };
-        out.push(DescLine { id, tags });
-    }
-    Ok(out)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -406,27 +338,5 @@ mod tests {
         ] {
             assert!(!is_valid_id(bad), "{bad}");
         }
-    }
-
-    #[test]
-    fn map_lines() {
-        let m = parse_map("G g1 | a, b | 1 | 5t\nR r | T \\| x | 5t | g1 | a\nS r/s | U | 2t\n")
-            .unwrap();
-        assert_eq!(m.groups, 1);
-        assert_eq!(m.doors.len(), 2);
-        assert_eq!(unescape_field(m.doors[0].title), "T | x");
-        assert_eq!(m.doors[1].id, "r/s");
-        assert_eq!(parse_map("X what\n").unwrap_err().code, ErrorCode::E005);
-    }
-
-    #[test]
-    fn desc_lines() {
-        let d = parse_desc("r\tleírás\ta, b\nr/s\t\t\n").unwrap();
-        assert_eq!(d[0].tags, ["a", "b"]);
-        assert_eq!(d[1].tags, Vec::<&str>::new());
-        assert_eq!(
-            parse_desc("r\tonly two\n").unwrap_err().code,
-            ErrorCode::E005
-        );
     }
 }

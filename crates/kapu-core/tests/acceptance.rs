@@ -293,22 +293,121 @@ fn sections_parse_in_every_vector_whose_fault_is_elsewhere() {
 // ---------------------------------------------------------------------------
 
 #[test]
-#[ignore = "M2: reader"]
 fn fr15_edge1_door_changed_in_place_served_with_index_stale() {
-    let _data = vector("edge-stale-same-length.kapu");
-    pending(
-        "M2",
-        "open frontend-design-alapok serves the edited text and reports index: stale",
+    let name = "edge-stale-same-length.kapu";
+    let exp = expected();
+    let id = exp[name]["door"].as_str().unwrap();
+    let opened = kapu_core::open_bytes(&vector(name), &[id]).unwrap();
+    assert!(opened.index_stale, "positions must be rebuilt");
+    let door = opened.doors[0].as_ref().unwrap();
+    assert_eq!(
+        door.text,
+        exp[name]["served"].as_str().unwrap(),
+        "the edited text is served"
     );
 }
 
 #[test]
-#[ignore = "M2: reader"]
 fn fr15_edge2_shifted_positions_rebuilt_from_room_markers() {
-    let _data = vector("edge-stale-shifted.kapu");
-    pending(
-        "M2",
-        "open electron-leckek after a shift serves the original text, index: stale",
+    let name = "edge-stale-shifted.kapu";
+    let exp = expected();
+    let first = exp[name]["door"].as_str().unwrap();
+    let second = exp[name]["second_door"].as_str().unwrap();
+    let opened = kapu_core::open_bytes(
+        &vector(name),
+        &[first, second, "electron-leckek/preload-bridge"],
+    )
+    .unwrap();
+    assert!(opened.index_stale);
+    assert_eq!(
+        opened.doors[0].as_ref().unwrap().text,
+        exp[name]["served"].as_str().unwrap()
+    );
+    assert_eq!(
+        opened.doors[1].as_ref().unwrap().text,
+        exp[name]["second_served"].as_str().unwrap()
+    );
+    // a sub-door of a shifted room is found again from its heading
+    let sub = opened.doors[2].as_ref().unwrap();
+    let want = exp["minta.kapu"]["doors"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|d| d["id"] == "electron-leckek/preload-bridge")
+        .unwrap()["served"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert_eq!(sub.text, want);
+}
+
+#[test]
+fn open_sample_uses_the_fast_path_and_reports_unknown_ids_per_id() {
+    let opened = kapu_core::open_bytes(
+        &vector("minta.kapu"),
+        &["frontend-design-alapok/glass-gomb", "nincs-ilyen"],
+    )
+    .unwrap();
+    assert!(!opened.index_stale);
+    let door = opened.doors[0].as_ref().unwrap();
+    assert_eq!((door.title.as_str(), door.tokens), ("Glass gomb", 108));
+    // the link edge to the Electron sub-door shows up as a neighbour
+    assert!(
+        door.neighbours
+            .iter()
+            .any(|n| n.id == "electron-leckek/preload-bridge"
+                && n.kind == "link"
+                && n.tokens == 102)
+    );
+    assert_eq!(opened.doors[1].as_ref().unwrap_err().code.as_str(), "E009");
+    let framed = kapu_core::frame("minta.kapu", door);
+    assert!(framed.starts_with(
+        "<kapu-room file=\"minta.kapu\" id=\"frontend-design-alapok/glass-gomb\" tokens=\"108\">
+"
+    ));
+    assert!(framed.ends_with(
+        "</kapu-room>
+"
+    ));
+    assert!(!framed.contains("<!--"), "comments are never served");
+}
+
+#[test]
+fn open_rebuilds_when_only_a_docs_fingerprint_is_corrupt() {
+    let opened =
+        kapu_core::open_bytes(&vector("E007-doorhash.kapu"), &["frontend-design-alapok"]).unwrap();
+    assert!(opened.index_stale);
+    let want = expected()["minta.kapu"]["doors"][0]["served"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert_eq!(opened.doors[0].as_ref().unwrap().text, want);
+}
+
+#[test]
+fn describe_returns_description_and_all_tags() {
+    let d =
+        kapu_core::describe_bytes(&vector("minta.kapu"), &["frontend-design-alapok", "x"]).unwrap();
+    let first = d[0].as_ref().unwrap();
+    assert!(first.description.starts_with("Sötét téma"));
+    assert_eq!(
+        first.tags.len(),
+        6,
+        "all tags, not only the five on the map"
+    );
+    assert_eq!(d[1].as_ref().unwrap_err().code.as_str(), "E009");
+}
+
+#[test]
+fn open_path_reads_the_file_from_disk() {
+    let path = vectors_dir().join("minta.kapu");
+    let opened = kapu_core::open_path(&path, &["szoba"]).unwrap();
+    assert!(!opened.index_stale);
+    assert_eq!(
+        opened.doors[0].as_ref().unwrap().text,
+        expected()["minta.kapu"]["doors"][6]["served"]
+            .as_str()
+            .unwrap()
     );
 }
 
@@ -340,12 +439,46 @@ fn fr02_esc_in_body_gives_e004_with_position_and_no_output_file() {
 }
 
 #[test]
-#[ignore = "M2: reader"]
 fn fr03_every_section_reachable_with_one_seek_from_the_header() {
-    pending(
-        "M2",
-        "header parser yields start+length for map/desc/graph/index/docs/body",
-    );
+    // Read only the 512 header bytes, then jump straight to each section.
+    let data = vector("minta.kapu");
+    let h = kapu_core::Header::parse(&data[..kapu_core::HEADER_LEN]).unwrap();
+    let at = |span: kapu_core::Span| {
+        let start = usize::try_from(span.start).unwrap();
+        &data[start..start + usize::try_from(span.len).unwrap()]
+    };
+    for (name, span) in [
+        (
+            "#MAP
+", h.map,
+        ),
+        (
+            "#DESC
+", h.desc,
+        ),
+        (
+            "#GRAPH
+", h.graph,
+        ),
+        (
+            "#INDEX
+", h.index,
+        ),
+        (
+            "#DOCS
+", h.docs,
+        ),
+    ] {
+        assert!(at(span).starts_with(name.as_bytes()), "{name}");
+        assert!(
+            at(span).ends_with(
+                b"#END
+"
+            ),
+            "{name}"
+        );
+    }
+    assert!(at(h.body).starts_with(b"@@@ "));
 }
 
 #[test]
@@ -425,7 +558,7 @@ fn fr12_build_twice_gives_identical_groups_and_file() {
 }
 
 #[test]
-#[ignore = "M2: reader"]
+#[ignore = "M3: needs a built 30-room file"]
 fn fr15_open_four_doors_returns_four_frames_sized_like_their_prices() {
     pending(
         "M2",
