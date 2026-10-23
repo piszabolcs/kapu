@@ -18,3 +18,5 @@ __pycache__/
 Thumbs.db
 .DS_Store
 *.log
+# Release packages (M9)
+/dist/

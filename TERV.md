@@ -190,11 +190,12 @@ Minden mérföldkő: `[ ]` feladatok → Ellenőrzés parancsai zöldek → `ALL
 6. [ ] Végponttól végpontig Claude Code-dal. Nyitott (A25).
 - Mérés közben: a `leidenalg`-összevetés (2. táblázat) és a Python–Rust keresztellenőrzés (D99) is lefutott.
 
-### M9 – Kiadás  (M)
-- [ ] Portable csomag platformonként: `kapu.exe` + `kapu-mcp.exe` + `models/` mappa; Linux/macOS binárisok a CI-ból
-- [ ] README (nyelv: döntés M9-ben), spec, licencek (MIT kód, CC BY 4.0 spec), THIRD-PARTY.md `cargo-deny`/`cargo-about` kimenetből, modell licence (MIT)
-- [ ] Titok-szkennelés, privát GitHub repó, release
-- Ellenőrzés: tiszta gépen (másik felhasználói profil vagy VM) telepítés nélkül az 1.3 forgatókönyv működik
+### M9 – Kiadás  (M)  — részben kész 2026-10-23
+- [x] Portable csomag Windowsra: `scripts/package.ps1` (`kapu.exe` + `kapu-mcp.exe` + `models/potion-multilingual-128M-i8/`, 123,5 MB zip, füstteszttel); Linux/macOS: `.github/workflows/release.yml` címkére, piszkozat kiadással (D103; helyben nem futtatható, A28)
+- [x] README (angol, A27), spec, licencek (MIT kód; CC BY 4.0 spec: `LICENSE-SPEC.txt` a csomagban), `THIRD-PARTY.md` (`tools/third_party.py`: 149 crate, plusz a modell és a tokenizáló)
+- [~] Titok-szkennelés lefutott, nincs találat; push és GitHub release: a felhasználó döntése
+- [~] Fuzz: a CI-ban minden pushnál 30 s/célpont (D104); helyben 10 perc/célpont; az 1 óra/célpont kiadás előtt nyitott
+- Ellenőrzés: tiszta gépen, telepítés nélkül az 1.3 forgatókönyv működik — **nyitott** (A25, A28)
 
 ---
 

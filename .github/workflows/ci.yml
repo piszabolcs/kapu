@@ -42,3 +42,23 @@ jobs:
       - uses: rustsec/audit-check@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+  # NFR-03/5, AGGALYOK A6: short fuzz run of every target on each push.
+  # The one-hour-per-target gate runs before a release (scripts/fuzz.ps1 -Seconds 3600).
+  fuzz:
+    name: fuzz smoke (Linux, 30 s per target)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install nightly --profile minimal
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: fuzz
+      - run: cargo install --locked cargo-fuzz
+      - name: run every target
+        run: |
+          for t in header sections docs catalog validate reader; do
+            mkdir -p "fuzz/corpus/$t"
+            cp tests/vectors/*.kapu "fuzz/corpus/$t/"
+            cargo +nightly fuzz run "$t" "fuzz/corpus/$t" --debug-assertions -- -max_total_time=30
+          done

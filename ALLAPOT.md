@@ -4,6 +4,21 @@ Minden commitnál frissül (TERV.md 8. fejezet). Legfrissebb bejegyzés felül.
 
 ---
 
+## 2026-10-23 – M8 részben, M9 részben: i8 modell, mérések, csomag
+
+**Kész**
+- i8 kvantálás (`tools/quantize.py`), a betöltő int8-at tart a memóriában; az i8 lett az alapmodell (D102). 124 MB, a vektorok ≥ 0,99996 koszinusszal egyeznek, a sebesség azonos.
+- Mérések: `bench/REPORT.md` 1–4. táblázat (build, fájlméret, térkép/törzs arány, gráf és csoportok, modularitás a `leidenalg`-gal összevetve, térkép-, kinyitás- és keresési idők, f32 kontra i8).
+- Portable Windows-csomag (`scripts/package.ps1`, 123,5 MB zip, füstteszttel), kiadási workflow Linuxra és macOS-re címkére (piszkozat), `THIRD-PARTY.md`, README frissítve (D103).
+- CI: Linuxos fuzz-füstteszt minden pushnál (D104).
+
+**Nyitott (a felhasználóval):** valódi korpusz és rajta a `kapu bench` (M8/1–2), kézi ellenőrzések (M8/4), saját desztillált modell (M8/5), Claude Code végponttól végpontig (M8/6, A25), tiszta gépes próba (A28), 1 órás fuzz-kapu, push és GitHub release. Részletek: `AGGALYOK.md`.
+
+**Ellenőrzés (2026-10-23, lefuttatva)**
+- `scripts/check.ps1` zöld; minden munkaterület-teszt zöld (egy FR-16 teszt indoklással `ignored`, A21).
+
+---
+
 ## 2026-10-23 – M7 kész: MCP szerver
 
 **Kész**

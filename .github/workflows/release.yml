@@ -1,0 +1,70 @@
+# M9: portable packages for Windows, Linux and macOS (NFR-06), on a version tag.
+# Each package: kapu, kapu-mcp, models/potion-multilingual-128M-i8 (downloaded
+# from Hugging Face and quantized with tools/quantize.py), licences, README, spec.
+# The packages are attached to a draft release; publishing it is a manual step.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: package (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: windows-x64
+            exe: .exe
+          - os: ubuntu-latest
+            target: linux-x64
+            exe: ""
+          - os: macos-latest
+            target: macos-arm64
+            exe: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --release --locked -p kapu-cli -p kapu-mcp
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: model (download, verify, quantize)
+        shell: bash
+        run: |
+          set -euo pipefail
+          m=models/potion-multilingual-128M
+          mkdir -p "$m"
+          for f in config.json README.md tokenizer.json model.safetensors; do
+            curl -sSfL -o "$m/$f" "https://huggingface.co/minishlab/potion-multilingual-128M/resolve/main/$f"
+          done
+          python -c "import hashlib,sys; h=hashlib.sha256(open('$m/model.safetensors','rb').read()).hexdigest(); sys.exit(h!='14b5eb39cb4ce5666da8ad1f3dc6be4346e9b2d601c073302fa0a31bf7943397')"
+          pip install numpy
+          python tools/quantize.py "$m"
+      - name: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          v="${GITHUB_REF_NAME#v}"
+          name="kapu-$v-${{ matrix.target }}"
+          mkdir -p "dist/$name/models/potion-multilingual-128M-i8"
+          cp "target/release/kapu${{ matrix.exe }}" "target/release/kapu-mcp${{ matrix.exe }}" "dist/$name/"
+          cp models/potion-multilingual-128M-i8/* "dist/$name/models/potion-multilingual-128M-i8/"
+          cp LICENSE README.md SPEC-KAPU.md THIRD-PARTY.md "dist/$name/"
+          printf 'SPEC-KAPU.md: CC BY 4.0, https://creativecommons.org/licenses/by/4.0/\n' > "dist/$name/LICENSE-SPEC.txt"
+          "dist/$name/kapu${{ matrix.exe }}" new "dist/smoke.kapu"
+          "dist/$name/kapu${{ matrix.exe }}" validate --full "dist/smoke.kapu"
+          cd dist && if [ "${{ matrix.exe }}" = ".exe" ]; then 7z a "$name.zip" "$name" >/dev/null; else tar czf "$name.tar.gz" "$name"; fi
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: |
+            dist/*.zip
+            dist/*.tar.gz
