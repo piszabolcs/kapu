@@ -19,11 +19,13 @@ pub mod docs;
 pub mod error;
 pub mod header;
 pub mod sections;
+pub mod validate;
 
 pub use docs::{DocEntry, blake3_of, served_text, strip_comments, unescape};
 pub use error::{Error, ErrorCode, Result};
 pub use header::{Hash, Header, Span};
 pub use sections::{BodyLength, Limits, Sections};
+pub use validate::{Level, Report, is_valid_id, validate};
 
 /// Format version written on the first header line (`%KAPU 1.0`, FR-03).
 pub const FORMAT_VERSION: &str = "1.0";

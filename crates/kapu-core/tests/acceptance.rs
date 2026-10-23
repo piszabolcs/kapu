@@ -118,17 +118,6 @@ fn every_invalid_vector_differs_from_the_sample() {
 // FR-20 error codes (M2: reader and validator)
 // ---------------------------------------------------------------------------
 
-macro_rules! error_code_test {
-    ($name:ident, $file:literal, $code:literal) => {
-        #[test]
-        #[ignore = "M2: validator"]
-        fn $name() {
-            let _data = vector($file);
-            pending("M2", concat!("validate ", $file, " must report ", $code));
-        }
-    };
-}
-
 #[test]
 fn e001_bad_magic() {
     // M2 step 1: the header parser already detects this code.
@@ -210,9 +199,26 @@ fn every_door_of_the_sample_reads_and_serves_the_expected_text() {
         );
     }
 }
-error_code_test!(e008_invalid_identifier, "E008-id.kapu", "E008");
-error_code_test!(e009_dangling_reference, "E009-dangling.kapu", "E009");
-error_code_test!(e010_caption_over_hard_limit, "E010-caption.kapu", "E010");
+#[test]
+fn e008_invalid_identifier() {
+    // M2 step 4: the validator detects this code.
+    let err = kapu_core::validate(&vector("E008-id.kapu"), kapu_core::Level::Basic).unwrap_err();
+    assert_eq!(err.code.as_str(), "E008", "{err}");
+}
+#[test]
+fn e009_dangling_reference() {
+    // M2 step 4: the validator detects this code.
+    let err =
+        kapu_core::validate(&vector("E009-dangling.kapu"), kapu_core::Level::Basic).unwrap_err();
+    assert_eq!(err.code.as_str(), "E009", "{err}");
+}
+#[test]
+fn e010_caption_over_hard_limit() {
+    // M2 step 4: the validator detects this code.
+    let err =
+        kapu_core::validate(&vector("E010-caption.kapu"), kapu_core::Level::Basic).unwrap_err();
+    assert_eq!(err.code.as_str(), "E010", "{err}");
+}
 #[test]
 fn e011_unknown_hash_prefix() {
     // M2 step 1: the header parser already detects this code.
@@ -221,10 +227,31 @@ fn e011_unknown_hash_prefix() {
 }
 
 #[test]
-#[ignore = "M2: validator"]
 fn sample_validates_clean() {
-    let _data = vector("minta.kapu");
-    pending("M2", "validate minta.kapu reports no error");
+    use kapu_core::{Level, validate};
+    let data = vector("minta.kapu");
+    let basic = validate(&data, Level::Basic).unwrap();
+    assert_eq!((basic.rooms, basic.doors, basic.full), (3, 7, false));
+    assert!(validate(&data, Level::Full).unwrap().full);
+}
+
+#[test]
+fn full_validation_reports_the_expected_code_for_every_vector() {
+    use kapu_core::{Level, validate};
+    for (name, entry) in expected().as_object().unwrap() {
+        let want = match entry["expect"].as_str().unwrap() {
+            "ok" => None,
+            // an in-place edit keeps the layout; the full check starts with bodyhash, which changed too
+            "stale" if name.contains("same-length") => Some("E006"),
+            // a grown room breaks the declared body length
+            "stale" => Some("E005"),
+            code => Some(code),
+        };
+        let got = validate(&vector(name), Level::Full)
+            .err()
+            .map(|e| e.code.as_str());
+        assert_eq!(got, want, "{name}");
+    }
 }
 
 #[test]

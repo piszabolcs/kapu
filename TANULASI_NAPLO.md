@@ -17,6 +17,11 @@ Készült: `kapu-core/src/docs.rs`: a `#DOCS` sorainak beolvasása, egy ajtó t�
 Döntés: az első külső függőség a hivatalos `blake3` crate (D73); a hibás `#DOCS` sor E005 (D72); a hash-parser a fejléccel közös, csak a hibakódot kapja paraméterként.
 Fogalmak: kriptográfiai ujjlenyomat (BLAKE3), referencia-implementáció elleni teszt (differential testing), let-else
 
+## 2026-10-23 | M2 4. lépés: validátor
+Készült: `kapu-core/src/validate.rs`: a `validate(fájl, Level)` összefogja a fejléc-, szakasz- és ajtóellenőrzést, és hozzáteszi az azonosító-nyelvtant (E008), a kereszthivatkozásokat (E009) és a feliratkorlátokat (E010); alap és teljes szint. Mind a 11 hibakód éles a vektorokon.
+Döntés: rögzített ellenőrzési sorrend, hogy minden vektor a saját hibakódját adja (D74); a leírás tokenkorlátja M3-ra marad (D75); a túl hosszú függvény a clippy jelzésére öt kis függvényre bomlott.
+Fogalmak: invariáns és kereszthivatkozás-ellenőrzés, ellenőrzési sorrend mint specifikáció, slice pattern
+
 ## Fogalomtár
 
 - **Result és a `?` operátor:** a Rust hibakezelése kivétel nélkül: a függvény `Ok(érték)`-et vagy `Err(hiba)`-t ad vissza. A `?` hibánál azonnal visszatér a hívóhoz, sikernél kicsomagolja az értéket.
@@ -32,3 +37,6 @@ Fogalmak: kriptográfiai ujjlenyomat (BLAKE3), referencia-implementáció elleni
 - **Kriptográfiai ujjlenyomat (BLAKE3):** egy bájtsorból képzett 256 bites érték; egyetlen bit változása is teljesen más kivonatot ad, és gyakorlatilag lehetetlen két különböző bemenetet találni ugyanazzal a kivonattal. A KAPU sérülésészlelésre használja (D16), nem aláírásra.
 - **Referencia-implementáció elleni teszt (differential testing):** ugyanazt a bemenetet két független implementáció dolgozza fel (itt a Python `build_vectors.py` és a Rust olvasó), és a kimeneteknek bájtra egyezniük kell. Olyan hibákat fog meg, amelyekre külön-külön senki nem írt volna tesztet.
 - **let-else:** `let Some(x) = kifejezés else { return ...; };` alak: ha a minta illeszkedik, a változók élnek tovább, ha nem, az `else` ág kötelezően kilép. Sok egymásba ágyazott `match` helyett lapos hibakezelést ad.
+- **Invariáns és kereszthivatkozás-ellenőrzés:** az invariáns olyan állítás, aminek egy érvényes fájlra mindig igaznak kell lennie (pl. „minden `#INDEX` posztingban szereplő azonosító létezik a `#DOCS`-ban”). A kereszthivatkozás-ellenőrzés két szakasz közötti invariánst néz, ezért csak azután futhat, hogy mindkét szakaszt külön beolvastuk.
+- **Ellenőrzési sorrend mint specifikáció:** ha egy hibás bemenet több szabályt is sért, az első ellenőrzés nyer. A sorrend így a viselkedés része, nem mellékes részlet: rögzíteni kell (D74), és teszttel védeni.
+- **Slice pattern:** `let [a, b, c] = f.as_slice() else { ... }` egyszerre ellenőrzi, hogy pontosan három elem van, és nevet ad nekik. Indexelés (`f[0]`) nélkül, így pánik sem lehet belőle.
