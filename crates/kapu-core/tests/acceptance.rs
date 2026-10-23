@@ -417,7 +417,7 @@ fn open_path_reads_the_file_from_disk() {
 //
 // The builder's Acceptance points (FR-02, FR-04..FR-09, FR-15 four-door open,
 // FR-18, the M3 byte-identity and import/export checks) live in
-// `tests/build.rs` and `src/edit.rs`.
+// `tests/build.rs` and `src/edit.rs`; FR-10/4 and FR-16 in `tests/search.rs`.
 
 #[test]
 fn fr01_sections_in_order_without_overlap_or_overrun() {
@@ -477,16 +477,6 @@ fn fr03_every_section_reachable_with_one_seek_from_the_header() {
 }
 
 #[test]
-#[ignore = "M5: search"]
-fn fr10_model_mismatch_falls_back_to_bm25_with_vector_unavailable() {
-    let _data = vector("minta.kapu"); // built with emb=none, so every reader mismatches
-    pending(
-        "M5",
-        "search on minta.kapu returns BM25 hits and `vector: unavailable`",
-    );
-}
-
-#[test]
 fn fr11_shared_rare_variable_creates_term_edge() {
     use kapu_core::build::{RoomSource, build};
     let mut rooms: Vec<RoomSource> = (0..12)
@@ -538,15 +528,6 @@ fn fr12_build_twice_gives_identical_groups_and_file() {
         "the Leiden grouping of the sample equals the reference"
     );
     // with a model: see tests/determinism.rs (tiny model, golden hash on every platform)
-}
-
-#[test]
-#[ignore = "M5: search"]
-fn fr16_semantic_hit_for_uvegszeru_homalyos_gomb() {
-    pending(
-        "M5",
-        "`backdrop-filter: blur` room is in the top 10 with source vec or both",
-    );
 }
 
 #[test]

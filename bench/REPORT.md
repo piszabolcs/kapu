@@ -37,3 +37,20 @@ Megjegyzések:
 2. A `sim` élek száma kb. 4,4 szobánként (k = 5, küszöb 0,6): a generált korpusz szókincse kicsi és ismétlődő, ezért sok szobapár hasonló. Valódi korpuszon ez várhatóan kevesebb.
 3. A 3000 szobás build modellel 5,8 s, ennek nagy része a `sim` élek páronkénti koszinusza (négyzetes, 3000² × 256). Elfogadható; ha a korpusz nő, közelítő kNN kellhet.
 4. A karateklub-gráfon (34 csúcs) a Rust a `leidenalg` 0,4198-ját ±0,01-en belül hozza (egységteszt).
+
+## 3. Keresési válaszidő (M5)
+
+- Dátum: 2026-10-23. Gép mint fent. Parancs: `kapu-bench search --rooms 30,300,3000 --model models/potion-multilingual-128M` (lekérdezés: „üvegszerű homályos gomb”, k=10, három futás mediánja; a modell betöltése nincs benne).
+- „Hideg”: üres vektor-gyorsítótár, minden ajtó vektorát ki kell számolni és el kell menteni. „Meleg”: a fájl törzséhez tartozó gyorsítótárfájl megvan.
+
+| Szobák | Ajtók | BM25 (ms) | Hibrid, hideg (ms) | Hibrid, meleg (ms) |
+|---:|---:|---:|---:|---:|
+| 30 | 122 | 1 | 29 | 1 |
+| 300 | 1192 | 11 | 249 | 12 |
+| 3000 | 12024 | 138 | 3313 | 162 |
+
+Megjegyzések:
+
+1. Az első változat ajtónként külön gyorsítótárfájlt írt: 3000 szobánál hidegen 12,5 s, melegen 1,2 s (12 ezer apró fájl). A törzsenkénti egyetlen gyorsítótárfájllal (D97) ez 3,3 s és 0,16 s.
+2. A hideg idő nagy része a 12 ezer ajtó tokenizálása és átlagolása. Az MCP szerver ezt a fájl első megnyitásakor egyszer fizeti meg.
+3. A modell betöltése (512 MB f32, kb. 0,5–1 s) a CLI minden modellt használó hívásánál hozzáadódik; lásd AGGALYOK A17.

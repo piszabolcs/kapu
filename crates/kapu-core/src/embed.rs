@@ -14,7 +14,6 @@ use std::path::{Path, PathBuf};
 
 use tokenizers::{Tokenizer, TruncationParams};
 
-use crate::docs::blake3_of;
 use crate::error::{Error, ErrorCode, Result};
 use crate::header::Hash;
 
@@ -393,35 +392,95 @@ impl<'m> VectorCache<'m> {
         Self { model, dir }
     }
 
+    /// The model behind the cache.
+    #[must_use]
+    pub fn model(&self) -> &'m Model {
+        self.model
+    }
+
+    /// A cache in a given directory (tests, portable setups).
+    #[must_use]
+    pub fn in_dir(model: &'m Model, root: &Path) -> Self {
+        Self {
+            model,
+            dir: Some(root.join(hex(&model.hash()))),
+        }
+    }
+
     /// A cache that never touches the disk.
     #[must_use]
     pub fn in_memory(model: &'m Model) -> Self {
         Self { model, dir: None }
     }
 
-    /// The vector of `text`, from the cache or computed and stored.
+    /// The vector of one text (not cached on disk).
     ///
     /// # Errors
     /// A tokenizer failure (E005).
     pub fn vector(&self, text: &str) -> Result<Vec<f32>> {
-        let key = hex(&blake3_of(text.as_bytes()));
-        let path = self.dir.as_ref().map(|d| d.join(format!("{key}.vec")));
-        if let Some(bytes) = path
-            .as_ref()
-            .and_then(|p| std::fs::read(p).ok())
-            .filter(|b| b.len() == self.model.dim() * 4)
-        {
-            return Ok(f32_le(&bytes));
-        }
-        let v = self.model.embed(text)?;
-        if let (Some(dir), Some(path)) = (&self.dir, &path) {
-            let bytes: Vec<u8> = v.iter().flat_map(|x| x.to_le_bytes()).collect();
-            if std::fs::create_dir_all(dir).is_ok() {
-                let _ = crate::build::write_atomic(path, &bytes);
-            }
-        }
-        Ok(v)
+        self.model.embed(text)
     }
+
+    /// All door vectors of one file body, in `#DOCS` order (D97). The cache
+    /// file is `<cache>/<embhash>/<bodyhash>.vecs`: `count` and `dim` as
+    /// little-endian u32, then `count × dim` f32. A missing or malformed file
+    /// is recomputed with `texts` and written atomically; write failures are
+    /// silent (the cache can be deleted any time).
+    ///
+    /// # Errors
+    /// A tokenizer failure (E005), or an error of `texts`.
+    pub fn door_vectors(
+        &self,
+        bodyhash: &Hash,
+        count: usize,
+        texts: impl FnOnce() -> Result<Vec<String>>,
+    ) -> Result<Vec<Vec<f32>>> {
+        let dim = self.model.dim();
+        let path = self
+            .dir
+            .as_ref()
+            .map(|d| d.join(format!("{}.vecs", hex(bodyhash))));
+        if let Some(bytes) = path.as_ref().and_then(|p| std::fs::read(p).ok())
+            && let Some(vectors) = parse_bundle(&bytes, count, dim)
+        {
+            return Ok(vectors);
+        }
+        let vectors: Vec<Vec<f32>> = texts()?
+            .iter()
+            .map(|t| self.model.embed(t))
+            .collect::<Result<_>>()?;
+        if let (Some(dir), Some(path)) = (&self.dir, &path)
+            && std::fs::create_dir_all(dir).is_ok()
+        {
+            let mut bytes = Vec::with_capacity(8 + vectors.len() * dim * 4);
+            bytes.extend_from_slice(
+                &u32::try_from(vectors.len())
+                    .unwrap_or(u32::MAX)
+                    .to_le_bytes(),
+            );
+            bytes.extend_from_slice(&u32::try_from(dim).unwrap_or(u32::MAX).to_le_bytes());
+            for v in &vectors {
+                for x in v {
+                    bytes.extend_from_slice(&x.to_le_bytes());
+                }
+            }
+            let _ = crate::build::write_atomic(path, &bytes);
+        }
+        Ok(vectors)
+    }
+}
+
+/// Reads a `.vecs` bundle if its header and size match.
+fn parse_bundle(bytes: &[u8], count: usize, dim: usize) -> Option<Vec<Vec<f32>>> {
+    let (head, data) = bytes.split_at_checked(8)?;
+    let (n, d) = head.split_at_checked(4)?;
+    let n = usize::try_from(u32::from_le_bytes(n.try_into().ok()?)).ok()?;
+    let d = usize::try_from(u32::from_le_bytes(d.try_into().ok()?)).ok()?;
+    if n != count || d != dim || data.len() != n.checked_mul(d)?.checked_mul(4)? {
+        return None;
+    }
+    let values = f32_le(data);
+    Some(values.chunks(dim.max(1)).map(<[f32]>::to_vec).collect())
 }
 
 fn hex(h: &Hash) -> String {

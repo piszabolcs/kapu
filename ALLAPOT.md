@@ -4,6 +4,22 @@ Minden commitnál frissül (TERV.md 8. fejezet). Legfrissebb bejegyzés felül.
 
 ---
 
+## 2026-10-23 – M5 kész: hibrid keresés (FR-16 Acceptance nyitott)
+
+**Kész**
+- `search.rs`: hibrid keresés (BM25 + vektor, RRF k=60, `max_tokens`, `k`, forrás), modell-eltérésnél csak BM25 és `vector: unavailable` (D96).
+- Vektor-gyorsítótár törzsenként egy fájl (D97): 3000 szobánál a meleg keresés 1,2 s helyett 0,16 s.
+- `kapu-bench search`: válaszidő-mérés, `bench/REPORT.md` 3. táblázat.
+
+**Nyitott, kiemelt:** az FR-16 Acceptance („üvegszerű, homályos gomb” → `backdrop-filter: blur`) a jelenlegi modellel nem teljesül; a Python `model2vec` is ugyanezt mutatja (AGGALYOK A21). M8/5 modellválasztás dönt.
+
+**Ellenőrzés (2026-10-23, lefuttatva)**
+- `scripts/check.ps1` zöld; a keresés tesztjei: FR-10/4, hibrid rangsor, gyorsítótár, `max_tokens`/`k`.
+
+**Következő: M6 – CLI**
+
+---
+
 ## 2026-10-23 – M4 kész: vektormodell, gráf, Leiden
 
 **Kész**

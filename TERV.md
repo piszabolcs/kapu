@@ -160,12 +160,13 @@ Minden mérföldkő: `[ ]` feladatok → Ellenőrzés parancsai zöldek → `ALL
 - Ellenőrzés (zöld): FR-11 és FR-12 Acceptance; build×2 bájtra azonos modellel; a determinizmus-teszt egy commitolt tesztmodellel rögzített BLAKE3-at vár, a CI mindhárom platformon futtatja (D95); `validate --full` a modellel újraépít és összevet
 - Mérés: `bench/REPORT.md` 2. táblázat (modularitás 0,25 / 0,35 / 0,41; csoportok 4 / 8 / 9)
 
-### M5 – Hibrid keresés  (M)
-- [ ] Lekérdezés-feldolgozás = index-tokenizálás; BM25 top-50; vektor top-50; RRF k=60; döntetlen → azonosító szerint
-- [ ] `max_tokens` szűrés, `k` paraméter, találatforrás (`bm25`/`vec`/`both`)
-- [ ] Modell-eltérés: `vector: unavailable`, csak BM25
-- Ellenőrzés: FR-16 Acceptance („üvegszerű, homályos gomb” → `backdrop-filter` szoba top-10); FR-10/4 Acceptance
-- Mérés: `kapu_search` válaszidő 30/300/3000 szobán (hideg és meleg gyorsítótár külön)
+### M5 – Hibrid keresés  (M)  — kész 2026-10-23, az FR-16 Acceptance nyitott (A21)
+- [x] Lekérdezés-feldolgozás = index-tokenizálás; BM25 top-50; vektor top-50; RRF k=60; döntetlen → azonosító szerint (`search.rs`, D96)
+- [x] `max_tokens` szűrés, `k` paraméter, találatforrás (`bm25`/`vec`/`both`)
+- [x] Modell-eltérés: `vector: unavailable`, csak BM25 (FR-10/4 Acceptance zöld)
+- [x] Vektor-gyorsítótár törzsenként (D97)
+- Ellenőrzés: FR-10/4 zöld. **FR-16 Acceptance a `potion-multilingual-128M`-mel nem teljesül** (magyar lekérdezés → CSS-kód, AGGALYOK A21); a teszt indoklással `ignored`, a D28 modellválasztás (M8/5) dönt
+- Mérés: `bench/REPORT.md` 3. táblázat (3000 szoba: BM25 138 ms, hibrid meleg 162 ms, hideg 3,3 s)
 
 ### M6 – CLI  (M)
 - [ ] 8. fejezet minden parancsa, `--json`, kilépési kódok, hibakód a kimenetben; `kapu rm` a 2.10 döntés szerint

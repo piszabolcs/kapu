@@ -59,6 +59,22 @@ enum Command {
         #[arg(long)]
         dump_graph: Option<PathBuf>,
     },
+    /// Times `search` on generated corpora: BM25 only, then hybrid with a
+    /// cold and a warm vector cache (NFR-05, M5).
+    Search {
+        /// Corpus sizes, comma separated.
+        #[arg(long, value_delimiter = ',', default_value = "30,300,3000")]
+        rooms: Vec<usize>,
+        /// Seed of the generator.
+        #[arg(long, default_value_t = 42)]
+        seed: u64,
+        /// Vector model directory.
+        #[arg(long)]
+        model: PathBuf,
+        /// The query.
+        #[arg(long, default_value = "üvegszerű homályos gomb")]
+        query: String,
+    },
 }
 
 fn main() -> ExitCode {
@@ -76,6 +92,21 @@ fn main() -> ExitCode {
             }
             Err(e) => {
                 eprintln!("kapu-bench gen: {e}");
+                ExitCode::FAILURE
+            }
+        },
+        Command::Search {
+            rooms,
+            seed,
+            model,
+            query,
+        } => match search_times(&rooms, seed, &model, &query) {
+            Ok(table) => {
+                print!("{table}");
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                eprintln!("kapu-bench search: {e}");
                 ExitCode::FAILURE
             }
         },
@@ -228,4 +259,54 @@ fn graph_row(
         counts.get("sim").copied().unwrap_or(0),
         sizes.len()
     ))
+}
+
+/// Median of three timings in milliseconds.
+fn time3(mut f: impl FnMut() -> kapu_core::Result<()>) -> kapu_core::Result<f64> {
+    let mut t = Vec::with_capacity(3);
+    for _ in 0..3 {
+        let start = Instant::now();
+        f()?;
+        t.push(start.elapsed().as_secs_f64() * 1000.0);
+    }
+    t.sort_by(f64::total_cmp);
+    Ok(t.get(1).copied().unwrap_or(0.0))
+}
+
+fn search_times(
+    sizes: &[usize],
+    seed: u64,
+    model_dir: &std::path::Path,
+    query: &str,
+) -> kapu_core::Result<String> {
+    use kapu_core::embed::{Model, VectorCache};
+    use kapu_core::search::{SearchOptions, search};
+    let model = Model::load(model_dir)?;
+    let mut out = String::from(
+        "| Szobák | Ajtók | BM25 (ms) | Hibrid, hideg gyorsítótár (ms) | Hibrid, meleg gyorsítótár (ms) |
+|---:|---:|---:|---:|---:|
+",
+    );
+    for &n in sizes {
+        let rooms: Vec<RoomSource> = corpus::markdown_rooms(n, seed)
+            .into_iter()
+            .map(|(id, content)| RoomSource { id, content })
+            .collect();
+        let bytes = build_with(&rooms, Some(&model))?.bytes;
+        let doors = kapu_core::Sections::parse(&bytes)?.header.doors;
+        let bm25 = time3(|| search(&bytes, query, SearchOptions::default(), None).map(|_| ()))?;
+        let dir = std::env::temp_dir().join(format!("kapu-bench-cache-{}-{n}", std::process::id()));
+        let cold = time3(|| {
+            let _ = std::fs::remove_dir_all(&dir);
+            let cache = VectorCache::in_dir(&model, &dir);
+            search(&bytes, query, SearchOptions::default(), Some(&cache)).map(|_| ())
+        })?;
+        let cache = VectorCache::in_dir(&model, &dir);
+        search(&bytes, query, SearchOptions::default(), Some(&cache))?;
+        let warm =
+            time3(|| search(&bytes, query, SearchOptions::default(), Some(&cache)).map(|_| ()))?;
+        let _ = std::fs::remove_dir_all(&dir);
+        let _ = writeln!(out, "| {n} | {doors} | {bm25:.0} | {cold:.0} | {warm:.0} |");
+    }
+    Ok(out)
 }
