@@ -16,7 +16,7 @@ The file format has its own version (`%KAPU 1.0`, see `SPEC-KAPU.md`); the tools
 - The S5 content scan no longer matches a command name inside another word (`async`, `confirm`) (D122).
 
 ### Added
-- Real-corpus measurements: `bench/REPORT.md` chapters 5-11, `bench/results/`.
+- Real-corpus measurements: `bench/REPORT.md` chapters 5-12, `bench/results/`.
 - `kapu bench --json`: room-level recall@5/10 and MRR@10, where any door of the expected room is a hit (D130).
 - Study pilot tools in `tools/study/`: corpus preparation from public documentation, Stack Overflow questions with a gold page, chunk-RAG baselines, scale probe, logged file-search, llms.txt and RAG tools for agents.
 - Tools: `tools/collect_skills.py`, `tools/mcp_probe.py`, `tools/kapu_mcp_call.py`, `tools/mcp_eval.py`.

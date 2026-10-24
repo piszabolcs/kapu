@@ -2011,6 +2011,27 @@
     "read_tokens_median": 0,
     "calls_median": 0,
     "agent_tokens_per_q": 2706
+   },
+   "c5v": {
+    "read_tokens_median": 2331.0,
+    "read_tokens_mean": 2497,
+    "calls_median": 2.0,
+    "later_parts_opened": 18,
+    "agent_tokens_per_q": 10582,
+    "tools": {
+     "kapu_map": [
+      3,
+      966
+     ],
+     "kapu_search": [
+      33,
+      9074
+     ],
+     "kapu_open": [
+      41,
+      64876
+     ]
+    }
    }
   }
  },
@@ -2278,6 +2299,380 @@
       8431
      ]
     ]
+   }
+  }
+ },
+ "remeasure_v104": {
+  "specification": "v1.0.4 (D131-D138)",
+  "scale": {
+   "s": {
+    "rooms_dir": "..\\study-data\\rooms-s",
+    "file": "..\\study-data\\s104.kapu",
+    "import": {
+     "seconds": 3.28,
+     "peak_mb": 720.8,
+     "exit": 0,
+     "stderr_tail": "",
+     "warnings": 0
+    },
+    "file_mb": 7.6,
+    "validate_full": {
+     "seconds": 2.42,
+     "peak_mb": 720.0,
+     "exit": 0,
+     "stderr_tail": ""
+    },
+    "cli_map": {
+     "seconds": 0.16,
+     "peak_mb": 54.9,
+     "exit": 0
+    },
+    "mcp": {
+     "map_first": {
+      "ms": 148.1,
+      "tokens": 322,
+      "error": false
+     },
+     "map": {
+      "ms": {
+       "n": 3,
+       "median": 17.8,
+       "p90": 18.6,
+       "max": 18.6
+      },
+      "tokens": 153
+     },
+     "totals_line": "rooms=111 doors=231 groups=7 tokens=321618 lang=en",
+     "groups": {
+      "n": 7,
+      "tokens": {
+       "n": 7,
+       "median": 661,
+       "p90": 804,
+       "max": 804
+      },
+      "sum_tokens": 4304
+     },
+     "search_first_ms": 1095.9,
+     "search": {
+      "ms": {
+       "n": 20,
+       "median": 56.3,
+       "p90": 61.5,
+       "max": 67.8
+      },
+      "tokens": {
+       "n": 20,
+       "median": 252.5,
+       "p90": 283,
+       "max": 285
+      }
+     },
+     "open": {
+      "ms": {
+       "n": 21,
+       "median": 17.1,
+       "p90": 18.9,
+       "max": 19.8
+      },
+      "tokens": {
+       "n": 21,
+       "median": 1689,
+       "p90": 2272,
+       "max": 2285
+      }
+     }
+    }
+   },
+   "m": {
+    "rooms_dir": "..\\study-data\\rooms-m",
+    "file": "..\\study-data\\m104.kapu",
+    "import": {
+     "seconds": 23.92,
+     "peak_mb": 1379.9,
+     "exit": 0,
+     "stderr_tail": "",
+     "warnings": 2
+    },
+    "file_mb": 117.4,
+    "validate_full": {
+     "seconds": 13.9,
+     "peak_mb": 1381.2,
+     "exit": 0,
+     "stderr_tail": ""
+    },
+    "cli_map": {
+     "seconds": 0.41,
+     "peak_mb": 168.1,
+     "exit": 0
+    },
+    "mcp": {
+     "map_first": {
+      "ms": 769.7,
+      "tokens": 2318,
+      "error": false
+     },
+     "map": {
+      "ms": {
+       "n": 3,
+       "median": 253.1,
+       "p90": 254.9,
+       "max": 254.9
+      },
+      "tokens": 1950
+     },
+     "totals_line": "rooms=1722 doors=6370 groups=104 tokens=3873333 lang=en",
+     "groups": {
+      "n": 104,
+      "tokens": {
+       "n": 104,
+       "median": 63.0,
+       "p90": 3019,
+       "max": 6957
+      },
+      "sum_tokens": 73795
+     },
+     "search_first_ms": 1734.8,
+     "search": {
+      "ms": {
+       "n": 20,
+       "median": 656.7,
+       "p90": 672.7,
+       "max": 702.6
+      },
+      "tokens": {
+       "n": 20,
+       "median": 265.0,
+       "p90": 358,
+       "max": 379
+      }
+     },
+     "open": {
+      "ms": {
+       "n": 21,
+       "median": 215.6,
+       "p90": 219.3,
+       "max": 221.8
+      },
+      "tokens": {
+       "n": 21,
+       "median": 239,
+       "p90": 528,
+       "max": 717
+      }
+     }
+    }
+   }
+  },
+  "scale_l_experimental": {
+   "rooms_dir": "..\\study-data\\rooms-l",
+   "file": "..\\study-data\\l104.kapu",
+   "import": {
+    "seconds": 357.82,
+    "peak_mb": 3960.4,
+    "exit": 0,
+    "stderr_tail": "",
+    "warnings": 28
+   },
+   "file_mb": 542.2,
+   "validate_full": {
+    "seconds": 117.81,
+    "peak_mb": 3983.4,
+    "exit": 0,
+    "stderr_tail": ""
+   },
+   "cli_map": {
+    "seconds": 1.61,
+    "peak_mb": 631.2,
+    "exit": 0
+   },
+   "mcp": {
+    "map_first": {
+     "ms": 4315.0,
+     "tokens": 2303,
+     "error": false
+    },
+    "map": {
+     "ms": {
+      "n": 3,
+      "median": 1400.5,
+      "p90": 1428.5,
+      "max": 1428.5
+     },
+     "tokens": 1921
+    },
+    "totals_line": "rooms=14719 doors=84910 groups=99 tokens=12995136 lang=en",
+    "groups": {
+     "n": 99,
+     "tokens": {
+      "n": 99,
+      "median": 4118,
+      "p90": 17395,
+      "max": 30118
+     },
+     "sum_tokens": 634122
+    },
+    "search_first_ms": 4273.8,
+    "search": {
+     "ms": {
+      "n": 20,
+      "median": 3171.8,
+      "p90": 3244.9,
+      "max": 3258.1
+     },
+     "tokens": {
+      "n": 20,
+      "median": 212.5,
+      "p90": 289,
+      "max": 298
+     }
+    },
+    "open": {
+     "ms": {
+      "n": 21,
+      "median": 1040.0,
+      "p90": 1050.1,
+      "max": 1056.1
+     },
+     "tokens": {
+      "n": 21,
+      "median": 365,
+      "p90": 1143,
+      "max": 2030
+     }
+    }
+   }
+  },
+  "kapu_bench": {
+   "m": {
+    "bm25": {
+     "lenient_mrr@10": 0.13068980494353624,
+     "lenient_recall@10": 0.3482587064676617,
+     "lenient_recall@5": 0.2537313432835821,
+     "mrr@10": 0.13068980494353624,
+     "recall@10": 0.3482587064676617,
+     "recall@5": 0.2537313432835821,
+     "room_mrr@10": 0.21827173655531878,
+     "room_recall@10": 0.44776119402985076,
+     "room_recall@5": 0.3482587064676617
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.1036819868909421,
+     "lenient_recall@10": 0.2736318407960199,
+     "lenient_recall@5": 0.18407960199004975,
+     "mrr@10": 0.1036819868909421,
+     "recall@10": 0.2736318407960199,
+     "recall@5": 0.18407960199004975,
+     "room_mrr@10": 0.22699399826265504,
+     "room_recall@10": 0.43781094527363185,
+     "room_recall@5": 0.3482587064676617
+    },
+    "questions": 201,
+    "timing_ms": 186993.441,
+    "vector": {
+     "lenient_mrr@10": 0.03519703071941878,
+     "lenient_recall@10": 0.1044776119402985,
+     "lenient_recall@5": 0.05472636815920398,
+     "mrr@10": 0.03519703071941878,
+     "recall@10": 0.1044776119402985,
+     "recall@5": 0.05472636815920398,
+     "room_mrr@10": 0.12351930822080075,
+     "room_recall@10": 0.27860696517412936,
+     "room_recall@5": 0.1890547263681592
+    },
+    "warnings": []
+   },
+   "l": {
+    "bm25": {
+     "lenient_mrr@10": 0.08804400241109102,
+     "lenient_recall@10": 0.22531645569620254,
+     "lenient_recall@5": 0.16455696202531644,
+     "mrr@10": 0.08804400241109102,
+     "recall@10": 0.22531645569620254,
+     "recall@5": 0.16455696202531644,
+     "room_mrr@10": 0.13465039180229063,
+     "room_recall@10": 0.28354430379746837,
+     "room_recall@5": 0.22025316455696203
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.0933815551537071,
+     "lenient_recall@10": 0.20506329113924052,
+     "lenient_recall@5": 0.14430379746835442,
+     "mrr@10": 0.0933815551537071,
+     "recall@10": 0.20506329113924052,
+     "recall@5": 0.14430379746835442,
+     "room_mrr@10": 0.1313431786216597,
+     "room_recall@10": 0.2810126582278481,
+     "room_recall@5": 0.18227848101265823
+    },
+    "questions": 395,
+    "timing_ms": 1774343.153,
+    "vector": {
+     "lenient_mrr@10": 0.03692184046614425,
+     "lenient_recall@10": 0.09873417721518987,
+     "lenient_recall@5": 0.060759493670886074,
+     "mrr@10": 0.03692184046614425,
+     "recall@10": 0.09873417721518987,
+     "recall@5": 0.060759493670886074,
+     "room_mrr@10": 0.061142254370102476,
+     "room_recall@10": 0.15443037974683543,
+     "room_recall@5": 0.10126582278481013
+    },
+    "warnings": []
+   }
+  },
+  "agents_s_kapu": {
+   "read_tokens_median": 2331.0,
+   "read_tokens_mean": 2497,
+   "calls_median": 2.0,
+   "later_parts_opened": 18,
+   "agent_tokens_per_q": 10582,
+   "tools": {
+    "kapu_map": [
+     3,
+     966
+    ],
+    "kapu_search": [
+     33,
+     9074
+    ],
+    "kapu_open": [
+     41,
+     64876
+    ]
+   }
+  },
+  "agents_s_ab_judge": "KAPU v1.0.3 30/30, KAPU v1.0.4 30/30 (one blind Sonnet A/B judge)",
+  "pixellab_same_prompt": {
+   "k104": {
+    "yes": 12,
+    "partly": 0,
+    "claims_supported": 153,
+    "claims_total": 157,
+    "helpfulness_mean": 4.17,
+    "read_tokens_median": 4104.0,
+    "read_tokens_total": 48557,
+    "calls_median": 4.0
+   },
+   "md": {
+    "yes": 12,
+    "partly": 0,
+    "claims_supported": 140,
+    "claims_total": 145,
+    "helpfulness_mean": 4,
+    "read_tokens_median": 8279.5,
+    "read_tokens_total": 101452,
+    "calls_median": 8.0
+   },
+   "pdf": {
+    "yes": 11,
+    "partly": 1,
+    "claims_supported": 147,
+    "claims_total": 151,
+    "helpfulness_mean": 3.83,
+    "read_tokens_median": 8207.0,
+    "read_tokens_total": 109675,
+    "calls_median": 6.0
    }
   }
  }

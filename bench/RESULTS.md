@@ -208,6 +208,34 @@ This test uses the PixelLab knowledge file, content the model does not know: 0.2
 
 Accuracy is the same. KAPU read about a third of the tokens of the searchable file formats, and about 1/79 of pasting the whole file.
 
+### After specification v1.0.4
+
+A first set of fixes followed the pilot (D131-D138, specification chapter 17). The most visible ones:
+- long doors open in parts of at most 2,000 tokens;
+- at most 10 content-scan lines on the map;
+- the content language on the totals line;
+- an in-memory file and vector cache in the server.
+
+Measured again with the same corpora and questions:
+
+| | Before | After |
+|---|---:|---:|
+| KAPU agents on S, tokens read per question (median), correct | 3,983, 30/30 | 2,331, 30/30 |
+| KAPU agents on S, tokens read for all 30 questions | 152,151 | 74,916 |
+| First map call on M / L (tokens) | 4,989 / 4,139 | 2,318 / 2,303 |
+| Search on M / L (ms, median) | 666 / 3,192 | 657 / 3,172 |
+
+The PixelLab run was repeated with the same prompt for all three formats:
+
+| Format | Correct | Supported claims | Tokens read per request (median) |
+|---|---:|---:|---:|
+| KAPU | 12/12 | 153/157 | 4,104 |
+| One `.md` file | 12/12 | 140/145 | 8,280 |
+| PDF | 11/12 | 147/151 | 8,207 |
+
+- Splitting long doors halved what the agents read on the Rust book, at the same accuracy.
+- The cache did not make search faster. The time goes to parsing the sections three times per search and to a linear scan of the search index, not to reading the file. That is the next fix.
+
 ## 9. Reproduce
 
 ```bash

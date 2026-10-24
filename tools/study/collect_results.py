@@ -84,6 +84,15 @@ def main(data: Path, out: Path):
             "full_file_in_context_tokens_per_request": 206899,
             "result": load(data / "pixellab" / "compare-result.json"),
         },
+        "remeasure_v104": {
+            "specification": "v1.0.4 (D131-D138)",
+            "scale": {size: load(data / f"scale-{size}-v104.json") for size in ("s", "m")},
+            "scale_l_experimental": load(data / "scale-l-xl-v104.json"),
+            "kapu_bench": {size: load(data / f"bench-{size}-v104.json") for size in ("m", "l")},
+            "agents_s_kapu": (load(pilot / "token-stats.json") or {}).get("c5v"),
+            "agents_s_ab_judge": "KAPU v1.0.3 30/30, KAPU v1.0.4 30/30 (one blind Sonnet A/B judge)",
+            "pixellab_same_prompt": load(data / "pixellab" / "compare-result-round2.json"),
+        },
     }
     out.write_text(json.dumps(result, indent=1, ensure_ascii=False), encoding="utf-8")
     print("written", out)

@@ -316,3 +316,42 @@ Mindhárom Sonnet-ügynök, kérésenként 3 kérés. A 36 választ három bír�
    A „méretfüggetlen költség” állítás ma csak a keresési válaszra igaz, a térképre és a válaszidőre nem.
 3. **A visszakeresés a darabos BM25 szintjén van.** A vektoros rész ajtószinten gyenge (A46), a nagy ajtók drágák (A45).
 4. **A tanulmányhoz kell a kontamináció elleni kérdéssor és egy nem Claude bíráló.** A népszerű kérdések plafonhatást adnak, a bírálók közti szórás pedig egy-egy válasznál látható.
+
+## 12. Újramérés a gyors javítások után (spec v1.0.4, 2026-10-24)
+
+A 11. fejezet után a felhasználó jóváhagyta az 1. javítócsomagot (D131–D138, spec 17. fejezet). Minden javításnak előbb bukó tesztje lett. A tesztek közben egy addig rejtett hiba is előkerült: láthatatlan karakter egy szoba címében vagy első mondatában olyan fájlt adott, amelyet az olvasó elutasított (D135, javítva).
+
+Ugyanazokkal az eszközökkel, korpuszokkal és kérdésekkel mértünk újra, mint a 11. fejezetben. Az S és M időadatai üresjáratban készültek, az L buildideje nem, ezért az nem összevethető.
+
+### 12.1 Ügynöki próbák
+
+| Próba | Változat | Helyes | Olvasott token/kérdés (medián) | Összesen | Hívás/kérdés (medián) | Későbbi rész kinyitva |
+|---|---|---|---:|---:|---:|---:|
+| Rust Book, 30 kérdés | KAPU v1.0.3 | 30/30 | 3 983 | 152 151 | 2 | – |
+| Rust Book, 30 kérdés | KAPU v1.0.4 | 30/30 | 2 331 | 74 916 | 2 | 18 |
+| PixelLab, 12 kérés | KAPU v1.0.4 | 12/12 (153/157 állítás, hasznosság 4,17) | 4 104 | 48 557 | 4 | 3 |
+| PixelLab, 12 kérés | Egy `.md` fájl, kereséssel | 12/12 (140/145, 4,00) | 8 280 | 101 452 | 8 | – |
+| PixelLab, 12 kérés | PDF, kereséssel | 11/12 (147/151, 3,83) | 8 207 | 109 675 | 6 | – |
+
+**Bírálat:**
+- **Rust Book:** egy vak A/B bíráló kérdésenként a régi és az új KAPU-választ kapta.
+- **PixelLab:** három vak bíráló dolgozott, mindhárom forma ugyanazzal a feladatszöveggel. A `.md`- és a PDF-válaszok ugyanazok, mint a 11.5-ben, csak most más bírálók pontozták őket; az állításszámok eltérése (134/138 → 140/145) a bírálói szórást mutatja.
+
+- **A45 (részekben kinyitás) hat ott, ahol az ajtók nagyok.** A Rust Bookon felére csökkentette az olvasott tokent (152 ezer → 75 ezer), a pontosság nem romlott. A PixelLab ajtói többnyire 2000 token alattiak, ott csak 3 kinyitás kért második részt.
+- **A futás és a feladatszöveg legalább annyit számít, mint a formátum.** A 10. fejezet KAPU-futása más feladatszöveggel mediánban 2 624 tokent olvasott, ez a futás 4 104-et; az ügynökök most több ajtót nyitottak ki (25 a korábbi 18 helyett). Ezért futások között nem, csak egy futáson belül, azonos feladatszöveggel érdemes összevetni. Ott a KAPU feleannyit olvasott, mint a `.md` vagy a PDF.
+
+### 12.2 Skálázás és válaszidő
+
+| | S: v1.0.3 → v1.0.4 | M: v1.0.3 → v1.0.4 | L: v1.0.3 → v1.0.4 (kísérleti build) |
+|---|---|---|---|
+| Első térképhívás (token) | 299 → 322 | 4 989 → 2 318 | 4 139 → 2 303 |
+| Térkép (token) | 151 → 153 | 1 948 → 1 950 | 1 919 → 1 921 |
+| Összesítő sor | + `lang=en` | + `lang=en` | + `lang=en` |
+| Keresés (ms, medián) | 58 → 56 | 666 → 657 | 3 192 → 3 172 |
+| Kinyitás (token, medián, alapértelmezett 2000-es kerettel) | 3 052 → 1 689 | 238 → 239 | 364 → 365 |
+| `kapu bench` futásideje | – | 213 s → 187 s | 1 841 s → 1 774 s |
+| Szobaszintű recall@10, hibrid | 0,46 → 0,46 | 0,44 → 0,44 | 0,28 → 0,28 |
+
+- **Az első térkép az M-en és az L-en felére rövidült** (D134: legfeljebb 10 tartalomvizsgálati sor). S-en 23 tokennel nőtt: az útmutató új mondata és a `lang=` miatt.
+- **A keresés ideje nem változott.** A D137 szerinti gyorsítótár megspórolja a fájl és a vektorfájl újraolvasását, de nem ez volt a szűk keresztmetszet. Egy keresés a szakaszokat háromszor dolgozza fel és ellenőrzi, és a `#INDEX`-et soronként végigolvassa. Az A44 ezért részben nyitva maradt; a javaslat: hívásonként egyszeri feldolgozás és bináris keresés a rendezett indexben, formátumváltozás nélkül.
+- **A bench kicsit gyorsabb lett** (M −12%, L −4%), mert a vektorfájlt már csak egyszer olvassa be; a rangsor változatlan.
