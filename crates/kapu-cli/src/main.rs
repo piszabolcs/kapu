@@ -498,6 +498,25 @@ fn parse_cli() -> Cli {
     Cli::from_arg_matches(&matches).unwrap_or_else(|e| e.exit())
 }
 
+/// One line to stdout. A reader that closed the pipe early (`kapu map | head`)
+/// is not an error (A40): the caller exits 0 without a panic.
+fn emit(text: &str) -> std::io::Result<()> {
+    use std::io::Write as _;
+    let mut out = std::io::stdout().lock();
+    writeln!(out, "{text}")?;
+    out.flush()
+}
+
+/// Exit code after a failed write: success for a closed pipe, failure otherwise.
+fn write_failed(e: &std::io::Error) -> ExitCode {
+    if e.kind() == std::io::ErrorKind::BrokenPipe {
+        ExitCode::SUCCESS
+    } else {
+        eprintln!("kapu: cannot write the output: {e}");
+        ExitCode::FAILURE
+    }
+}
+
 fn main() -> ExitCode {
     let cli = parse_cli();
     let start = Instant::now();
@@ -519,10 +538,14 @@ fn main() -> ExitCode {
                         obj.insert("error".to_owned(), json!({ "code": code }));
                     }
                 }
-                println!("{json}");
+                if let Err(e) = emit(&json.to_string()) {
+                    return write_failed(&e);
+                }
             } else {
-                if !out.text.is_empty() {
-                    println!("{}", out.text.trim_end_matches('\n'));
+                if !out.text.is_empty()
+                    && let Err(e) = emit(out.text.trim_end_matches('\n'))
+                {
+                    return write_failed(&e);
                 }
                 for w in &out.warnings {
                     eprintln!("{}: {}", w.code, w.message);
@@ -536,10 +559,10 @@ fn main() -> ExitCode {
         }
         Err(e) => {
             if cli.json {
-                println!(
-                    "{}",
-                    json!({ "error": { "code": e.code.as_str(), "detail": e.detail }, "timing_ms": elapsed })
-                );
+                let line = json!({ "error": { "code": e.code.as_str(), "detail": e.detail }, "timing_ms": elapsed });
+                if let Err(w) = emit(&line.to_string()) {
+                    return write_failed(&w);
+                }
             } else {
                 eprintln!("{e}");
             }

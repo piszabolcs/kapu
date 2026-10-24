@@ -391,6 +391,124 @@ fn subdoor_starts(room: &[u8]) -> Vec<usize> {
     out
 }
 
+/// One part of a long door's served text (A45, D136).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Part {
+    /// The part's text; the parts of a door joined give its whole text.
+    pub text: String,
+    /// Its price in `o200k_base` tokens.
+    pub tokens: u64,
+    /// Its first heading without `#`, or its first line; at most 60 characters.
+    pub heading: String,
+}
+
+/// A45 (D136): a door's served text in parts of at most `max_tokens`
+/// tokens. A part ends before a heading, or else after a blank line, never
+/// inside a code fence; the last heading within the budget wins when it fills
+/// at least a quarter of it. A piece with no such place inside the budget
+/// (a long code block or line) stays whole and may be longer.
+///
+/// # Errors
+/// A tokenizer failure (E012).
+pub fn parts(text: &str, max_tokens: u64) -> Result<Vec<Part>> {
+    let total = crate::terms::tokens(text)?;
+    if total <= max_tokens {
+        return Ok(vec![Part {
+            text: text.to_owned(),
+            tokens: total,
+            heading: part_heading(text),
+        }]);
+    }
+    let lines: Vec<&str> = text.split_inclusive('\n').collect();
+    let cost: Vec<u64> = lines
+        .iter()
+        .map(|l| crate::terms::tokens(l))
+        .collect::<Result<_>>()?;
+    // where a part may start: (allowed, at a heading)
+    let mut starts = vec![(false, false); lines.len()];
+    let mut fence: Option<&str> = None;
+    for (i, line) in lines.iter().enumerate() {
+        let t = line.trim_start();
+        let heading = t.starts_with('#');
+        let after_blank = i > 0 && lines.get(i - 1).is_some_and(|p| p.trim().is_empty());
+        if i > 0
+            && fence.is_none()
+            && (heading || after_blank)
+            && let Some(slot) = starts.get_mut(i)
+        {
+            *slot = (true, heading);
+        }
+        let marker = ["```", "~~~"].into_iter().find(|m| t.starts_with(m));
+        if let Some(m) = marker {
+            fence = match fence {
+                None => Some(m),
+                Some(open) if open == m => None,
+                open => open,
+            };
+        }
+    }
+    let allowed = |i: usize| starts.get(i).is_some_and(|s| s.0);
+    let mut out = Vec::new();
+    let mut start = 0;
+    while start < lines.len() {
+        let (mut sum, mut last_heading, mut last_any) = (0u64, None, None);
+        let mut i = start;
+        let mut rest_fits = false;
+        while i < lines.len() {
+            sum += cost.get(i).copied().unwrap_or(0);
+            i += 1;
+            if sum > max_tokens {
+                break;
+            }
+            if i == lines.len() {
+                rest_fits = true;
+            } else if allowed(i) {
+                last_any = Some(i);
+                if starts.get(i).is_some_and(|s| s.1) {
+                    last_heading = Some((i, sum));
+                }
+            }
+        }
+        let stop = if rest_fits {
+            lines.len()
+        } else {
+            match (last_heading, last_any) {
+                (Some((h, used)), _) if used * 4 >= max_tokens => h,
+                (_, Some(any)) => any,
+                (Some((h, _)), None) => h,
+                (None, None) => (start + 1..lines.len())
+                    .find(|&j| allowed(j))
+                    .unwrap_or(lines.len()),
+            }
+        };
+        let part: String = lines.get(start..stop).unwrap_or_default().concat();
+        out.push(Part {
+            tokens: crate::terms::tokens(&part)?,
+            heading: part_heading(&part),
+            text: part,
+        });
+        start = stop;
+    }
+    Ok(out)
+}
+
+/// The first heading of a part without its `#`, or its first non-empty line.
+fn part_heading(text: &str) -> String {
+    let line = text
+        .lines()
+        .map(str::trim)
+        .find(|l| l.starts_with('#'))
+        .or_else(|| text.lines().map(str::trim).find(|l| !l.is_empty()))
+        .unwrap_or("");
+    let line = line.trim_start_matches('#').trim();
+    if line.chars().count() <= 60 {
+        line.to_owned()
+    } else {
+        let cut: String = line.chars().take(59).collect();
+        format!("{cut}…")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -433,5 +551,61 @@ mod tests {
         assert_ne!(a, b);
         assert_eq!(a.len(), 12);
         assert!(a.bytes().all(|c| c.is_ascii_hexdigit()));
+    }
+}
+
+#[cfg(test)]
+mod parts_tests {
+    use super::*;
+
+    fn section(name: &str, words: usize) -> String {
+        format!("## {name}\n\n{}\n\n", "word ".repeat(words).trim_end())
+    }
+
+    #[test]
+    fn a_short_door_is_one_part() {
+        let text = "# Title\nshort text\n";
+        let p = parts(text, 2000).unwrap();
+        assert_eq!(p.len(), 1);
+        assert_eq!(p[0].text, text);
+        assert_eq!(p[0].heading, "Title");
+    }
+
+    #[test]
+    fn a_long_door_splits_at_headings_within_the_budget() {
+        // A45 (D136): parts end before a heading or after a blank line
+        let text = format!(
+            "# Title\n\n{}{}{}",
+            section("A", 100),
+            section("B", 100),
+            section("C", 100)
+        );
+        let p = parts(&text, 150).unwrap();
+        assert_eq!(p.len(), 3, "{p:?}");
+        assert_eq!(p.iter().map(|x| x.text.as_str()).collect::<String>(), text);
+        assert!(p.iter().all(|x| x.tokens <= 150), "{p:?}");
+        assert!(p[1].text.starts_with("## B"));
+        let headings: Vec<&str> = p.iter().map(|x| x.heading.as_str()).collect();
+        assert_eq!(headings, ["Title", "B", "C"]);
+    }
+
+    #[test]
+    fn a_code_fence_is_not_cut_when_there_is_another_place() {
+        let fence = format!("```\n{}```\n", "let x = 1;\n".repeat(80));
+        let text = format!("## A\n\nintro\n\n{fence}\nafter the code\n\n## B\n\nend\n");
+        let p = parts(&text, 120).unwrap();
+        assert_eq!(p.iter().map(|x| x.text.as_str()).collect::<String>(), text);
+        for part in &p {
+            let fences = part.text.lines().filter(|l| l.starts_with("```")).count();
+            assert_eq!(fences % 2, 0, "{part:?}");
+        }
+    }
+
+    #[test]
+    fn one_line_longer_than_the_budget_stays_whole() {
+        let text = format!("{}\n", "word ".repeat(1000).trim_end());
+        let p = parts(&text, 100).unwrap();
+        assert_eq!(p.len(), 1);
+        assert_eq!(p[0].text, text);
     }
 }

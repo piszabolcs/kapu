@@ -294,7 +294,7 @@ fn vector_ranking(
     let vectors = cache.door_vectors(&s.header.bodyhash, entries.len(), texts)?;
     let mut semantic: Vec<(f64, String)> = entries
         .iter()
-        .zip(&vectors)
+        .zip(vectors.iter())
         .filter(|(entry, _)| allowed(entry.id))
         .map(|(entry, v)| (crate::embed::cosine(&q, v), entry.id.to_owned()))
         .collect();
@@ -340,20 +340,44 @@ pub const EXCERPT_CHARS: usize = 160;
 pub fn excerpts(file: &[u8], ids: &[&str], query: &str) -> Result<Vec<String>> {
     let s = Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?;
     let entries = s.doc_entries()?;
-    let wanted = query_terms(query);
+    let weights = idf_of(&s, entries.len(), &query_terms(query));
     ids.iter()
         .map(|id| match entries.iter().find(|e| e.id == *id) {
             Some(entry) => Ok(best_line(
                 &crate::docs::served_text(s.stored(entry)?)?,
-                &wanted,
+                &weights,
             )),
             None => Ok(String::new()),
         })
         .collect()
 }
 
-fn best_line(text: &str, wanted: &BTreeSet<String>) -> String {
-    let mut best: Option<(usize, &str)> = None;
+/// A39 (D132): the BM25 `idf` of each query entry from `#INDEX`; an entry
+/// the index does not know weighs as a word of a single door.
+fn idf_of(s: &Sections<'_>, doors: usize, wanted: &BTreeSet<String>) -> BTreeMap<String, f64> {
+    #[allow(clippy::cast_precision_loss)]
+    let n = doors as f64;
+    let idf = |df: f64| libm::log((n - df + 0.5) / (df + 0.5) + 1.0);
+    let mut weights: BTreeMap<String, f64> = wanted.iter().map(|t| (t.clone(), idf(1.0))).collect();
+    for line in s.index.lines() {
+        let mut f = line.splitn(3, '\t');
+        let (Some(term), Some(df)) = (f.next(), f.next()) else {
+            continue;
+        };
+        if let Some(w) = weights.get_mut(term) {
+            #[allow(clippy::cast_precision_loss)]
+            let df = parse_decimal(df).unwrap_or(0) as f64;
+            *w = idf(df);
+        }
+    }
+    weights
+}
+
+/// D124 with D132: the line whose shared query entries weigh the most (a
+/// rarer entry weighs more), the first on a tie; without one the first
+/// prose line.
+fn best_line(text: &str, weights: &BTreeMap<String, f64>) -> String {
+    let mut best: Option<(f64, &str)> = None;
     let mut first_prose: Option<&str> = None;
     for line in text.lines().map(str::trim) {
         if line.is_empty() || line.starts_with("```") || line.starts_with("tags:") {
@@ -362,9 +386,12 @@ fn best_line(text: &str, wanted: &BTreeSet<String>) -> String {
         if first_prose.is_none() && !line.starts_with('#') {
             first_prose = Some(line);
         }
-        let shared = query_terms(line).intersection(wanted).count();
-        if shared > 0 && best.is_none_or(|(n, _)| shared > n) {
-            best = Some((shared, line));
+        let weight: f64 = query_terms(line)
+            .iter()
+            .filter_map(|t| weights.get(t))
+            .sum();
+        if weight > 0.0 && best.is_none_or(|(w, _)| weight > w + 1e-9) {
+            best = Some((weight, line));
         }
     }
     one_line(best.map(|(_, l)| l).or(first_prose).unwrap_or(""))

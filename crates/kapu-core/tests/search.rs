@@ -202,3 +202,44 @@ fn excerpts_show_the_line_that_matches_the_query() {
             .all(|e| e.chars().count() <= kapu_core::search::EXCERPT_CHARS)
     );
 }
+
+/// A39: the excerpt line is the one with the rarest query terms, not just the
+/// most of them: `blur` is in one door, `button` in all four.
+#[test]
+fn excerpt_prefers_the_line_with_rarer_query_terms() {
+    let mk = |id: &str, text: &str| RoomSource {
+        id: id.into(),
+        content: text.into(),
+    };
+    let rooms = vec![
+        mk(
+            "glass",
+            "# Glass
+button styles and button colors
+
+Use a backdrop blur behind the glass.
+",
+        ),
+        mk(
+            "one",
+            "# One
+button one
+",
+        ),
+        mk(
+            "two",
+            "# Two
+button two
+",
+        ),
+        mk(
+            "three",
+            "# Three
+button three
+",
+        ),
+    ];
+    let built = kapu_core::build::build(&rooms).unwrap();
+    let ex = kapu_core::search::excerpts(&built.bytes, &["glass"], "button blur").unwrap();
+    assert!(ex[0].contains("blur"), "{ex:?}");
+}

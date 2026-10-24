@@ -36,6 +36,9 @@ OUT = ROOT / "tests" / "vectors"
 HEADER_LEN = 512
 FORMAT_VERSION = "1.0"
 # D121: group names leave out the stop words of the YAKE list (same file as Rust).
+# D131: words of API parameter tables, never a group's topic (build.rs GROUP_NAME_SKIP)
+GROUP_NAME_SKIP = {"bool", "default", "false", "float", "int", "let", "none", "null", "optional", "required", "str", "true"}
+
 STOPWORDS = {
     line.strip()
     for line in (ROOT / "crates" / "kapu-core" / "data" / "stopwords.txt").read_text(encoding="utf-8").splitlines()
@@ -522,9 +525,9 @@ def build_groups(doors: list[Door], edges) -> list[tuple[str, str, list[Door]]]:
     g = len(ordered)
     # class-level TF-IDF group names on unstemmed terms: tf * (1 + ln(G/df));
     # candidates are at least 3 characters long, not purely numeric (D66) and
-    # not stop words (D121).
+    # not stop words (D121) and not parameter-table words (D131).
     def candidate(t: str) -> bool:
-        return len(t) >= 3 and not t.isdigit() and t not in STOPWORDS
+        return len(t) >= 3 and not t.isdigit() and t not in STOPWORDS and t not in GROUP_NAME_SKIP
 
     gdf: dict[str, int] = {}
     for rs in ordered:
@@ -555,10 +558,19 @@ def build_groups(doors: list[Door], edges) -> list[tuple[str, str, list[Door]]]:
     return out
 
 
+INVISIBLE = {"\u200b", "\u200c", "\u200d", "\u2060", "\ufeff"}
+
+
+def derived(s: str) -> str:
+    """D135: NFC text without the invisible characters FR-02/5 forbids in a
+    derived section (the body may hold them)."""
+    return "".join(c for c in nfc(s) if c not in INVISIBLE)
+
+
 def esc_field(s: str) -> str:
     """FR-13 field escape on NFC text (FR-02/6, D82): `\\` -> `\\\\` first,
-    then `|` -> `\\|` (D107), TAB -> space."""
-    return nfc(s).replace("\\", "\\\\").replace("|", "\\|").replace("\t", " ")
+    then `|` -> `\\|` (D107), TAB -> space; invisible characters out (D135)."""
+    return derived(s).replace("\\", "\\\\").replace("|", "\\|").replace("\t", " ")
 
 
 def section(name: str, lines: list[str]) -> bytes:
@@ -584,7 +596,7 @@ def derive(doors: list[Door]) -> dict[str, bytes]:
                     map_lines.append(f"S {s.id} | {esc_field(s.title)} | {s.tokens}t")
 
     desc_lines = [
-        f"{d.id}\t{nfc(d.description).replace(chr(9), ' ')}\t{nfc(', '.join(d.tags)).replace(chr(9), ' ')}" for d in doors
+        f"{d.id}\t{derived(d.description).replace(chr(9), ' ')}\t{derived(', '.join(d.tags)).replace(chr(9), ' ')}" for d in doors
     ]
     graph_lines = [f"{a}\t{b}\t{t}\t{fmt_weight(w)}" for a, b, t, w in edges]
 

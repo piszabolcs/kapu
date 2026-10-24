@@ -256,3 +256,22 @@ fn version_prints_the_info_card_and_help_ends_with_the_signature() {
     // Not a terminal, so clap strips the dim style.
     assert_eq!(run("--help").trim_end().lines().last(), Some(signature));
 }
+
+/// A40: a reader that closes the pipe early (`kapu map | head -0`) is not an
+/// error: no panic, exit 0.
+#[test]
+fn a40_a_closed_pipe_ends_quietly() {
+    for _ in 0..3 {
+        let mut child = Command::new(env!("CARGO_BIN_EXE_kapu"))
+            .args(["--no-model", "map", s(&sample())])
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .unwrap();
+        drop(child.stdout.take());
+        let out = child.wait_with_output().unwrap();
+        let err = String::from_utf8_lossy(&out.stderr);
+        assert!(!err.contains("panicked"), "{err}");
+        assert!(out.status.success(), "{:?}: {err}", out.status);
+    }
+}

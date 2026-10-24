@@ -11,6 +11,7 @@
 
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 use tokenizers::{Tokenizer, TruncationParams};
 
@@ -461,11 +462,31 @@ impl<'m> VectorCache<'m> {
     /// file is `<cache>/<embhash>/<bodyhash>.vecs`: `count` and `dim` as
     /// little-endian u32, then `count × dim` f32. A missing or malformed file
     /// is recomputed with `texts` and written atomically; write failures are
-    /// silent (the cache can be deleted any time).
+    /// silent (the cache can be deleted any time). The vectors of the last
+    /// [`MEMO_BODIES`] bodies stay in memory for the process (A44, D137).
     ///
     /// # Errors
     /// A tokenizer failure (E012), or an error of `texts`.
     pub fn door_vectors(
+        &self,
+        bodyhash: &Hash,
+        count: usize,
+        texts: impl FnOnce() -> Result<Vec<String>>,
+    ) -> Result<Arc<Vec<Vec<f32>>>> {
+        let key = MemoKey {
+            model: self.model.hash(),
+            body: *bodyhash,
+            dir: self.dir.clone(),
+        };
+        if let Some(hit) = memo_get(&key, count) {
+            return Ok(hit);
+        }
+        let vectors = Arc::new(self.load_or_compute(bodyhash, count, texts)?);
+        memo_put(key, Arc::clone(&vectors));
+        Ok(vectors)
+    }
+
+    fn load_or_compute(
         &self,
         bodyhash: &Hash,
         count: usize,
@@ -506,6 +527,41 @@ impl<'m> VectorCache<'m> {
     }
 }
 
+/// How many bodies' door vectors stay in memory (A44, D137).
+pub const MEMO_BODIES: usize = 2;
+
+/// What a memo entry belongs to: model, file body and cache directory (a
+/// cache directory still gets its bundle written once).
+#[derive(PartialEq, Eq)]
+struct MemoKey {
+    model: Hash,
+    body: Hash,
+    dir: Option<PathBuf>,
+}
+
+/// Door vectors shared between the memo and its callers.
+type Vectors = Arc<Vec<Vec<f32>>>;
+
+/// Memo entries, the most recent last.
+static MEMO: Mutex<Vec<(MemoKey, Vectors)>> = Mutex::new(Vec::new());
+
+fn memo_get(key: &MemoKey, count: usize) -> Option<Vectors> {
+    let memo = MEMO.lock().ok()?;
+    memo.iter()
+        .find(|(k, v)| k == key && v.len() == count)
+        .map(|(_, v)| Arc::clone(v))
+}
+
+fn memo_put(key: MemoKey, vectors: Vectors) {
+    if let Ok(mut memo) = MEMO.lock() {
+        memo.retain(|(k, _)| k != &key);
+        memo.push((key, vectors));
+        if memo.len() > MEMO_BODIES {
+            memo.remove(0);
+        }
+    }
+}
+
 /// Reads a `.vecs` bundle if its header and size match.
 fn parse_bundle(bytes: &[u8], count: usize, dim: usize) -> Option<Vec<Vec<f32>>> {
     let (head, data) = bytes.split_at_checked(8)?;
@@ -530,6 +586,27 @@ fn hex(h: &Hash) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn door_vectors_stay_in_memory_for_the_process() {
+        // A44 (D137): the second call of the same body needs no texts and no disk
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/model/kapu-test-tiny");
+        let model = Model::load(&dir).unwrap();
+        let cache = VectorCache::in_memory(&model);
+        let body = Hash([7u8; 32]);
+        let first = cache
+            .door_vectors(&body, 2, || Ok(vec!["alpha".to_owned(), "beta".to_owned()]))
+            .unwrap();
+        let second = cache
+            .door_vectors(&body, 2, || {
+                Err(Error::new(
+                    ErrorCode::E012,
+                    "texts are not needed".to_owned(),
+                ))
+            })
+            .unwrap();
+        assert_eq!(first, second);
+    }
 
     #[test]
     fn cosine_basics() {

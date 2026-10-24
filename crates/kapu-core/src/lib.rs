@@ -39,8 +39,8 @@ pub use docs::{DocEntry, blake3_of, served_text, strip_comments, unescape};
 pub use error::{Error, ErrorCode, Result};
 pub use header::{Hash, Header, Span};
 pub use reader::{
-    Described, Neighbour, Opened, OpenedDoor, describe_bytes, frame, frame_with_boundary,
-    new_boundary, open_bytes, open_path,
+    Described, Neighbour, Opened, OpenedDoor, Part, describe_bytes, frame, frame_with_boundary,
+    new_boundary, open_bytes, open_path, parts,
 };
 pub use sections::{BodyLength, Limits, Sections};
 pub use validate::{Level, Report, is_valid_id, validate, validate_with};

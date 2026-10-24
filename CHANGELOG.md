@@ -6,10 +6,13 @@ The file format has its own version (`%KAPU 1.0`, see `SPEC-KAPU.md`); the tools
 ## [Unreleased]
 
 ### Changed
+- Specification v1.0.4 (D131-D138): group names leave out parameter-table words; the search excerpt prefers rarer query words; the map's totals line names the content language (`lang=`) and the guide asks for queries in that language; at most 10 content-scan lines on the map (`scan=true` lists all); `kapu_open` serves long doors in parts (`max_tokens`, `part`); the MCP server keeps unchanged files and door vectors in memory.
 - Specification v1.0.2: in-page anchors link to the room's own sections and no longer warn (D123); group names leave out stop words (D121).
 - `kapu-mcp`: tool annotations, at most 50 hits, a next step in every error (D120); an excerpt line under each search hit (D124); a group lists its rooms only and `room=` lists one room's sub-doors (D125); at most 8 neighbours per opened door (D126); a totals line on the map (D127).
 
 ### Fixed
+- Invisible characters (U+200B-U+200D, U+2060, U+FEFF) in a room's title or first sentence no longer produce a file the reader rejects (D135).
+- `kapu ... | head` no longer panics when the reader closes the pipe early (D138).
 - The S5 content scan no longer matches a command name inside another word (`async`, `confirm`) (D122).
 
 ### Added

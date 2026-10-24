@@ -626,12 +626,23 @@ fn communities(doors: &[Door], edges: &[EdgeRow]) -> Vec<Vec<usize>> {
     ordered
 }
 
+/// Words of API parameter tables that are never a group's topic (A41, D131).
+/// Group names only; tags keep them (`str` can be a Rust topic).
+pub const GROUP_NAME_SKIP: [&str; 12] = [
+    "bool", "default", "false", "float", "int", "let", "none", "null", "optional", "required",
+    "str", "true",
+];
+
 // D66 group names: class-level TF-IDF `tf * (1 + ln(G / df))` over the
-/// unstemmed terms of at least 3 characters that are not all digits and not
-/// stop words (D121); the best three joined with `, `, ties in byte order.
+/// unstemmed terms of at least 3 characters that are not all digits, not
+/// stop words (D121) and not parameter-table words (D131); the best three
+/// joined with `, `, ties in byte order.
 fn group_names(doors: &[Door], groups: &[Vec<usize>]) -> Vec<String> {
     let candidate = |t: &str| {
-        t.chars().count() >= 3 && !t.chars().all(|c| c.is_ascii_digit()) && !yake::is_stopword(t)
+        t.chars().count() >= 3
+            && !t.chars().all(|c| c.is_ascii_digit())
+            && !yake::is_stopword(t)
+            && !GROUP_NAME_SKIP.contains(&t)
     };
     let mut gdf: BTreeMap<&str, u64> = BTreeMap::new();
     for rooms in groups {
@@ -711,10 +722,19 @@ fn build_groups(doors: &mut [Door], edges: &[EdgeRow]) -> Vec<Group> {
 // Sections and header
 // ---------------------------------------------------------------------------
 
-/// FR-13 field escape (D107): `\` becomes `\\` first, then `|` becomes `\|`;
-/// TAB becomes a space.
-fn esc_field(s: &str) -> String {
+/// D135: NFC text without the invisible characters FR-02/5 forbids in a
+/// derived section (the body may hold them, with W002).
+fn derived(s: &str) -> String {
     nfc(s)
+        .chars()
+        .filter(|c| !matches!(c, '\u{200B}'..='\u{200D}' | '\u{2060}' | '\u{FEFF}'))
+        .collect()
+}
+
+/// FR-13 field escape (D107): `\` becomes `\\` first, then `|` becomes `\|`;
+/// TAB becomes a space. Invisible characters are left out (D135).
+fn esc_field(s: &str) -> String {
+    derived(s)
         .replace('\\', "\\\\")
         .replace('|', "\\|")
         .replace('\t', " ")
@@ -788,8 +808,8 @@ fn desc_lines(doors: &[Door]) -> Vec<String> {
             format!(
                 "{}\t{}\t{}",
                 d.id,
-                nfc(&d.description).replace('\t', " "),
-                nfc(&d.tags.join(", ")).replace('\t', " ")
+                derived(&d.description).replace('\t', " "),
+                derived(&d.tags.join(", ")).replace('\t', " ")
             )
         })
         .collect()
@@ -1017,6 +1037,50 @@ mod tests {
             id: id.to_owned(),
             content: content.to_owned(),
         }
+    }
+
+    #[test]
+    fn group_names_leave_out_api_table_words() {
+        // A41: the words of parameter tables are not a topic
+        let table = "| name | type | optional | default |
+|---|---|---|---|
+| size | str | optional | none |
+| seed | int | optional | null |
+";
+        let rooms: Vec<RoomSource> = (0..3)
+            .map(|i| {
+                room(
+                    &format!("api-{i}"),
+                    &format!(
+                        "# Image API {i}
+{}
+pixel sprite image
+",
+                        table.repeat(6)
+                    ),
+                )
+            })
+            .collect();
+        let built = build(&rooms).unwrap();
+        let view = crate::view::map_view(&built.bytes, None).unwrap();
+        for g in &view.groups {
+            for word in ["optional", "str", "int", "default", "null"] {
+                assert!(!g.name.split(", ").any(|t| t == word), "{}", g.name);
+            }
+        }
+    }
+
+    #[test]
+    fn invisible_characters_stay_out_of_derived_sections() {
+        // D135: the body may hold U+200B (W002), a derived section may not (FR-02/5)
+        let built = build(&[room(
+            "a",
+            "# Zero\u{200B}width title\nfirst\u{200B}line of the text\n",
+        )])
+        .unwrap();
+        crate::validate(&built.bytes, crate::Level::Full).unwrap();
+        let view = crate::view::map_view(&built.bytes, None).unwrap();
+        assert_eq!(view.doors[0].title, "Zerowidth title");
     }
 
     #[test]
