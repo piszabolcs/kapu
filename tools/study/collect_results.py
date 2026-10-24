@@ -129,7 +129,7 @@ def main(data: Path, out: Path):
             "kapu_bench_seconds": bench_seconds(data / "remeasure_v11.log"),
         },
     }
-    out.write_text(json.dumps(result, indent=1, ensure_ascii=False), encoding="utf-8")
+    out.write_text(json.dumps(result, indent=1, ensure_ascii=False), encoding="utf-8", newline="\n")
     print("written", out)
 
 
