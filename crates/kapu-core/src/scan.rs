@@ -209,8 +209,18 @@ pub fn scan_room(id: &str, title: &str, tags: &[String], content: &str) -> Vec<F
 /// # Errors
 /// A broken file.
 pub fn scan_file(file: &[u8]) -> crate::Result<Vec<Finding>> {
-    let s =
-        crate::Sections::parse_with(file, &crate::Limits::default(), crate::BodyLength::Tolerate)?;
+    scan_in(&crate::Sections::parse_with(
+        file,
+        &crate::Limits::default(),
+        crate::BodyLength::Tolerate,
+    )?)
+}
+
+/// [`scan_file`] on a parsed file (D139).
+///
+/// # Errors
+/// A broken section.
+pub fn scan_in(s: &crate::Sections<'_>) -> crate::Result<Vec<Finding>> {
     let map = crate::catalog::parse_map(s.map)?;
     let desc = crate::catalog::parse_desc(s.desc)?;
     let mut out = Vec::new();

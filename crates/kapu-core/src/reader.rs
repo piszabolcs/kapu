@@ -15,7 +15,7 @@ use std::path::Path;
 use crate::catalog::{Map, parse_desc, parse_graph, parse_map, unescape_field};
 use crate::docs::{DocEntry, served_text};
 use crate::error::{Error, ErrorCode, Result};
-use crate::sections::{BodyLength, Limits, Sections};
+use crate::sections::{BodyLength, CheckedFile, Limits, Sections};
 
 /// A graph neighbour of an opened door (FR-15: id, title, price, edge type).
 /// Data only, not a suggestion (FR-15/3).
@@ -83,10 +83,29 @@ fn e009(id: &str) -> Error {
 /// Only for a file whose header or section layout is broken; per-id problems
 /// are reported inside [`Opened::doors`].
 pub fn open_bytes(file: &[u8], ids: &[&str]) -> Result<Opened> {
-    match open_fast(file, ids)? {
-        Some(opened) => Ok(opened),
-        None => open_rebuilt(file, ids),
+    let s = Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?;
+    let body_ok = s.body_length_matches && s.check_bodyhash().is_ok();
+    open_in(&s, body_ok, ids)
+}
+
+/// [`open_bytes`] on a file checked once (D139): the body fingerprint is
+/// checked on the first open of this copy only.
+///
+/// # Errors
+/// As [`open_bytes`].
+pub fn open_checked(file: &CheckedFile, ids: &[&str]) -> Result<Opened> {
+    let s = file.sections();
+    let body_ok = *file
+        .body_ok
+        .get_or_init(|| s.body_length_matches && s.check_bodyhash().is_ok());
+    open_in(&s, body_ok, ids)
+}
+
+fn open_in(s: &Sections<'_>, body_ok: bool, ids: &[&str]) -> Result<Opened> {
+    if body_ok && let Some(opened) = open_fast(s, ids)? {
+        return Ok(opened);
     }
+    open_rebuilt(s, ids)
 }
 
 /// Opens doors of a file on disk with the full FR-15 procedure: fast path,
@@ -96,14 +115,24 @@ pub fn open_bytes(file: &[u8], ids: &[&str]) -> Result<Opened> {
 /// I/O errors are reported as E012 with the OS message; a broken header or
 /// layout as its own code.
 pub fn open_path(path: &Path, ids: &[&str]) -> Result<Opened> {
+    let fast = |file: &[u8]| -> Result<Option<Opened>> {
+        let s = Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?;
+        if !s.body_length_matches || s.check_bodyhash().is_err() {
+            return Ok(None);
+        }
+        open_fast(&s, ids)
+    };
     let first = read(path)?;
-    if let Some(opened) = open_fast(&first, ids)? {
+    if let Some(opened) = fast(&first)? {
         return Ok(opened);
     }
     let second = read(path)?;
-    match open_fast(&second, ids)? {
+    match fast(&second)? {
         Some(opened) => Ok(opened),
-        None => open_rebuilt(&second, ids),
+        None => open_rebuilt(
+            &Sections::parse_with(&second, &Limits::default(), BodyLength::Tolerate)?,
+            ids,
+        ),
     }
 }
 
@@ -125,7 +154,20 @@ pub fn describe_bytes(
     file: &[u8],
     ids: &[&str],
 ) -> Result<Vec<std::result::Result<Described, Error>>> {
-    let s = Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?;
+    describe_in(
+        &Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?,
+        ids,
+    )
+}
+
+/// [`describe_bytes`] on a parsed file (D139).
+///
+/// # Errors
+/// Only for a broken `#MAP` or `#DESC`.
+pub fn describe_in(
+    s: &Sections<'_>,
+    ids: &[&str],
+) -> Result<Vec<std::result::Result<Described, Error>>> {
     let map = parse_map(s.map)?;
     let desc = parse_desc(s.desc)?;
     Ok(ids
@@ -252,14 +294,11 @@ fn weight_e4(weight: f64) -> u32 {
     w
 }
 
-/// The fast path. `Ok(None)` means "inconsistent, fall back".
-fn open_fast(file: &[u8], ids: &[&str]) -> Result<Option<Opened>> {
-    let s = Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?;
-    if !s.body_length_matches || s.check_bodyhash().is_err() {
-        return Ok(None);
-    }
+/// The fast path, for a body whose length and fingerprint match. `Ok(None)`
+/// means "inconsistent, fall back".
+fn open_fast(s: &Sections<'_>, ids: &[&str]) -> Result<Option<Opened>> {
     let entries = s.doc_entries()?;
-    let catalog = Catalog::load(&s)?;
+    let catalog = Catalog::load(s)?;
     let mut doors = Vec::with_capacity(ids.len());
     for id in ids {
         let Some(entry) = entries.iter().find(|e| e.id == *id) else {
@@ -280,10 +319,9 @@ fn open_fast(file: &[u8], ids: &[&str]) -> Result<Option<Opened>> {
 
 /// The edge-2 path: room spans from the `@@@` lines, sub-door spans from the
 /// `## ` headings of the rebuilt room (D77).
-fn open_rebuilt(file: &[u8], ids: &[&str]) -> Result<Opened> {
-    let s = Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?;
+fn open_rebuilt(s: &Sections<'_>, ids: &[&str]) -> Result<Opened> {
     let entries = s.doc_entries()?;
-    let catalog = Catalog::load(&s)?;
+    let catalog = Catalog::load(s)?;
     let rooms = room_spans(s.body);
     let doors = ids
         .iter()

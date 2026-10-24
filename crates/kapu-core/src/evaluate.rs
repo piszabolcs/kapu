@@ -10,7 +10,7 @@
 
 use crate::embed::VectorCache;
 use crate::error::{Error, ErrorCode, Result};
-use crate::search::rankings;
+use crate::search::rankings_in;
 use crate::text::slug;
 
 /// One question of the benchmark.
@@ -189,8 +189,10 @@ pub fn evaluate(
     let mut vector = Vec::with_capacity(questions.len());
     let mut hybrid = Vec::with_capacity(questions.len());
     let mut vector_available = true;
+    let s =
+        crate::Sections::parse_with(file, &crate::Limits::default(), crate::BodyLength::Tolerate)?;
     for q in questions {
-        let r = rankings(file, &q.kerdes, cache)?;
+        let r = rankings_in(&s, &q.kerdes, cache)?;
         let expected = q.expected();
         bm25.push((r.bm25, expected.clone()));
         match r.vector {

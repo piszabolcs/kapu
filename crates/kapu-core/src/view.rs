@@ -74,7 +74,17 @@ fn split_fields(line: &str) -> Vec<String> {
 /// # Errors
 /// A broken file; E009 for an unknown group.
 pub fn map_view(file: &[u8], group: Option<&str>) -> Result<MapView> {
-    let s = Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?;
+    map_view_in(
+        &Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?,
+        group,
+    )
+}
+
+/// [`map_view`] on a parsed file (D139).
+///
+/// # Errors
+/// A broken section; E009 for an unknown group.
+pub fn map_view_in(s: &Sections<'_>, group: Option<&str>) -> Result<MapView> {
     parse_map(s.map)?; // shape check
     let mut groups = Vec::new();
     let mut all: Vec<(String, DoorLine, String)> = Vec::new(); // (gid of the line, door, raw)
@@ -130,7 +140,7 @@ pub fn map_view(file: &[u8], group: Option<&str>) -> Result<MapView> {
             .filter(|(_, d, _)| d.is_room)
             .map(|(_, d, _)| d.tokens)
             .sum(),
-        lang: file_lang(&s)?,
+        lang: file_lang(s)?,
     };
     let (doors, flat, raw_lines) = if let Some(g) = group {
         if !groups.iter().any(|x| x.gid == g) {
@@ -287,7 +297,17 @@ pub fn totals(file: &[u8]) -> Result<Totals> {
 /// # Errors
 /// A broken file; E009 when `id` is not a room.
 pub fn room_lines(file: &[u8], id: &str) -> Result<Vec<String>> {
-    let s = Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?;
+    room_lines_in(
+        &Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?,
+        id,
+    )
+}
+
+/// [`room_lines`] on a parsed file (D139).
+///
+/// # Errors
+/// A broken `#MAP`; E009 when `id` is not a room.
+pub fn room_lines_in(s: &Sections<'_>, id: &str) -> Result<Vec<String>> {
     parse_map(s.map)?; // shape check
     let room = format!("R {id} |");
     let subs = format!("S {id}/");

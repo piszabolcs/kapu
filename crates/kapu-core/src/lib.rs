@@ -39,10 +39,10 @@ pub use docs::{DocEntry, blake3_of, served_text, strip_comments, unescape};
 pub use error::{Error, ErrorCode, Result};
 pub use header::{Hash, Header, Span};
 pub use reader::{
-    Described, Neighbour, Opened, OpenedDoor, Part, describe_bytes, frame, frame_with_boundary,
-    new_boundary, open_bytes, open_path, parts,
+    Described, Neighbour, Opened, OpenedDoor, Part, describe_bytes, describe_in, frame,
+    frame_with_boundary, new_boundary, open_bytes, open_checked, open_path, parts,
 };
-pub use sections::{BodyLength, Limits, Sections};
+pub use sections::{BodyLength, CheckedFile, Limits, Sections};
 pub use validate::{Level, Report, is_valid_id, validate, validate_with};
 
 /// Format version written on the first header line (`%KAPU 1.0`, FR-03).

@@ -5,7 +5,11 @@
 //! `k1 = 1.2`, `b = 0.75`, the `dl` of `#DOCS` and
 //! `idf = ln((N - df + 0.5) / (df + 0.5) + 1)` with `N` the number of doors.
 //! Ties are broken by door id (FR-16/4).
+//!
+//! Every function has a `_in` form on a parsed file, so one call parses and
+//! checks the file once (D139); the byte forms parse and call it.
 
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::error::Result;
@@ -35,12 +39,51 @@ pub fn query_terms(query: &str) -> BTreeSet<String> {
     index_tokens(query).iter().flat_map(|t| stems(t)).collect()
 }
 
+fn parse(file: &[u8]) -> Result<Sections<'_>> {
+    Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)
+}
+
+/// The `#INDEX` line of `term`, without its LF, by binary search: the lines
+/// are in byte order of their term (FR-09/5, D139).
+fn index_line<'a>(index: &'a str, term: &str) -> Option<&'a str> {
+    let b = index.as_bytes();
+    let (mut lo, mut hi) = (0, b.len()); // `lo` and `hi` are line starts (or the end)
+    while lo < hi {
+        let mid = lo + (hi - lo) / 2;
+        let start = b
+            .get(lo..mid)?
+            .iter()
+            .rposition(|&c| c == b'\n')
+            .map_or(lo, |p| lo + p + 1);
+        let end = b
+            .get(start..hi)?
+            .iter()
+            .position(|&c| c == b'\n')
+            .map_or(hi, |p| start + p);
+        let line = index.get(start..end)?;
+        let key = line.split_once('\t').map_or(line, |(k, _)| k);
+        match key.as_bytes().cmp(term.as_bytes()) {
+            Ordering::Equal => return Some(line),
+            Ordering::Less => lo = end + 1,
+            Ordering::Greater => hi = start,
+        }
+    }
+    None
+}
+
 /// BM25 ranking of all doors for `query`, best first, at most [`TOP_N`].
 ///
 /// # Errors
 /// A broken header, layout or `#DOCS`.
 pub fn bm25(file: &[u8], query: &str) -> Result<Vec<Hit>> {
-    let s = Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?;
+    bm25_in(&parse(file)?, query)
+}
+
+/// [`bm25`] on a parsed file.
+///
+/// # Errors
+/// A broken `#DOCS`.
+pub fn bm25_in(s: &Sections<'_>, query: &str) -> Result<Vec<Hit>> {
     let docs = s.doc_entries()?;
     let dl: BTreeMap<&str, u64> = docs.iter().map(|d| (d.id, d.dl)).collect();
     #[allow(clippy::cast_precision_loss)]
@@ -53,14 +96,15 @@ pub fn bm25(file: &[u8], query: &str) -> Result<Vec<Hit>> {
     let wanted = query_terms(query);
 
     let mut scores: BTreeMap<&str, f64> = BTreeMap::new();
-    for line in s.index.lines() {
-        let mut f = line.splitn(3, '\t');
-        let (Some(term), Some(df), Some(postings)) = (f.next(), f.next(), f.next()) else {
+    // in byte order of the entries, as the index lines, so the sums are the same
+    for term in &wanted {
+        let Some(line) = index_line(s.index, term) else {
             continue;
         };
-        if !wanted.contains(term) {
+        let mut f = line.splitn(3, '\t');
+        let (Some(_), Some(df), Some(postings)) = (f.next(), f.next(), f.next()) else {
             continue;
-        }
+        };
         #[allow(clippy::cast_precision_loss)]
         let df = parse_decimal(df).unwrap_or(0) as f64;
         let idf = libm::log((n - df + 0.5) / (df + 0.5) + 1.0);
@@ -185,9 +229,21 @@ pub fn search(
     options: SearchOptions,
     cache: Option<&crate::embed::VectorCache<'_>>,
 ) -> Result<SearchResult> {
+    search_in(&parse(file)?, query, options, cache)
+}
+
+/// [`search`] on a parsed file.
+///
+/// # Errors
+/// A broken section or a tokenizer failure.
+pub fn search_in(
+    s: &Sections<'_>,
+    query: &str,
+    options: SearchOptions,
+    cache: Option<&crate::embed::VectorCache<'_>>,
+) -> Result<SearchResult> {
     use crate::catalog::{parse_desc, parse_map, unescape_field};
 
-    let s = Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?;
     let map = parse_map(s.map)?;
     let price = |id: &str| map.door(id).map_or(0, |d| d.tokens);
     let allowed = |id: &str| options.max_tokens.is_none_or(|m| price(id) <= m);
@@ -197,7 +253,7 @@ pub fn search(
             .unwrap_or_default()
     };
 
-    let keyword: Vec<Hit> = bm25(file, query)?
+    let keyword: Vec<Hit> = bm25_in(s, query)?
         .into_iter()
         .filter(|h| allowed(&h.id))
         .collect();
@@ -232,7 +288,7 @@ pub fn search(
     };
 
     let desc = parse_desc(s.desc)?;
-    let semantic = vector_ranking(&s, &desc, &title, &allowed, cache, query)?;
+    let semantic = vector_ranking(s, &desc, &title, &allowed, cache, query)?;
     let fused = rrf(&keyword, &semantic);
     let mut hits: Vec<SearchHit> = fused
         .into_iter()
@@ -338,9 +394,16 @@ pub const EXCERPT_CHARS: usize = 160;
 /// # Errors
 /// A broken file, or a door whose fingerprint does not match (E007).
 pub fn excerpts(file: &[u8], ids: &[&str], query: &str) -> Result<Vec<String>> {
-    let s = Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?;
+    excerpts_in(&parse(file)?, ids, query)
+}
+
+/// [`excerpts`] on a parsed file.
+///
+/// # Errors
+/// A broken section, or a door whose fingerprint does not match (E007).
+pub fn excerpts_in(s: &Sections<'_>, ids: &[&str], query: &str) -> Result<Vec<String>> {
     let entries = s.doc_entries()?;
-    let weights = idf_of(&s, entries.len(), &query_terms(query));
+    let weights = idf_of(s, entries.len(), &query_terms(query));
     ids.iter()
         .map(|id| match entries.iter().find(|e| e.id == *id) {
             Some(entry) => Ok(best_line(
@@ -358,19 +421,19 @@ fn idf_of(s: &Sections<'_>, doors: usize, wanted: &BTreeSet<String>) -> BTreeMap
     #[allow(clippy::cast_precision_loss)]
     let n = doors as f64;
     let idf = |df: f64| libm::log((n - df + 0.5) / (df + 0.5) + 1.0);
-    let mut weights: BTreeMap<String, f64> = wanted.iter().map(|t| (t.clone(), idf(1.0))).collect();
-    for line in s.index.lines() {
-        let mut f = line.splitn(3, '\t');
-        let (Some(term), Some(df)) = (f.next(), f.next()) else {
-            continue;
-        };
-        if let Some(w) = weights.get_mut(term) {
+    wanted
+        .iter()
+        .map(|t| {
+            let df = index_line(s.index, t).map_or(1, |line| {
+                line.split('\t')
+                    .nth(1)
+                    .map_or(0, |df| parse_decimal(df).unwrap_or(0))
+            });
             #[allow(clippy::cast_precision_loss)]
-            let df = parse_decimal(df).unwrap_or(0) as f64;
-            *w = idf(df);
-        }
-    }
-    weights
+            let df = df as f64;
+            (t.clone(), idf(df))
+        })
+        .collect()
 }
 
 /// D124 with D132: the line whose shared query entries weigh the most (a
@@ -437,17 +500,28 @@ pub fn rankings(
     query: &str,
     cache: Option<&crate::embed::VectorCache<'_>>,
 ) -> Result<Rankings> {
+    rankings_in(&parse(file)?, query, cache)
+}
+
+/// [`rankings`] on a parsed file.
+///
+/// # Errors
+/// A broken section or a tokenizer failure.
+pub fn rankings_in(
+    s: &Sections<'_>,
+    query: &str,
+    cache: Option<&crate::embed::VectorCache<'_>>,
+) -> Result<Rankings> {
     use crate::catalog::{parse_desc, parse_map, unescape_field};
-    let bm25_ids: Vec<String> = bm25(file, query)?.into_iter().map(|h| h.id).collect();
+    let bm25_ids: Vec<String> = bm25_in(s, query)?.into_iter().map(|h| h.id).collect();
     let options = SearchOptions {
         k: 2 * TOP_N,
         max_tokens: None,
     };
-    let result = search(file, query, options, cache)?;
+    let result = search_in(s, query, options, cache)?;
     let hybrid: Vec<String> = result.hits.iter().map(|h| h.id.clone()).collect();
     let vector = match (cache, &result.vector) {
         (Some(cache), VectorStatus::Available) => {
-            let s = Sections::parse_with(file, &Limits::default(), BodyLength::Tolerate)?;
             let map = parse_map(s.map)?;
             let desc = parse_desc(s.desc)?;
             let title = |id: &str| {
@@ -455,7 +529,7 @@ pub fn rankings(
                     .map(|d| unescape_field(d.title))
                     .unwrap_or_default()
             };
-            let ranked = vector_ranking(&s, &desc, &title, &|_| true, cache, query)?;
+            let ranked = vector_ranking(s, &desc, &title, &|_| true, cache, query)?;
             Some(ranked.into_iter().map(|(_, id)| id).collect())
         }
         _ => None,
@@ -465,4 +539,34 @@ pub fn rankings(
         vector,
         hybrid,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn index_line_finds_each_term_by_binary_search() {
+        let long = format!("b\t1\t{}x:1", "x:1,".repeat(5000));
+        let lines = [
+            "a\t1\tr:1",
+            &long,
+            "bb\t2\tr:1,s:1",
+            "c\t1\ts:2",
+            "gomb\t1\tr:1",
+            "gombok\t1\ts:1",
+            "új\t1\tr:1",
+        ];
+        for index in [lines.join("\n"), lines.join("\n") + "\n"] {
+            for line in lines {
+                let term = line.split('\t').next().unwrap();
+                assert_eq!(index_line(&index, term), Some(line), "{term}");
+            }
+            for missing in ["", "0", "ab", "ba", "d", "gombo", "zz", "ú", "űr"] {
+                assert_eq!(index_line(&index, missing), None, "{missing}");
+            }
+        }
+        assert_eq!(index_line("", "a"), None);
+        assert_eq!(index_line("a\t1\tr:1\n", "a"), Some("a\t1\tr:1"));
+    }
 }

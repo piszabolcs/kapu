@@ -1,4 +1,4 @@
-# KAPU Specification  v1.0.4  (2026-10-24; v1.0: 2026-10-20)
+# KAPU Specification  v1.0.5  (2026-10-24; v1.0: 2026-10-20)
 
 Navigálható, egyfájlos tudáskonténer AI ügynököknek.
 Szerző és ötletgazda: Pintér Szabolcs. Specifikáció licence: CC BY 4.0. Kód licence: MIT.
@@ -216,7 +216,7 @@ tags:
   2. Kisbetűsítés, NFC.
   3. Szótövezés: minden kifejezésre a magyar és az angol Snowball szótövező is lefut, az eltérő eredmények mind bekerülnek (ASSUMPTION-04).
   4. Az index ajtónként (szobák és alajtók) tartalmazza a cím, a tagek, a leírás és a tartalom kifejezéseit. A cím és a tagek kifejezései 3-szoros tf súllyal (ASSUMPTION-05).
-  5. A sorok a kifejezés UTF-8 bájtsorrendje szerint rendezettek.
+  5. A sorok a kifejezés UTF-8 bájtsorrendje szerint rendezettek. Az olvasó erre építve bináris kereséssel találja meg egy kifejezés sorát (D139).
   6. Pontozás BM25, `k1=1.2`, `b=0.75`, a dokumentumhossz a `#DOCS` `dl` mezője.
 - Acceptance: Given „üvegszerű gomb” és „gombok” kifejezések, When keresés „gomb”-ra, Then mindkét ajtó találat.
 
@@ -293,7 +293,7 @@ S <id> | <cím> | <token>t
 
 ### FR-15 Olvasás és MCP eszközök (core flow)
 
-- Behavior: az MCP szerver az alábbi eszközöket adja. Minden eszköz minden hívásnál ellenőrzi a fájlt a lemezen (méret, módosítási idő), és ha változott, újraolvassa; a változatlan fájlt és ajtóvektorait a memóriából szolgálja ki (D137).
+- Behavior: az MCP szerver az alábbi eszközöket adja. Minden eszköz minden hívásnál ellenőrzi a fájlt a lemezen (méret, módosítási idő), és ha változott, újraolvassa; a változatlan fájlt és ajtóvektorait a memóriából szolgálja ki (D137). A fájl karakter- és szerkezetellenőrzése fájlváltozatonként egyszer fut, a törzs ujjlenyomata az első kinyitáskor; a további hívások az ellenőrzött másolatból dolgoznak (D139).
 
 | Eszköz | Bemenet | Kimenet |
 |---|---|---|
@@ -622,3 +622,9 @@ A pilotmérés (`bench/RESULTS.md` 8. fejezet) utáni gyors javítások, a felha
 6. **FR-15 `kapu_open` (D136, A45):** `max_tokens` (alapból 2000) és `part`: a hosszú ajtó részekben jön. Indok: a KAPU-tokenek 77%-a kinyitás volt, az ügynökök a nagy ajtókat `sed`-del vágták.
 7. **FR-15 (D137, A44):** a szerver a változatlan fájlt és az ajtóvektorait a memóriában tartja; a vektorok a folyamat egészére megmaradnak (utolsó két törzs). Indok: 542 MB-os fájlon egy keresés 3,2 s volt, mert minden hívás újraolvasta a fájlt és a 87 MB-os vektorfájlt.
 8. **8. fejezet, parancssor (D138, A40):** ha a kimenet olvasója korán bezárja a csövet (`kapu map | head`), a `kapu` csendben, 0-val lép ki.
+
+## 18. Változások v1.0.4 → v1.0.5 (2026-10-24)
+
+A fájlformátum és a kimenetek nem változnak.
+
+1. **FR-09/5, FR-15 (D139, A44):** egy hívás a fájlt egyszer dolgozza fel és ellenőrzi (korábban keresésenként háromszor), a `#INDEX`-ben a kifejezés sorát bináris keresés találja meg, és az MCP szerver a fájlváltozat ellenőrzött másolatát tartja meg. Indok: a D137-es gyorsítótár után is 657 ms volt egy keresés a 117 MB-os fájlon, mert az idő a háromszori teljes ellenőrzésre és az index soronkénti végigolvasására ment el. Utána: 19 ms.

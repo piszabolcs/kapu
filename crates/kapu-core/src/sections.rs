@@ -164,6 +164,71 @@ impl<'a> Sections<'a> {
     }
 }
 
+/// A file that passed the layout and character checks once (D139): later
+/// calls slice its sections without scanning the bytes again. The MCP server
+/// keeps one per unchanged file, so a search does not re-check 100 MB.
+#[derive(Debug)]
+pub struct CheckedFile {
+    text: String,
+    header: Header,
+    body_length_matches: bool,
+    /// Whether the body length and fingerprint match (set by the first open).
+    pub(crate) body_ok: std::sync::OnceLock<bool>,
+}
+
+impl CheckedFile {
+    /// Runs every check of [`Sections::parse_with`] with the default limits,
+    /// accepting a body that grew or shrank after the build, and keeps the file.
+    ///
+    /// # Errors
+    /// The first violated rule, as from the parser.
+    pub fn new(bytes: Vec<u8>) -> Result<Self> {
+        let s = Sections::parse_with(&bytes, &Limits::default(), BodyLength::Tolerate)?;
+        let (header, body_length_matches) = (s.header.clone(), s.body_length_matches);
+        let text = String::from_utf8(bytes).map_err(|e| {
+            e004(format!(
+                "file is not UTF-8 at byte {}",
+                e.utf8_error().valid_up_to()
+            ))
+        })?;
+        Ok(Self {
+            text,
+            header,
+            body_length_matches,
+            body_ok: std::sync::OnceLock::new(),
+        })
+    }
+
+    /// The whole file.
+    #[must_use]
+    pub fn bytes(&self) -> &[u8] {
+        self.text.as_bytes()
+    }
+
+    /// The sections at the positions the checks accepted.
+    #[must_use]
+    pub fn sections(&self) -> Sections<'_> {
+        let at = |n: u64| usize::try_from(n).unwrap_or(usize::MAX);
+        // inner text: after the `#NAME` line, before the `#END` line
+        let inner = |name: &str, span: Span| {
+            let start = at(span.start).saturating_add(name.len() + 2);
+            let end = at(span.end().unwrap_or(0)).saturating_sub(5);
+            self.text.get(start..end).unwrap_or("")
+        };
+        let h = &self.header;
+        Sections {
+            map: inner("MAP", h.map),
+            desc: inner("DESC", h.desc),
+            graph: inner("GRAPH", h.graph),
+            index: inner("INDEX", h.index),
+            docs: inner("DOCS", h.docs),
+            body: self.bytes().get(at(h.body.start)..).unwrap_or(&[]),
+            body_length_matches: self.body_length_matches,
+            header: h.clone(),
+        }
+    }
+}
+
 fn e004(detail: impl Into<String>) -> Error {
     Error::new(ErrorCode::E004, detail)
 }
@@ -434,6 +499,31 @@ mod tests {
         let s = Sections::parse_with(&f, &Limits::default(), BodyLength::Tolerate).unwrap();
         assert!(!s.body_length_matches);
         assert!(s.body.ends_with(b"more\n"));
+    }
+
+    #[test]
+    fn checked_file_hands_out_the_sections_of_a_full_parse() {
+        let file = minimal();
+        let parsed = Sections::parse_with(&file, &Limits::default(), BodyLength::Tolerate).unwrap();
+        let checked = CheckedFile::new(file.clone()).unwrap();
+        assert_eq!(checked.sections(), parsed);
+        assert_eq!(checked.bytes(), file.as_slice());
+        // a body that grew after the build stays readable, as with the parser
+        let mut grown = minimal();
+        grown.extend(b"more\n");
+        let checked = CheckedFile::new(grown).unwrap();
+        assert!(!checked.sections().body_length_matches);
+        assert!(checked.sections().body.ends_with(b"more\n"));
+    }
+
+    #[test]
+    fn checked_file_refuses_what_the_parser_refuses() {
+        let mut f = minimal();
+        let n = f.len();
+        f[n - 2] = 0x1b;
+        assert_eq!(CheckedFile::new(f).unwrap_err().code, ErrorCode::E004);
+        let f = build(["", "a\u{200B}b\n", "", "", ""], b"", |_| {});
+        assert_eq!(CheckedFile::new(f).unwrap_err().code, ErrorCode::E004);
     }
 
     #[test]

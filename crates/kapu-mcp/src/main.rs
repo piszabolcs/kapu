@@ -16,6 +16,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
+use kapu_core::CheckedFile;
 use kapu_core::embed::{DEFAULT_MODEL, FALLBACK_MODEL, Model, VectorCache, find_model_dir};
 use kapu_core::search::{SearchOptions, VectorStatus};
 use kapu_core::view::GUIDE_STD1_EN;
@@ -86,12 +87,13 @@ struct WriteArgs {
     markdown: String,
 }
 
-/// A file as last read, with the size and modification time it had (D137).
+/// A file as last read and checked, with the size and modification time it
+/// had (D137, D139).
 struct CachedFile {
     path: PathBuf,
     len: u64,
     modified: SystemTime,
-    bytes: Arc<Vec<u8>>,
+    file: Arc<CheckedFile>,
 }
 
 /// How many files stay in memory between calls (A44, D137).
@@ -205,9 +207,9 @@ impl KapuServer {
         }
     }
 
-    /// The file's bytes: from memory while its size and modification time
-    /// are unchanged, otherwise read again (A44, D137).
-    fn bytes(&self, file: &str) -> Result<Arc<Vec<u8>>, kapu_core::Error> {
+    /// The file, checked once: from memory while its size and modification
+    /// time are unchanged, otherwise read and checked again (D137, D139).
+    fn file(&self, file: &str) -> Result<Arc<CheckedFile>, kapu_core::Error> {
         let path = PathBuf::from(file);
         let stat = std::fs::metadata(&path)
             .ok()
@@ -217,22 +219,22 @@ impl KapuServer {
                 .iter()
                 .find(|c| c.path == path && c.len == len && c.modified == modified)
         {
-            return Ok(Arc::clone(&hit.bytes));
+            return Ok(Arc::clone(&hit.file));
         }
-        let bytes = Arc::new(read(file)?);
+        let checked = Arc::new(CheckedFile::new(read(file)?)?);
         if let (Some((len, modified)), Ok(mut files)) = (stat, self.files.lock()) {
             files.retain(|c| c.path != path);
             files.push(CachedFile {
                 path,
                 len,
                 modified,
-                bytes: Arc::clone(&bytes),
+                file: Arc::clone(&checked),
             });
             if files.len() > CACHED_FILES {
                 files.remove(0);
             }
         }
-        Ok(bytes)
+        Ok(checked)
     }
 
     /// Drops a file from memory, so the next call reads it from disk.
@@ -259,14 +261,15 @@ impl KapuServer {
     }
 
     fn map_text(&self, args: &MapArgs) -> Result<String, kapu_core::Error> {
-        let data = self.bytes(&args.file)?;
+        let file = self.file(&args.file)?;
+        let s = file.sections();
         let mut out = String::new();
         if let Some(room) = &args.room {
             // D125: one room's line and its sub-door lines
-            out.push_str(&kapu_core::view::room_lines(&data, room)?.join("\n"));
+            out.push_str(&kapu_core::view::room_lines_in(&s, room)?.join("\n"));
         } else if args.group.is_some() {
             // D125: a group lists its rooms only; a room's price covers its sub-doors
-            let view = kapu_core::view::map_view(&data, args.group.as_deref())?;
+            let view = kapu_core::view::map_view_in(&s, args.group.as_deref())?;
             let rooms: Vec<&str> = view
                 .raw_lines
                 .iter()
@@ -279,7 +282,7 @@ impl KapuServer {
                 let _ = write!(out, "\n\n({subs} sub-doors: kapu_map room=<room-id>)");
             }
         } else {
-            let view = kapu_core::view::map_view(&data, None)?;
+            let view = kapu_core::view::map_view_in(&s, None)?;
             if !self.guide_shown.swap(true, Ordering::SeqCst) {
                 out.push_str(GUIDE_STD1_EN);
                 out.push_str("\n\n");
@@ -294,10 +297,10 @@ impl KapuServer {
         }
         // FR-19: scan once per file body and session; `scan=true` lists all (D134)
         let all = args.scan.unwrap_or(false);
-        let body = hex(&kapu_core::Header::parse(&data)?.bodyhash);
+        let body = hex(&s.header.bodyhash);
         let first = self.scanned.lock().is_ok_and(|mut s| s.insert(body));
         if first || all {
-            let findings = kapu_core::scan::scan_file(&data)?;
+            let findings = kapu_core::scan::scan_in(&s)?;
             if !findings.is_empty() {
                 out.push_str("\n\ncontent scan (warnings, not a block):\n");
                 let shown = if all { findings.len() } else { MAX_SCAN_LINES };
@@ -317,20 +320,20 @@ impl KapuServer {
     }
 
     fn search_text(&self, args: &SearchArgs) -> Result<String, kapu_core::Error> {
-        let data = self.bytes(&args.file)?;
-        let header = kapu_core::Header::parse(&data)?;
-        let model = self.model(&header.emb);
+        let file = self.file(&args.file)?;
+        let s = file.sections();
+        let model = self.model(&s.header.emb);
         let cache = model.as_deref().map(VectorCache::new);
         let options = SearchOptions {
             k: args.k.unwrap_or(10).clamp(1, MAX_HITS),
             max_tokens: args.max_tokens,
         };
-        let r = kapu_core::search::search(&data, &args.query, options, cache.as_ref())?;
+        let r = kapu_core::search::search_in(&s, &args.query, options, cache.as_ref())?;
         // D124: one excerpt per hit, the line that matches the query best
         let show = args.excerpts.unwrap_or(true) && !r.hits.is_empty();
         let ids: Vec<&str> = r.hits.iter().map(|h| h.id.as_str()).collect();
         let excerpts = if show {
-            kapu_core::search::excerpts(&data, &ids, &args.query)?
+            kapu_core::search::excerpts_in(&s, &ids, &args.query)?
         } else {
             Vec::new()
         };
@@ -362,7 +365,7 @@ impl KapuServer {
 
     fn describe_text(&self, args: &IdsArgs) -> Result<String, kapu_core::Error> {
         let refs: Vec<&str> = args.ids.iter().map(String::as_str).collect();
-        let list = kapu_core::describe_bytes(&self.bytes(&args.file)?, &refs)?;
+        let list = kapu_core::describe_in(&self.file(&args.file)?.sections(), &refs)?;
         let mut out = String::new();
         for (id, item) in args.ids.iter().zip(list) {
             match item {
@@ -386,7 +389,7 @@ impl KapuServer {
 
     fn open_text(&self, args: &OpenArgs) -> Result<String, kapu_core::Error> {
         let refs: Vec<&str> = args.ids.iter().map(String::as_str).collect();
-        let mut opened = kapu_core::open_bytes(&self.bytes(&args.file)?, &refs)?;
+        let mut opened = kapu_core::open_checked(&*self.file(&args.file)?, &refs)?;
         if opened.index_stale {
             // FR-15 edge 1: maybe saved just now; read it from disk again (D137)
             self.forget(&args.file);
@@ -462,8 +465,10 @@ impl KapuServer {
 
     fn write_text(&self, args: &WriteArgs) -> Result<String, kapu_core::Error> {
         let path = PathBuf::from(&args.file);
-        let data = self.bytes(&args.file)?;
-        let header = kapu_core::Header::parse(&data)?;
+        let file = self.file(&args.file)?;
+        let data = file.bytes();
+        let sections = file.sections();
+        let header = &sections.header;
         let model = if header.emb == kapu_core::build::NO_MODEL {
             self.model(DEFAULT_MODEL)
                 .or_else(|| self.model(FALLBACK_MODEL))
@@ -471,7 +476,7 @@ impl KapuServer {
             self.model(&header.emb)
         };
         let (added, id) =
-            kapu_core::edit::add_room(&data, "kapu_write", &args.markdown, args.id.as_deref())?;
+            kapu_core::edit::add_room(data, "kapu_write", &args.markdown, args.id.as_deref())?;
         let built = kapu_core::build::rebuild_with(&added.bytes, model.as_deref())?;
         kapu_core::build::write_atomic(&path, &built.bytes)?;
         self.forget(&args.file);
