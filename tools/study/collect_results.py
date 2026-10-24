@@ -38,6 +38,33 @@ def judge_scores(pilot: Path, judge: str):
     return out, grades
 
 
+def kapu_split():
+    """KAPU tokens of the PixelLab run per request (p1..p12) and tool, from the local call log."""
+    log = Path(__file__).resolve().parents[2] / "bench" / "korpusz" / "mcp-calls.jsonl"
+    if not log.is_file():
+        return None
+    out = {f"p{i}": {"kapu_map": 0, "kapu_search": 0, "kapu_open": 0} for i in range(1, 13)}
+    for line in log.read_text(encoding="utf-8").splitlines():
+        r = json.loads(line)
+        if r.get("tag") in out and "pixellab" in json.dumps(r.get("args")) and r["tool"] in out[r["tag"]]:
+            out[r["tag"]][r["tool"]] += r["tokens"]
+    return out
+
+
+def bench_seconds(log: Path):
+    """`kapu bench` run time per size from the re-measurement log (`== bench s` ... `in N s`)."""
+    if not log.is_file():
+        return None
+    out, size = {}, None
+    for line in log.read_text(encoding="utf-8").splitlines():
+        if line.startswith("== bench "):
+            size = line.split()[2]
+        elif size and " in " in line and line.rstrip().endswith(" s"):
+            out[size] = int(line.rsplit(" in ", 1)[1].split()[0])
+            size = None
+    return out
+
+
 def main(data: Path, out: Path):
     pilot = data / "pilot"
     sonnet, gs = judge_scores(pilot, "sonnet")
@@ -83,6 +110,7 @@ def main(data: Path, out: Path):
             "judge": "three blind Claude Sonnet judges, claims checked against the documentation",
             "full_file_in_context_tokens_per_request": 206899,
             "result": load(data / "pixellab" / "compare-result.json"),
+            "kapu_tokens_by_tool_per_request": kapu_split(),
         },
         "remeasure_v104": {
             "specification": "v1.0.4 (D131-D138)",
@@ -92,6 +120,13 @@ def main(data: Path, out: Path):
             "agents_s_kapu": (load(pilot / "token-stats.json") or {}).get("c5v"),
             "agents_s_ab_judge": "KAPU v1.0.3 30/30, KAPU v1.0.4 30/30 (one blind Sonnet A/B judge)",
             "pixellab_same_prompt": load(data / "pixellab" / "compare-result-round2.json"),
+        },
+        "remeasure_v11": {
+            "specification": "v1.1, file format 1.1 (D139-D141)",
+            "date": "2026-10-24",
+            "scale": {size: load(data / f"scale-{size}-v11final.json") for size in ("s", "m", "l")},
+            "kapu_bench": {size: load(data / f"bench-{size}-v11final.json") for size in ("s", "m", "l")},
+            "kapu_bench_seconds": bench_seconds(data / "remeasure_v11.log"),
         },
     }
     out.write_text(json.dumps(result, indent=1, ensure_ascii=False), encoding="utf-8")

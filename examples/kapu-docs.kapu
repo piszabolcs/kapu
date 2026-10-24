@@ -1,0 +1,2791 @@
+%KAPU 1.1
+eol=LF
+enc=UTF-8
+tok=o200k_base
+emb=potion-multilingual-128M-i8
+embhash=b3:29ae0d5c6817d2e9eaf65d0c0cb9e7c56e72a0236da42ed7e942bbac178124e7
+map=512+1901
+desc=2413+4475
+graph=6888+735
+index=7623+52426
+docs=60049+3350
+body=63405+37011
+rooms=6
+doors=29
+groups=2
+bodyhash=b3:19ee963fbc6fa5b734d09e0d4d915be533376f31000ddde01b31fd9229144675
+guide=std-1
+                                                                                                                                                         
+#MAP
+G g1 | kapu, search, file | 3 | 9315t
+R changelog | Changelog | 1390t | g1 | kapu, tools, file, specification v1, py
+S changelog/unreleased | [Unreleased] | 937t
+S changelog/0-1-0-2026-10-23 | [0.1.0] - 2026-10-23 | 378t
+R overview | KAPU overview | 2740t | g1 | kapu, file, kapu file, markdown, agent
+S overview/results | Results | 414t
+S overview/why | Why | 295t
+S overview/quickstart | Quickstart | 320t
+S overview/use-it-from-claude-code | Use it from Claude Code | 258t
+S overview/how-it-works | How it works | 450t
+S overview/desktop-window | Desktop window | 97t
+S overview/architecture | Architecture | 399t
+S overview/project-structure | Project structure | 238t
+S overview/status | Status | 118t
+S overview/license | License | 73t
+R results | KAPU measurements | 5185t | g1 | tokens, search, kapu, file, questions
+S results/summary | Summary | 306t
+S results/1-test-corpus | 1. Test corpus | 333t
+S results/2-what-an-agent-pays | 2. What an agent pays | 207t
+S results/3-retrieval-quality | 3. Retrieval quality | 426t
+S results/4-mcp-server | 4. MCP server | 206t
+S results/5-live-evaluation | 5. Live evaluation | 415t
+S results/6-changes-made-from-these-measurements | 6. Changes made from these measurements | 269t
+S results/7-limitations | 7. Limitations | 183t
+S results/8-pilot-on-public-documentation | 8. Pilot on public documentation | 1415t
+S results/9-file-format-1-1-specification-v1-1 | 9. File format 1.1 (specification v1.1) | 1025t
+S results/10-reproduce | 10. Reproduce | 226t
+G g2 | kapu, nfr, nfr-03 | 3 | 1389t
+R fuzzing | Fuzz targets (NFR-03/5) | 291t | g2 | targets nfr-03, fuzz targets nfr-03, nfr-03, cargo-fuzz libfuzzer targets, targets
+R python-tools | Developer-only tools (not shipped) | 398t | g2 | py, developer-only tools, kapu, results, developer-only
+R test-vectors | Test vectors (M1) | 700t | g2 | test vectors m1, kapu, vectors m1, m1, room
+#END
+#DESC
+changelog	Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/). The file format has its own version (`%KAPU 1.1`, see `SPEC-KAPU.md`); the tools below are versioned	kapu, tools, file, specification v1, py, line, search, mb
+changelog/unreleased	- Search by meaning uses one vector per window of a door's text (at most 512 tokens, overlapping by an eighth); the best window counts (D141). Room-level recall@10 on real questions, hybrid: Rust book	
+changelog/0-1-0-2026-10-23	First portfolio release. Specification v1.0.1, milestones M0-M7 and	
+fuzzing	`cargo-fuzz` (libFuzzer) targets for every parser of	targets nfr-03, fuzz targets nfr-03, nfr-03, cargo-fuzz libfuzzer targets, targets, file, whole, fuzz
+overview	On a 207,000-token manual the model had never seen, Claude agents using KAPU answered **12 of 12** beginner questions while reading **4,104 tokens** per question: **half** of what the same agents read with grep over the Markdown file, and **2%** of pasting the whole manual into the context.	kapu, file, kapu file, markdown, agent, results, search, tokens
+overview/results	The same 12 questions about the PixelLab documentation (third-party, not published), the same prompt for	
+overview/why	AI agents get their working knowledge as Markdown: a manual, a specification,	
+overview/quickstart	Build from source with [Rust](https://rustup.rs) (the	
+overview/use-it-from-claude-code	Then ask, for example: "Use `notes.kapu` to	
+overview/how-it-works	A `.kapu` file is plain UTF-8 text. The Markdown body is the single source of	
+overview/desktop-window	`kapu-gui` shows a file the way an agent sees	
+overview/architecture	| Layer | Technology | |---|---| | Language | Rust 1.99 (edition	
+overview/project-structure		
+overview/status	KAPU is a working pre-release: the format, the command	
+overview/license	Code: MIT, see [LICENSE](LICENSE). Specification	
+python-tools	- `build_vectors.py`: builds `tests/vectors/` (the M1 sample file,	py, developer-only tools, kapu, results, developer-only, shipped, m1 sample file, rust
+results	English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file; chapter 9 measures it again with file format 1.1. The [results page](../docs/results/index.html) shows the pilot and format 1.1 with charts. - **Date:** 2026-10-23 - **Version:** tools 0.1.0 with specification v1.0.2 - **Machine:** Windows 11 Pro, release build (`lto`, `codegen-units = 1`) - **Vector model:** `potion-multilingual-128M`, int8 (124 MB) | What | Result | |---|---| | Knowledge in the test file | 2.35 million characters, 573,733 tokens of Markdown, 244 rooms | | Live run: Claude agents that could only use the KAPU tools | 10 of 10 questions answered correctly | | Tokens an agent read per question in the live run (median) | 842 (1.5 tool calls) | | Map call, the agent's	tokens, search, kapu, file, questions, one, kapu bm25 kapu, median
+results/summary	| What | Result | |---|---| | Knowledge in the test	
+results/1-test-corpus	A local corpus, not published, because most of it is third-party text:	
+results/2-what-an-agent-pays	Measured through the official Python MCP client in one session	
+results/3-retrieval-quality	There are 77 English questions:	
+results/4-mcp-server	| Tool | Median | p90 | Notes |	
+results/5-live-evaluation	The evaluation followed the format of the mcp-builder skill: 10 questions, each with one verifiable	
+results/6-changes-made-from-these-measurements	An earlier run on a mixed English and Hungarian corpus led to specification	
+results/7-limitations	- The questions were written by people (and an agent) who had seen	
+results/8-pilot-on-public-documentation	This is a first run of the study design. Raw numbers are in [results/2026-10-23-study-pilot.json](results/2026-10-23-study-pilot.json).	
+results/9-file-format-1-1-specification-v1-1	Three changes after the pilot (D139-D141, specification chapters 18 and 19), measured on 2026-10-24 with the same corpora and questions: - **Compact index (format 1.1).** An	
+results/10-reproduce	Chapters 8 and 9 (public documentation):	
+test-vectors	Generated by `tools/build_vectors.py`; never edit these files by hand (some contain a CR or a control byte on purpose, and `.gitattributes` marks them binary	test vectors m1, kapu, vectors m1, m1, room, line, reader, one
+#END
+#GRAPH
+changelog	fuzzing	term	0.02
+changelog	overview	sim	0.7148
+changelog	overview	term	0.2933
+changelog	python-tools	sim	0.629
+changelog	python-tools	term	0.1267
+changelog	results	sim	0.6911
+changelog	results	term	0.5933
+changelog	test-vectors	sim	0.644
+changelog	test-vectors	term	0.08
+fuzzing	overview	term	0.08
+fuzzing	python-tools	term	0.0067
+fuzzing	results	term	0.06
+fuzzing	test-vectors	sim	0.6304
+fuzzing	test-vectors	term	0.0067
+overview	python-tools	term	0.0533
+overview	results	sim	0.7541
+overview	results	term	1.0
+overview	test-vectors	sim	0.6653
+overview	test-vectors	term	0.14
+python-tools	results	term	0.1133
+python-tools	test-vectors	sim	0.627
+python-tools	test-vectors	term	0.0667
+results	test-vectors	term	0.1
+#END
+#INDEX
+0	14	0:18,1:14,1:10,2:9,4:1,3:8,5:98,4:25,3:2,1:2,1:22,1:37,1:4,1:4
+000	4	4:4,3:2,9:1,9:1
+000-tok	1	4:2
+000-token	1	4:2
+001	3	0:1,1:1,27:2
+002	1	28:2
+003	1	28:2
+004	1	28:2
+005	5	16:3,3:1,4:1,3:1,2:2
+006	1	28:2
+007	1	28:2
+008	1	28:2
+009	3	16:1,5:1,7:2
+010	1	28:2
+011	1	28:2
+012	2	0:1,1:1
+03	3	3:13,13:1,10:1
+040	2	16:1,10:1
+056	2	16:1,1:1
+0m	2	16:1,9:1
+0x1b	1	28:1
+1	22	0:27,1:10,1:11,1:1,1:8,1:2,1:1,1:2,1:2,3:2,4:5,1:74,1:6,2:1,2:1,1:9,1:1,1:2,1:8,1:46,1:2,1:21
+1-dev	2	4:1,2:1
+10	16	0:6,1:5,1:5,2:2,7:2,5:38,1:1,1:7,1:3,1:6,2:3,1:1,2:7,1:5,1:4,1:1
+104	4	4:3,7:1,5:2,9:2
+11	4	4:2,7:2,5:4,9:2
+111	2	16:1,9:1
+113	2	16:1,7:1
+117	5	0:1,2:1,14:2,9:1,1:1
+118	2	16:1,9:1
+12	5	4:8,7:5,5:12,9:11,1:1
+120	2	0:1,2:1
+121	4	0:1,2:1,14:1,7:1
+122	5	0:1,2:1,14:2,7:1,2:1
+123	5	0:1,2:1,14:2,7:1,2:1
+124	7	0:2,1:1,1:1,2:1,10:1,2:3,7:1
+125	4	0:1,2:1,14:1,7:1
+126	4	0:1,2:1,14:1,7:1
+127	5	0:1,2:1,14:2,7:1,3:1
+128	10	0:2,1:1,1:1,2:6,1:1,5:4,1:1,5:5,2:1,8:2
+13	9	0:1,2:1,2:4,3:1,4:2,1:1,3:1,1:1,9:1
+13-million-t	2	0:1,2:1
+13-million-token	2	0:1,2:1
+130	2	0:1,2:1
+131	5	0:1,2:1,14:2,9:1,1:1
+134	2	16:1,9:1
+135	2	0:1,2:1
+138	4	0:2,2:2,14:2,9:2
+139	5	0:1,2:1,14:2,9:1,1:2
+13m-tok	2	4:1,8:1
+13m-token	2	4:1,8:1
+14	2	16:1,9:1
+140	5	0:1,2:1,14:1,9:1,3:1
+141	4	0:1,2:2,14:1,10:2
+142	2	16:1,10:1
+145	2	16:1,9:1
+146	2	16:1,9:1
+147	2	16:1,9:1
+15	3	16:2,7:1,2:1
+150	2	16:1,9:1
+151	2	16:4,9:4
+152	2	16:1,9:1
+153	2	16:1,9:1
+154	2	16:1,10:1
+156	2	16:1,1:1
+157	2	16:1,9:1
+158	6	0:1,2:1,2:1,7:1,5:1,10:1
+17	3	16:2,9:1,1:1
+172	3	16:2,9:1,1:1
+18	3	16:4,4:2,6:3
+187	2	16:1,10:1
+19	9	0:2,1:1,1:1,2:1,7:1,5:4,1:1,8:1,1:3
+190	3	16:2,9:1,1:1
+192	2	16:2,9:2
+2	18	0:4,1:1,1:3,2:11,1:2,1:2,1:2,4:3,5:29,1:1,2:5,3:4,1:4,1:1,1:5,1:8,1:1,1:2
+20	1	3:1
+200	10	0:3,1:1,1:2,2:1,1:1,10:1,1:2,1:1,8:1,3:1
+200-270	2	16:1,9:1
+200b-u	2	0:1,2:1
+200d	2	0:1,2:1
+201	4	16:3,9:2,1:1,2:1
+201-charact	1	28:1
+201-character	1	28:1
+2024	2	4:1,1:1
+2026	6	0:1,1:4,15:10,2:1,7:4,1:2
+2026-10-23	3	0:1,1:4,15:2
+2026-10-23-english-corpus	1	16:4
+2026-10-23-study-pil	3	16:3,2:1,7:4
+2026-10-23-study-pilot	3	16:3,2:1,7:4
+2026-10-24	2	16:1,10:2
+206	4	4:1,7:1,5:1,9:1
+2060	2	0:1,2:1
+207	5	4:3,7:1,5:3,9:2,1:1
+21	2	16:1,9:1
+210	2	16:1,6:1
+213	2	16:1,9:1
+216	5	0:1,2:1,14:2,1:1,9:1
+219	2	16:1,9:1
+21m	2	16:1,9:1
+220	3	16:2,3:1,8:1
+227	2	16:1,10:1
+23	6	0:1,1:4,15:10,2:1,7:4,1:1
+231	2	16:1,9:1
+238	2	16:1,7:1
+24	3	16:2,9:1,1:2
+240	2	16:1,10:1
+244	3	16:3,1:1,10:1
+245	2	16:1,10:1
+249	2	16:1,9:1
+25	11	0:2,1:2,3:6,1:2,2:2,3:1,1:1,5:11,4:1,5:3,1:4
+253	2	16:1,10:1
+256	1	28:1
+26	6	0:1,2:1,2:1,7:1,5:1,10:1
+265	2	16:1,9:1
+27	6	0:1,2:1,2:1,7:1,5:1,9:1
+270	2	16:1,9:1
+271	2	16:1,10:1
+274	2	16:1,7:1
+279	2	16:1,10:1
+28	6	0:1,2:1,14:8,1:1,3:2,5:5
+280	7	4:1,7:1,5:5,5:1,1:1,3:2,2:1
+281	2	16:2,10:2
+284	2	16:1,10:1
+29	3	16:4,1:1,8:3
+290	2	16:1,9:1
+293	2	16:1,5:1
+299	2	16:1,10:1
+3	18	0:2,1:1,1:1,2:5,1:1,2:1,3:1,1:2,4:4,1:26,1:2,3:4,2:4,2:1,1:7,1:9,1:2,1:3
+30	4	4:1,7:1,5:12,9:12
+303	2	16:1,9:1
+31	3	16:2,5:1,2:1
+318	3	16:3,9:1,1:2
+32	3	16:4,1:1,8:3
+324	2	16:1,10:1
+32m	2	16:1,9:1
+33	3	16:2,5:1,6:1
+331	2	16:1,9:1
+333	3	16:2,3:1,8:1
+334	2	16:1,6:1
+337	2	16:1,6:1
+347	2	16:1,1:1
+35	3	16:3,10:1,1:1
+350	2	16:1,1:1
+355	2	16:1,6:1
+357	2	16:1,10:1
+3600	1	3:1
+370	2	16:1,9:1
+373	2	16:1,6:1
+38	2	16:1,10:1
+382	2	16:1,3:1
+390	2	16:1,10:1
+395	3	16:3,9:2,1:1
+399	2	16:1,3:1
+4	16	0:2,2:2,2:6,1:1,1:1,2:1,3:1,5:25,1:2,4:4,1:2,1:1,2:8,1:10,1:1,1:2
+40	2	16:1,4:1
+400	2	16:1,10:1
+401	2	16:1,3:1
+426	2	16:2,10:2
+43	2	16:1,9:1
+438	2	16:1,10:1
+44	7	0:1,2:1,2:1,7:1,5:3,9:2,1:1
+441	2	16:1,10:1
+442	2	16:1,1:1
+448	2	16:2,10:2
+45	5	4:1,7:1,5:3,4:1,5:2
+456	2	16:1,10:1
+458	2	16:1,10:1
+46	7	0:2,2:2,2:1,7:1,5:2,9:1,1:1
+47	2	16:1,4:1
+485	2	16:2,10:2
+49	7	0:1,2:1,2:2,7:2,5:3,4:2,5:1
+5	13	0:5,2:5,1:4,1:1,7:1,5:15,2:1,1:2,1:2,1:2,1:6,4:1,1:3
+50	2	0:1,2:1
+511	1	28:1
+512	8	0:1,2:2,2:3,1:1,2:2,9:5,9:2,1:3
+512-byte	3	4:2,1:1,2:1
+512-tok	5	4:1,3:1,9:3,9:2,1:1
+512-token	5	4:1,3:1,9:3,9:2,1:1
+515	2	16:1,1:1
+53	2	16:1,3:1
+542	5	0:1,2:1,14:2,9:1,1:1
+56	4	15:1,1:1,10:1,2:1
+569	2	16:1,1:1
+573	3	16:4,1:1,10:2
+58	2	16:1,9:1
+59	2	16:1,4:1
+6	7	16:10,1:1,5:1,1:4,2:3,1:3,1:1
+61	2	16:1,4:1
+624	2	16:1,9:1
+64	4	16:4,4:1,5:1,1:2
+65	2	16:1,4:1
+655	2	16:1,3:1
+657	5	0:1,2:1,14:2,9:1,1:1
+658	2	16:1,1:1
+66	2	15:1,13:1
+666	2	16:2,9:2
+67	3	16:2,4:1,7:1
+68	4	16:5,4:1,5:2,1:2
+680	2	16:1,11:1
+69	2	16:1,10:1
+698	2	16:1,3:1
+7	8	0:1,1:2,15:7,6:1,2:4,1:3,1:2,2:1
+70	3	16:2,5:1,5:1
+71	3	16:2,4:1,1:1
+712	2	16:1,1:1
+714	2	16:1,6:1
+719	2	16:1,9:1
+722	2	16:1,9:1
+73	2	16:1,4:1
+733	3	16:4,1:1,10:2
+739	2	16:1,9:1
+74	2	16:1,9:1
+756	2	16:1,7:1
+76	2	16:1,4:1
+760	2	16:1,3:1
+77	3	16:2,4:2,7:1
+774	2	16:1,10:1
+777	5	16:4,3:1,3:1,1:1,4:1
+78	2	16:1,4:1
+785	2	16:1,6:1
+79	3	16:2,4:1,5:1
+8	18	0:3,1:2,1:1,2:7,1:2,2:2,3:1,1:2,3:1,1:2,1:21,1:1,1:3,4:1,1:3,2:9,1:3,1:1
+80	3	16:2,4:1,1:1
+804	2	16:1,9:1
+809	2	16:1,1:1
+83	4	16:3,4:1,1:1,2:1
+84	5	16:4,4:1,5:1,1:1,1:1
+842	3	16:4,7:1,4:2
+852	2	16:1,1:1
+86	2	16:1,4:1
+87	2	16:1,10:1
+887	2	16:1,1:1
+899	4	4:1,7:1,5:1,9:1
+9	13	0:1,1:1,3:1,7:1,4:1,1:12,1:1,1:2,1:1,3:1,3:1,1:7,1:1
+90	5	16:7,3:2,1:2,1:2,6:2
+901	2	16:1,1:1
+907	2	16:1,6:1
+91	2	16:2,5:2
+910	3	16:2,9:1,1:1
+916	3	16:2,1:1,8:1
+919	2	16:1,9:1
+92	2	16:1,4:1
+93	2	16:2,4:2
+94	2	16:1,4:1
+948	2	16:1,9:1
+95	2	16:1,4:1
+957	2	16:1,9:1
+96	2	16:1,4:1
+971	2	16:1,7:1
+976	2	16:1,1:1
+983	2	16:2,9:2
+989	2	16:1,9:1
+99	4	4:1,1:2,11:1,9:1
+9m	2	16:1,9:1
+a	27	0:18,1:2,1:15,1:1,1:37,1:1,1:2,1:9,3:2,1:2,1:4,1:5,1:15,1:2,1:47,1:5,1:1,1:1,1:5,1:1,1:3,1:4,1:5,1:11,1:10,1:2,1:12
+abou	9	0:1,2:1,2:3,3:2,4:2,5:4,9:2,1:1,1:1
+about	9	0:1,2:1,2:3,3:2,4:2,5:4,9:2,1:1,1:1
+abov	4	4:1,8:1,4:1,10:1
+above	4	4:1,8:1,4:1,10:1
+accept	5	4:1,7:1,5:1,9:1,3:1
+acceptanc	1	28:1
+acceptance	1	28:1
+accepted	4	4:1,7:1,5:1,9:1
+access	3	16:2,1:1,5:1
+accessibility	2	16:1,1:1
+accuraci	2	16:3,9:3
+accuracy	2	16:3,9:3
+ad	5	0:4,1:2,1:2,2:1,9:1
+add	6	0:4,1:2,1:2,2:3,9:2,1:1
+added	3	0:2,1:1,1:1
+adds	3	4:2,9:1,1:1
+after	9	0:1,2:1,2:1,3:1,9:5,7:1,2:2,1:2,1:1
+ag	4	4:2,1:2,11:3,9:1
+again	2	16:3,9:1
+agains	7	4:2,1:1,6:1,5:2,1:1,8:1,3:1
+against	7	4:2,1:1,6:1,5:2,1:1,8:1,3:1
+agen	14	4:14,1:2,1:2,1:1,4:1,2:2,1:4,1:1,1:12,1:1,2:4,5:4,1:1,2:4
+agent	17	0:1,2:1,2:19,1:2,1:2,1:1,4:1,2:2,1:6,1:2,1:25,1:1,2:4,3:4,2:5,1:7,2:5
+agent-fac	2	16:1,8:1
+agent-facing	2	16:1,8:1
+agentic	3	16:2,8:1,1:1
+agents	9	0:1,2:1,2:5,10:2,1:1,1:11,6:4,3:5,2:1
+ai	3	4:2,1:1,9:2
+alajtó	2	16:1,8:1
+all	9	0:1,2:1,2:1,10:1,2:5,3:1,2:1,3:1,1:2
+allow	2	16:1,6:1
+allowed	2	16:1,6:1
+alon	4	16:2,4:1,2:1,6:1
+alone	4	16:2,4:1,2:1,6:1
+alreadi	2	16:1,4:1
+already	2	16:1,4:1
+als	1	28:1
+also	1	28:1
+alter	1	28:1
+altered	1	28:1
+among	2	4:1,7:1
+an	29	0:27,1:10,1:19,1:5,1:53,1:6,1:3,1:12,1:1,1:3,1:1,1:4,1:4,1:4,1:14,1:6,1:74,1:7,1:6,1:5,1:5,1:2,1:4,1:7,1:7,1:14,1:20,1:5,1:6
+anchor	5	0:1,2:1,14:2,6:1,1:1
+anchors	4	0:1,2:1,14:1,7:1
+and	29	0:23,1:10,1:14,1:3,1:49,1:6,1:1,1:11,1:1,1:3,1:1,1:4,1:4,1:4,1:12,1:6,1:54,1:5,1:6,1:1,1:5,1:2,1:3,1:4,1:4,1:11,1:15,1:1,1:6
+ani	7	0:1,2:1,1:1,13:3,6:1,3:1,2:1
+anim	3	0:1,2:1,13:1
+animat	3	0:1,2:1,13:1
+animated	3	0:1,2:1,13:1
+annot	4	0:1,2:1,14:1,5:1
+annotations	4	0:1,2:1,14:1,5:1
+anoth	4	0:1,2:1,2:1,9:1
+another	4	0:1,2:1,2:1,9:1
+answer	7	4:4,7:1,2:1,3:9,6:3,3:3,2:2
+answered	3	4:2,12:2,11:1
+answers	3	16:3,6:1,3:2
+anthrop	2	16:1,1:1
+anthropic	2	16:1,1:1
+any	7	0:1,2:1,1:1,13:3,6:1,3:1,2:1
+ap	4	4:1,2:1,10:1,4:1
+api	2	16:1,4:1
+app	2	0:1,1:1
+appear	2	16:1,8:1
+appli	1	28:1
+applies	1	28:1
+apt	2	4:1,2:1
+ar	16	0:5,2:3,1:1,1:5,3:1,4:1,1:3,4:14,1:2,3:4,1:1,1:1,2:1,1:4,1:3,2:2
+architectu	2	4:1,1:4
+architectur	2	4:1,1:4
+architecture	2	4:1,1:4
+archiv	2	0:1,2:1
+archive	2	0:1,2:1
+are	16	0:5,2:3,1:1,1:5,3:1,4:1,1:3,4:14,1:2,3:4,1:1,1:1,2:1,1:4,1:3,2:2
+aroun	4	4:1,6:1,6:1,9:1
+around	4	4:1,6:1,6:1,9:1
+artifact	1	3:1
+artifacts	1	3:1
+as	16	0:3,1:1,1:2,2:7,5:1,1:1,1:1,2:3,1:3,2:6,1:2,1:1,2:1,2:1,3:1,3:1
+ask	6	0:1,2:1,2:1,9:2,3:1,6:1
+asked	2	16:1,6:1
+asks	2	0:1,2:1
+asser	1	28:1
+assert	1	28:1
+asset	3	0:1,2:1,13:1
+assets	3	0:1,2:1,13:1
+async	2	0:1,2:1
+at	10	0:4,2:5,2:2,9:1,1:1,2:9,4:3,3:1,2:4,2:1
+aud	2	4:1,1:1
+audit	2	4:1,1:1
+author	5	0:1,1:1,15:3,1:2,3:1
+authors	2	16:1,4:1
+avo	2	16:1,4:1
+avoid	2	16:1,4:1
+away	2	0:1,2:1
+b	8	0:2,2:2,2:3,1:3,11:4,9:2,1:2,2:1
+backslash	1	28:1
+badg	2	16:1,6:1
+badge	2	16:1,6:1
+bas	9	0:1,1:1,3:1,1:1,10:1,1:2,1:1,7:1,4:1
+base	9	0:1,1:1,3:1,1:1,10:1,1:2,1:1,7:1,4:1
+based	2	16:1,8:1
+baselin	6	0:1,2:1,14:4,2:2,6:1,2:1
+baseline	3	16:2,2:1,8:1
+baselines	5	0:1,2:1,14:2,2:1,6:1
+bash	6	4:5,2:1,4:3,3:1,3:1,2:1
+basic	1	3:1
+becaus	3	16:3,1:2,8:2
+because	3	16:3,1:2,8:2
+becom	2	4:1,6:1
+become	2	4:1,6:1
+bef	4	16:3,6:1,1:1,2:1
+befor	4	16:3,6:1,1:1,2:1
+before	4	16:3,6:1,1:1,2:1
+beginn	3	4:2,12:1,9:1
+beginner	3	4:2,12:1,9:1
+below	1	0:2
+bench	10	0:5,1:1,1:4,2:6,5:2,2:4,4:1,1:3,2:2,8:1
+benchmar	4	4:1,8:1,4:1,8:1
+benchmark	4	4:1,8:1,4:1,8:1
+bes	6	0:1,2:2,2:1,9:1,3:1,10:1
+best	6	0:1,2:2,2:1,9:1,3:1,10:1
+better	2	4:1,8:1
+betw	6	0:1,2:1,2:1,3:1,9:1,10:1
+between	6	0:1,2:1,2:1,3:1,9:1,10:1
+binari	8	0:1,2:1,2:3,8:1,2:2,2:1,10:1,2:2
+binaries	2	4:1,8:1
+binary	7	0:1,2:1,2:2,10:2,2:1,10:1,2:2
+blak	7	0:1,1:1,3:2,1:1,2:1,8:2,13:1
+blake	7	0:1,1:1,3:2,1:1,2:1,8:2,13:1
+blake3	7	0:1,1:1,3:2,1:1,2:1,8:1,13:1
+blake3_ref	1	15:1
+blin	4	4:1,7:1,5:1,9:1
+blind	4	4:1,7:1,5:1,9:1
+bloc	2	4:1,3:1
+block	2	4:2,3:2
+blocks	2	4:1,3:1
+blur	2	16:1,9:1
+blurs	2	16:1,9:1
+bm	11	0:2,1:2,3:6,1:2,2:2,3:1,1:1,5:11,4:1,5:3,1:4
+bm25	11	0:2,1:2,3:6,1:2,2:2,3:1,1:1,5:11,4:1,5:3,1:4
+bo	7	0:1,2:2,2:1,7:1,5:5,9:2,1:3
+bodi	5	4:3,3:4,9:1,1:1,11:1
+body	5	4:3,3:4,9:1,1:1,11:1
+bodyhash	1	28:3
+book	7	0:1,2:2,2:1,7:1,5:5,9:2,1:3
+bound	1	3:1
+bounds	1	3:1
+bracket	2	16:1,10:1
+brackets	2	16:1,10:1
+bring	2	16:1,10:1
+brok	1	3:1
+broken	1	3:1
+browser	3	16:3,1:1,5:2
+budg	2	0:1,1:1
+budget	2	0:1,1:1
+buil	15	0:3,1:1,1:2,2:8,2:1,1:4,3:3,1:1,4:4,1:11,1:2,8:3,1:2,1:2,1:4
+build	15	0:4,1:1,1:3,2:8,2:1,1:4,3:3,1:1,4:7,1:13,1:2,8:3,1:4,1:2,1:3
+build_vector	4	4:2,3:2,8:3,13:3
+build_vectors	4	4:2,3:2,8:3,13:3
+builder	9	0:2,1:2,3:5,1:2,2:1,2:2,6:1,1:1,6:2
+builds	5	0:1,2:1,13:3,1:2,10:2
+built	1	28:1
+butt	2	16:1,6:1
+button	2	16:1,6:1
+by	12	0:5,2:7,2:6,3:3,1:1,2:1,2:1,3:2,1:4,8:2,2:3,2:7
+byte	12	0:1,1:1,2:1,1:9,1:2,2:6,7:1,1:3,1:2,1:1,10:1,1:5
+byte-ident	4	4:1,10:1,2:1,11:1
+byte-identical	4	4:1,10:1,2:1,11:1
+byte-l	6	0:1,1:1,3:2,1:1,2:1,8:1
+byte-level	6	0:1,1:1,3:2,1:1,2:1,8:1
+bytes	4	3:1,13:1,1:1,11:1
+cach	4	0:1,2:1,14:2,9:2
+cache	4	0:1,2:1,14:2,9:2
+call	13	0:2,2:2,13:2,1:22,2:2,1:3,2:1,1:4,1:2,1:1,1:2,1:2,1:3
+calls	5	16:5,3:1,3:1,1:1,4:1
+cam	2	16:1,6:1
+came	2	16:1,6:1
+can	1	28:1
+canius	2	16:1,1:1
+caniuse	2	16:1,1:1
+cann	4	4:1,9:1,3:1,9:1
+cannot	4	4:1,9:1,3:1,9:1
+capt	1	28:1
+caption	1	28:1
+car	2	0:1,1:1
+card	2	0:1,1:1
+carg	6	3:6,1:6,1:3,1:1,3:1,1:1
+cargo	6	3:6,1:6,1:3,1:1,3:1,1:1
+cargo-aud	2	4:1,1:1
+cargo-audit	2	4:1,1:1
+cargo-deni	2	4:1,1:1
+cargo-deny	2	4:1,1:1
+cargo-fuzz	4	3:5,1:2,1:1,4:1
+carri	2	16:1,5:1
+carry	2	16:1,5:1
+case	1	15:1
+cases	1	15:1
+catalog	1	3:1
+cc	2	4:1,4:1
+cd	2	4:1,6:1
+chang	5	0:1,2:1,14:3,7:5,3:2
+change	2	16:1,7:1
+changed	2	0:1,2:1
+changelog	1	0:6
+changes	3	16:2,7:4,3:2
+chapter	5	15:1,1:7,2:2,7:1,1:2
+chapters	4	15:1,1:2,2:2,8:2
+charact	8	0:1,2:1,2:1,3:1,9:4,1:1,10:2,1:2
+character	1	28:2
+characters	7	0:1,2:1,2:1,3:1,9:4,1:1,10:2
+chart	3	4:1,7:1,5:2
+charts	3	4:1,7:1,5:2
+chec	12	0:1,2:1,2:2,1:1,4:1,6:1,1:5,1:1,4:1,1:1,4:1,1:1
+check	16	0:4,1:2,1:2,2:5,1:1,1:1,1:1,2:1,2:1,4:1,1:7,1:2,4:1,1:1,4:2,1:1
+checked	7	0:1,2:1,2:1,1:1,11:2,5:1,5:1
+checking	4	4:1,7:1,5:1,1:1
+checks	8	0:3,1:2,1:1,2:2,2:1,1:1,9:1,10:1
+chun	9	0:1,2:1,2:1,7:1,5:8,2:2,6:1,1:3,1:2
+chunk	10	0:1,2:1,2:4,7:1,3:3,2:13,2:2,6:1,1:6,1:4
+chunk-bas	2	16:1,8:1
+chunk-based	2	16:1,8:1
+chunk-rag	2	0:1,2:1
+chunk_baselin	2	16:1,2:1
+chunk_baseline	2	16:1,2:1
+chunked	4	4:1,7:1,5:1,10:1
+chunks	5	4:3,10:3,2:5,9:3,1:2
+ci	4	0:1,1:1,3:1,1:1
+cit	2	0:1,2:1
+cite	2	0:1,2:1
+cited	2	0:1,2:1
+clai	2	4:1,7:1
+claim	4	4:1,7:1,5:2,9:2
+claims	2	16:2,9:2
+clap	2	4:1,1:1
+claud	9	4:7,6:2,3:6,3:7,1:2,5:1,2:1,1:1,2:1
+claude	9	4:7,6:2,3:6,3:7,1:2,5:1,2:1,1:1,2:1
+claude-md-manag	2	16:1,1:1
+claude-md-managemen	2	16:1,1:1
+claude-md-management	2	16:1,1:1
+cli	4	4:6,1:4,4:1,1:1
+clien	5	4:1,9:1,2:1,1:1,3:2
+client	5	4:1,9:1,2:1,1:1,3:2
+clippi	2	4:1,1:1
+clippy	2	4:1,1:1
+clon	2	4:1,6:1
+clone	2	4:1,6:1
+clos	2	16:1,9:1
+close	4	0:1,2:1,14:1,9:1
+closed	2	16:1,9:1
+closes	2	0:1,2:1
+cluster	2	4:1,3:1
+clusters	2	4:1,3:1
+co	8	0:1,1:1,2:1,1:4,1:2,4:1,1:1,18:1
+cod	13	0:1,2:1,1:1,1:6,3:1,1:2,1:1,1:2,3:4,2:1,1:1,1:1,11:1
+code	14	0:2,1:1,1:1,1:1,1:6,3:1,1:2,1:1,1:2,3:4,2:1,1:1,1:1,11:1
+codeg	1	16:2
+codegen	1	16:2
+codegen-unit	1	16:2
+codegen-units	1	16:2
+codes	2	0:1,1:1
+collec	5	0:1,2:1,14:3,1:1,1:2
+collect	5	0:1,2:1,14:4,1:2,1:2
+collect_result	2	16:1,2:1
+collect_results	2	16:1,2:1
+collect_skil	5	0:1,2:1,14:2,1:1,1:1
+collect_skills	5	0:1,2:1,14:2,1:1,1:1
+collects	2	16:1,1:1
+colour	2	16:1,6:1
+colu	2	16:1,9:1
+column	2	16:1,9:1
+com	5	0:2,4:1,6:1,6:1,9:1
+come	4	4:1,3:1,9:1,9:1
+comes	4	4:1,3:1,9:1,9:1
+comman	7	0:3,1:2,1:1,2:3,1:1,4:1,3:2
+command	10	0:3,1:2,1:1,2:4,1:1,2:1,2:1,3:2,4:1,7:1
+commands	4	4:1,3:1,9:1,7:1
+commen	1	3:1
+comment	1	3:1
+common	2	16:1,9:1
+comp	1	28:1
+compac	2	16:1,10:2
+compact	2	16:1,10:2
+compar	1	15:1
+compares	1	15:1
+comparis	3	16:2,1:1,10:1
+comparison	3	16:2,1:1,10:1
+compat	1	28:1
+comput	4	0:1,2:1,14:1,10:1
+compute	4	0:1,2:1,14:1,10:1
+concep	2	0:1,2:1
+concept	2	0:1,2:1
+conf	2	4:1,6:1
+config	2	4:1,6:1
+confir	2	0:1,2:1
+confirm	2	0:1,2:1
+connec	2	4:1,6:1
+connect	2	4:1,6:1
+consist	1	28:1
+consistently	1	28:1
+cont	1	28:2
+contain	1	28:2
+conten	12	0:4,1:1,1:3,2:3,3:1,6:2,3:10,3:1,1:1,3:1,1:2,1:5
+content	13	0:4,1:1,1:3,2:4,3:1,6:2,1:1,2:10,3:1,1:1,3:1,1:2,1:5
+content-sc	7	0:1,2:1,14:4,3:1,4:1,1:1,1:1
+content-scan	7	0:1,2:1,14:4,3:1,4:1,1:1,1:1
+contents	2	4:1,10:1
+contex	6	4:5,7:1,3:2,2:2,8:1,3:1
+context	6	4:5,7:1,3:2,2:2,8:1,3:1
+control	1	28:3
+convers	2	16:1,9:1
+conversat	2	16:1,9:1
+conversation	2	16:1,9:1
+copi	7	0:1,2:1,2:1,6:1,5:1,1:1,10:1
+copy	7	0:1,2:1,2:1,6:1,5:1,1:1,10:1
+core	7	0:1,1:1,2:1,1:3,1:2,4:1,19:1
+corp	6	4:1,8:1,4:4,2:1,7:2,1:2
+corpora	6	4:1,8:1,4:4,2:1,7:2,1:2
+corpus	11	0:3,2:3,1:5,1:2,5:1,2:1,5:15,1:6,1:5,5:3,2:2
+correc	5	4:1,7:1,5:5,6:1,3:4
+correct	6	4:1,7:1,5:7,6:1,3:4,2:1
+correctly	2	16:2,11:1
+cost	2	4:1,10:1
+costs	2	4:1,10:1
+coul	2	16:2,11:1
+could	2	16:2,11:1
+coun	5	4:1,3:1,9:2,7:2,5:1
+count	9	0:1,2:2,2:2,3:2,9:4,7:2,1:1,2:1,2:1
+counts	7	0:1,2:2,2:1,3:1,9:2,8:1,2:1
+cp	1	3:1
+cr	1	28:4
+crate	4	4:3,4:2,1:1,19:1
+crates	4	4:3,4:2,1:1,19:1
+cross	2	0:1,1:1
+cross-check	2	0:1,1:1
+cross-checks	2	0:1,1:1
+crosschec	1	15:1
+crosscheck	1	15:1
+css	6	4:1,1:1,11:4,1:1,5:1,1:2
+cu	2	4:1,10:1
+curren	2	16:1,11:1
+current	2	16:1,11:1
+cut	2	4:2,10:2
+cuts	2	4:1,10:1
+d	8	0:18,2:19,13:2,1:11,7:7,2:2,1:4,2:3
+d-number	2	0:1,2:1
+d-numbers	2	0:1,2:1
+d120	2	0:1,2:1
+d121	4	0:1,2:1,14:1,7:1
+d122	4	0:1,2:1,14:1,7:1
+d123	4	0:1,2:1,14:1,7:1
+d124	4	0:1,2:1,14:1,7:1
+d125	4	0:1,2:1,14:1,7:1
+d126	4	0:1,2:1,14:1,7:1
+d127	4	0:1,2:1,14:1,7:1
+d130	2	0:1,2:1
+d131-d138	4	0:1,2:1,14:1,9:1
+d135	2	0:1,2:1
+d138	2	0:1,2:1
+d139	2	0:1,2:1
+d139-d141	2	16:1,10:2
+d140	3	0:1,2:1,26:1
+d141	2	0:1,2:2
+d56-d66	2	15:1,13:1
+daili	2	4:1,8:1
+daily	2	4:1,8:1
+dangl	1	28:1
+dangling	1	28:1
+dat	1	16:2
+databas	2	4:3,10:3
+database	2	4:3,10:3
+date	1	16:2
+debug	2	16:1,6:1
+debugging	2	16:1,6:1
+decis	4	0:2,2:2,13:1,13:1
+decision	2	0:1,2:1
+decisions	4	0:1,2:1,13:1,13:1
+defaul	2	16:1,6:1
+default	2	16:1,6:1
+dem	6	0:4,1:1,1:3,2:1,5:1,6:2
+demo	6	0:4,1:1,1:3,2:1,5:1,6:2
+deni	2	4:1,1:1
+deny	2	4:1,1:1
+deploy	2	4:1,9:1
+desc	4	3:1,1:1,3:1,21:2
+descr	8	0:2,1:2,2:1,1:1,9:1,3:2,3:1,2:1
+describ	8	0:2,1:2,2:1,1:1,9:1,3:2,3:1,2:1
+describe	8	0:2,1:2,2:1,1:1,9:1,3:2,3:1,2:1
+descript	5	4:2,3:1,6:1,3:1,1:1
+description	2	4:1,9:1
+descriptions	4	4:1,3:1,9:1,1:1
+desig	3	16:2,6:1,3:2
+design	3	16:2,6:1,3:2
+desktop	7	0:1,1:1,3:4,2:4,3:1,3:1,1:1
+destruct	2	16:1,5:1
+destructiv	2	16:1,5:1
+destructive	2	16:1,5:1
+destructivehin	2	16:1,5:1
+destructivehint	2	16:1,5:1
+dev	4	4:4,2:4,10:1,1:1
+develop	3	15:10,1:1,4:1
+developer	3	15:10,1:1,4:1
+developer-on	1	15:10
+developer-only	1	15:10
+di	2	16:1,9:1
+did	2	16:1,9:1
+differ	5	4:1,8:1,4:2,4:1,3:1
+differen	5	4:1,8:1,4:2,4:1,3:1
+different	5	4:1,8:1,4:2,4:1,3:1
+dir	2	4:1,9:1
+direct	3	4:1,9:1,15:1
+directly	3	4:1,9:1,15:1
+directori	2	4:1,9:1
+directory	2	4:1,9:1
+do	6	4:2,6:1,3:1,3:2,10:1,1:1
+doc	14	0:7,2:7,1:2,1:12,2:1,1:3,2:2,1:3,1:3,4:3,1:5,9:2,1:1,2:2
+docs	14	0:7,2:7,1:2,1:12,2:1,1:3,2:2,1:3,1:3,4:3,1:5,9:2,1:1,2:2
+document	12	0:3,2:3,2:6,3:1,2:1,1:1,1:4,4:1,1:6,1:1,1:2,7:5
+documentat	11	0:2,2:2,2:6,3:1,2:1,1:1,1:4,4:1,1:5,2:2,7:5
+documentation	11	0:2,2:2,2:6,3:1,2:1,1:1,1:4,4:1,1:5,2:2,7:5
+documents	4	0:1,2:1,14:1,1:1
+doe	5	4:1,3:1,9:3,9:2,1:1
+does	5	4:1,3:1,9:3,9:2,1:1
+don	2	0:1,1:1
+done	2	0:1,1:1
+door	15	0:10,2:11,1:2,1:3,3:3,9:20,1:1,2:2,1:2,1:3,1:1,1:2,2:5,1:4,2:4
+doorhash	1	28:1
+doors	9	0:4,2:4,2:2,3:2,9:5,1:1,8:3,1:1,2:1
+downlo	3	4:2,3:1,3:1
+download	4	4:2,3:1,3:1,5:1
+downloads	1	15:1
+draf	2	0:1,1:1
+draft	2	0:1,1:1
+e	6	0:2,1:2,15:2,5:1,5:1,2:22
+e001	1	28:1
+e001-e012	2	0:1,1:1
+e001-mag	1	28:1
+e001-magic	1	28:1
+e002	1	28:1
+e002-head	1	28:1
+e002-header	1	28:1
+e003	1	28:1
+e003-cr	1	28:1
+e004	1	28:1
+e004-control	1	28:1
+e005	3	16:1,10:1,2:1
+e005-sp	1	28:1
+e005-span	1	28:1
+e006	1	28:1
+e006-bodyhash	1	28:1
+e007	1	28:1
+e007-doorhash	1	28:1
+e008	1	28:1
+e008-	1	28:1
+e008-id	1	28:1
+e009	3	16:1,5:1,7:1
+e009-dangl	1	28:1
+e009-dangling	1	28:1
+e010	1	28:1
+e010-capt	1	28:1
+e010-caption	1	28:1
+e011	1	28:1
+e011-hashprefix	1	28:1
+each	11	0:1,2:1,2:2,3:1,6:1,3:6,1:2,5:3,1:1,4:1,1:1
+earli	2	0:2,2:2
+earlier	2	16:1,7:2
+early	2	0:2,2:2
+ed	1	28:2
+edg	8	0:1,1:1,3:1,1:1,10:1,1:1,7:1,5:3
+edge	2	15:1,13:2
+edge-stale-same-length	1	28:1
+edge-stale-shift	1	28:1
+edge-stale-shifted	1	28:1
+edges	7	0:1,1:1,3:1,1:1,11:1,7:1,5:1
+edit	4	4:3,1:2,2:2,21:4
+edited	1	28:2
+edition	2	4:1,1:2
+edits	2	4:2,3:2
+eighth	2	0:1,2:2
+elemen	2	16:1,7:1
+element	2	16:1,7:1
+els	1	28:1
+else	1	28:1
+emb	1	28:1
+embed	8	0:1,1:1,3:5,1:1,2:1,7:3,2:1,4:1
+embedding	3	4:4,3:1,7:3
+embeddings	6	0:1,1:1,3:1,1:1,11:1,4:1
+en	5	0:2,3:1,1:8,1:3,2:5
+encod	2	4:1,3:1
+encoded	2	4:1,3:1
+end	4	3:1,1:8,1:3,2:5
+english	11	0:1,2:1,2:2,3:1,5:1,4:15,1:2,3:5,3:2,1:1,3:1
+equal	1	28:1
+err	1	3:1
+error	9	0:2,1:1,1:1,2:2,3:1,2:1,6:1,1:1,5:1
+errors	2	16:1,5:1
+esc	1	28:1
+escap	1	28:1
+escapes	1	28:1
+ev	2	4:1,3:1
+eval	3	0:1,2:1,13:1
+evalu	2	16:2,6:6
+evaluat	2	16:2,6:6
+evaluation	2	16:2,6:6
+even	2	4:1,3:1
+everi	16	0:2,1:1,1:1,1:4,1:8,3:3,4:2,3:3,1:1,1:7,5:1,1:2,2:1,1:2,1:1,2:4
+every	16	0:2,1:1,1:1,1:4,1:8,3:3,4:2,3:3,1:1,1:7,5:1,1:2,2:1,1:2,1:1,2:4
+exact	2	16:1,9:1
+exactly	2	16:1,9:1
+exampl	12	0:4,1:1,1:3,2:7,2:1,3:1,1:4,3:2,2:3,1:2,3:1,2:1
+example	8	0:1,2:1,2:2,6:1,3:2,3:2,3:1,2:1
+examples	8	0:3,1:1,1:2,2:5,2:1,3:1,1:3,5:3
+exceed	2	16:1,9:1
+exceeds	2	16:1,9:1
+excerp	6	0:2,2:2,14:4,6:2,1:1,4:1
+excerpt	8	0:2,2:2,14:6,3:1,2:1,1:2,1:1,4:1
+excerpts	3	16:2,3:1,2:1
+execut	2	15:1,13:1
+executabl	2	15:1,13:1
+executable	2	15:1,13:1
+exercis	1	28:1
+exercises	1	28:1
+expect	6	0:1,2:1,13:1,1:4,4:4,8:3
+expected	6	0:1,2:1,13:1,1:4,4:4,8:3
+experiment	3	16:2,9:1,1:1
+experimental	3	16:2,9:1,1:1
+expor	2	0:1,1:1
+export	2	0:1,1:1
+f	2	4:2,1:2
+face	2	16:1,8:1
+facing	2	16:1,8:1
+fair	2	16:1,11:1
+fals	2	16:2,7:2
+false	2	16:2,7:2
+faster	2	16:1,9:1
+feed	1	3:1
+feeds	1	3:1
+feff	2	0:1,2:1
+fenc	1	28:1
+fence	1	28:1
+few	2	16:1,8:1
+fewer	2	16:1,6:1
+fewes	2	16:1,9:1
+fewest	2	16:1,9:1
+fi	2	16:1,11:1
+fiel	3	16:1,6:1,6:1
+field	3	16:1,6:1,6:1
+field-siz	2	16:1,6:1
+field-sizing	2	16:1,6:1
+figm	2	16:1,1:1
+figma	2	16:1,1:1
+fil	24	0:14,1:3,1:6,1:6,1:24,1:2,1:2,1:2,2:1,1:2,1:3,2:3,1:3,1:6,1:33,1:3,1:1,3:1,1:1,2:1,1:11,1:7,1:3,1:2
+file	24	0:17,1:3,1:9,1:6,1:29,1:3,1:2,1:2,2:1,1:3,1:3,2:3,1:6,1:6,1:35,1:3,1:1,3:1,1:1,2:1,1:11,1:9,1:3,1:4
+file-search	2	0:1,2:1
+files	9	0:3,2:3,2:5,1:1,5:1,4:3,2:2,10:2,2:2
+find	3	3:1,13:1,10:1
+finding	1	3:1
+finds	2	16:1,10:1
+fingerprin	3	4:2,3:2,21:3
+fingerprint	9	0:1,1:1,3:6,1:1,2:4,7:1,2:1,1:1,11:3
+fingerprints	8	0:1,1:1,3:4,1:1,2:2,7:1,2:1,1:1
+firefox	2	16:1,6:1
+firs	18	0:2,1:2,1:1,2:5,3:1,4:1,2:1,1:2,1:1,1:14,3:1,2:1,2:2,1:1,1:4,1:4,1:2,1:1
+first	18	0:2,1:2,1:1,2:5,3:1,4:1,2:1,1:2,1:1,1:14,3:1,2:1,2:2,1:1,1:4,1:4,1:2,1:1
+fit	3	16:2,8:1,3:1
+fits	2	16:1,8:1
+fiv	5	4:1,9:1,3:3,5:1,1:2
+five	5	4:1,9:1,3:3,5:1,1:2
+fix	7	0:1,2:1,2:1,10:1,2:3,6:1,3:2
+fixed	4	0:1,2:1,2:1,10:1
+fixes	2	16:1,9:1
+flowchar	2	4:1,1:1
+flowchart	2	4:1,1:1
+folder	8	4:3,6:1,3:1,1:1,1:1,1:2,2:1,7:1
+follow	3	16:2,6:2,3:1
+followed	3	16:2,6:2,3:1
+fon	2	4:1,4:1
+font	2	4:3,4:3
+fonts	2	4:2,4:2
+for	21	0:9,1:1,1:4,1:2,1:19,1:1,2:5,2:1,1:2,1:4,1:4,1:4,1:1,1:4,1:17,5:1,1:3,2:1,1:5,1:8,2:3
+form	1	28:1
+format	13	0:6,2:2,2:6,1:1,2:1,2:1,2:2,1:2,4:12,6:2,3:4,1:7,2:1
+formats	2	16:2,9:2
+formul	2	16:1,6:1
+formula	2	16:1,6:1
+foun	6	0:1,2:1,2:1,9:1,3:1,11:1
+found	6	0:1,2:1,2:1,9:1,3:1,11:1
+four	3	16:2,5:1,1:1
+fr	4	0:1,1:1,2:1,25:1
+fr-10	1	28:1
+fr-19	2	0:1,1:1
+fr-20	1	3:1
+fram	3	3:1,1:1,9:1
+frame	3	3:1,1:1,9:1
+framed	2	4:1,9:1
+from	14	0:2,2:2,2:8,3:2,3:4,2:1,1:5,2:3,1:6,5:2,1:1,1:4,2:2,3:1
+fronten	3	16:3,1:1,3:2
+frontend	3	16:3,1:1,3:2
+full	8	3:1,1:1,7:1,5:4,1:1,1:1,6:1,3:1
+full-contex	2	16:1,8:1
+full-context	2	16:1,8:1
+fus	4	4:1,3:1,9:1,4:1
+fusion	4	4:1,3:1,9:1,4:1
+fuzz	6	0:1,1:1,2:21,1:4,1:1,4:3
+fuzzer	1	3:2
+gap	4	0:2,2:2,14:1,10:1
+gat	1	3:1
+gate	1	3:1
+gb	3	16:4,9:3,1:1
+generat	3	4:1,5:1,19:2
+generated	1	28:2
+generator	2	4:1,5:1
+get	2	4:1,10:2
+gi	5	3:1,1:3,6:2,4:1,14:1
+git	5	3:1,1:3,6:2,4:1,14:1
+git-ignor	1	3:1
+git-ignored	1	3:1
+gitattribut	1	28:2
+gitattributes	1	28:2
+github	3	4:2,6:1,1:1
+give	5	4:1,9:1,3:2,1:1,8:1
+gives	5	4:1,9:1,3:2,1:1,8:1
+goal	1	3:1
+goe	2	16:1,9:1
+goes	2	16:1,9:1
+gol	4	0:1,2:1,14:1,9:1
+gold	4	0:1,2:1,14:1,9:1
+got	2	4:1,7:1
+grad	2	16:1,9:1
+grade	2	16:1,9:1
+graded	2	16:1,9:1
+graph	12	0:2,1:2,2:1,1:6,1:2,1:1,1:1,2:1,5:1,2:1,1:1,11:1
+grep	6	4:4,7:1,3:1,2:3,8:1,1:2
+grew	1	28:1
+group	16	0:4,1:1,1:3,2:9,1:3,2:2,2:1,3:1,1:1,1:1,2:11,1:1,2:5,4:3,2:2,3:1
+groups	13	0:1,1:1,3:8,1:2,2:2,2:1,3:1,1:1,1:1,2:5,1:1,2:3,6:1
+grow	2	16:1,9:1
+gtk	2	4:2,2:2
+gu	13	0:3,1:2,1:1,2:11,1:4,1:4,2:1,1:2,4:1,3:3,3:1,5:1,3:1
+guess	2	4:1,10:1
+gui	7	0:1,1:1,3:10,1:4,1:4,2:1,1:2
+guid	9	0:2,1:1,1:1,2:1,9:1,3:3,3:1,5:1,3:1
+guide	9	0:2,1:1,1:1,2:1,9:1,3:3,3:1,5:1,3:1
+had	3	4:2,12:2,8:3
+haiku	2	16:2,9:2
+half	1	4:2
+halv	2	16:1,9:1
+halved	2	16:1,9:1
+han	4	4:2,3:1,5:1,16:2
+hand	4	4:2,3:1,5:1,16:2
+has	3	0:2,4:1,10:1
+hashprefix	1	28:1
+he	3	0:1,2:1,1:1
+head	5	0:1,2:1,2:2,6:1,4:1
+header	5	3:2,1:2,1:1,2:1,21:2
+headings	3	4:2,6:1,4:1
+help	4	0:1,1:1,15:1,10:1
+here	1	3:1
+hi	5	0:2,2:2,14:2,7:1,2:1
+hid	2	4:1,3:1
+hidden	2	4:1,3:1
+high	2	16:1,8:1
+hin	2	16:2,5:2
+hint	2	16:2,5:2
+hit	9	0:3,2:3,2:1,7:1,5:4,3:1,4:1,2:1,2:1
+hits	7	0:1,2:1,2:1,7:1,5:2,3:1,8:1
+hour	1	3:1
+how	5	4:4,3:4,3:1,1:1,2:1
+howev	1	3:1
+however	1	3:1
+html	7	0:1,2:1,2:2,1:1,6:1,4:1,1:2
+https	4	0:4,4:4,6:4,1:1
+huggingfac	2	4:1,6:1
+huggingface	2	4:1,6:1
+hungar	9	0:1,2:1,2:2,3:2,9:4,1:1,3:1,3:2,1:1
+hungarian	9	0:1,2:1,2:2,3:2,9:4,1:1,3:1,3:2,1:1
+hybri	11	0:2,1:1,1:2,2:2,1:1,2:1,9:12,4:6,5:2,1:3,1:1
+hybrid	11	0:2,1:1,1:2,2:2,1:1,2:1,9:12,4:6,5:2,1:3,1:1
+i	4	4:1,6:1,6:1,2:1
+id	9	0:1,2:1,1:1,1:1,3:1,9:2,5:1,5:1,2:4
+ident	4	4:1,10:1,2:1,11:1
+identical	4	4:1,10:1,2:1,11:1
+idl	2	16:1,10:1
+idle	2	16:1,10:1
+ids	5	3:1,1:1,3:1,9:1,5:1
+if	3	4:2,3:1,6:1
+ignor	1	3:1
+ignored	1	3:1
+implement	2	4:1,1:1
+implementat	2	4:1,1:1
+implementation	2	4:1,1:1
+impor	8	0:2,1:1,1:1,2:1,6:1,6:6,2:1,8:5
+import	8	0:2,1:1,1:1,2:1,6:1,6:6,2:1,8:5
+in	25	0:13,1:4,1:9,1:1,1:20,1:1,2:7,1:1,2:3,1:1,1:3,1:1,1:3,1:2,1:23,1:1,2:2,1:3,2:1,1:1,1:1,1:6,1:3,1:4,1:8
+in-memori	3	16:1,9:1,3:1
+in-memory	3	16:1,9:1,3:1
+in-pag	4	0:1,2:1,14:1,7:1
+in-page	4	0:1,2:1,14:1,7:1
+includ	2	16:1,10:1
+includes	2	16:1,10:1
+independ	2	16:1,8:1
+independen	2	16:1,8:1
+independent	2	16:1,8:1
+index	15	0:4,1:1,1:3,2:7,1:1,2:3,4:1,3:2,1:1,1:10,1:1,8:2,1:5,1:1,1:3
+inf	2	0:1,1:1
+info	2	0:1,1:1
+initi	2	16:1,5:1
+initializ	2	16:1,5:1
+initialize	2	16:1,5:1
+inpu	3	3:2,1:1,1:1
+input	3	3:2,1:1,1:1
+ins	3	0:1,2:1,26:3
+insid	3	0:1,2:1,26:3
+inside	3	0:1,2:1,26:3
+instal	6	4:1,2:1,9:1,1:2,1:1,1:1
+install	6	4:1,2:1,9:1,1:2,1:1,1:1
+installed	3	16:2,1:1,1:1
+inste	7	0:1,2:1,2:1,9:1,3:2,10:2,2:1
+instead	7	0:1,2:1,2:1,9:1,3:2,10:2,2:1
+instruct	3	4:2,3:1,6:1
+instructions	3	4:2,3:1,6:1
+int	13	0:1,1:1,2:1,1:7,1:1,5:2,1:1,3:1,1:1,1:5,2:1,7:1,2:1
+int8	7	0:1,1:1,3:2,1:1,5:1,5:1,1:2
+intac	1	28:1
+intact	1	28:1
+interfac	3	4:2,1:1,4:1
+interface	3	4:2,1:1,4:1
+intern	2	0:1,2:1
+internal	2	0:1,2:1
+into	9	3:1,1:5,6:1,1:1,3:1,2:3,2:1,7:1,2:1
+inval	1	15:1
+invalid	1	15:1
+invis	2	0:1,2:1
+invisibl	2	0:1,2:1
+invisible	2	0:1,2:1
+io	2	4:1,7:1
+is	21	0:3,2:3,1:3,1:15,3:8,2:1,1:3,1:2,1:2,2:2,1:1,1:24,1:2,3:4,1:3,1:1,2:3,1:7,1:2,1:2,1:3
+isol	1	15:1
+isolat	1	15:1
+isolated	1	15:1
+it	19	0:4,2:2,1:1,1:24,2:1,1:8,3:4,3:10,1:7,1:2,1:19,1:3,3:1,3:1,1:1,1:1,1:7,1:2,1:5
+item	2	16:1,9:1
+items	2	16:1,9:1
+its	14	0:4,2:2,2:4,3:1,6:1,1:2,2:13,1:1,3:1,3:1,2:1,1:6,1:1,1:1
+itself	2	16:2,11:2
+jav	2	4:1,1:1
+java	2	4:1,1:1
+javascrip	2	4:1,1:1
+javascript	2	4:1,1:1
+json	12	0:2,1:1,1:1,2:3,5:1,1:2,5:2,1:9,2:2,4:1,3:4,3:2
+jsonl	2	16:2,2:2
+judg	4	4:1,7:1,5:2,9:2
+judge	2	16:1,9:1
+judges	4	4:1,7:1,5:1,9:1
+jump	2	4:1,3:1
+jumps	2	4:1,3:1
+k	11	0:1,1:1,3:2,1:1,5:1,5:1,1:4,1:1,3:2,1:1,7:1
+kapu	26	0:30,1:13,1:10,1:2,1:76,1:5,1:6,1:6,1:2,1:13,1:16,1:4,1:2,1:12,1:2,1:10,1:61,1:1,1:9,1:7,2:7,1:2,3:11,1:8,1:2,1:20
+kapu-bench	2	4:1,5:1
+kapu-c	8	0:1,1:1,2:1,1:4,1:1,4:2,1:1,18:1
+kapu-cl	3	4:2,5:1,1:1
+kapu-cli	3	4:2,5:1,1:1
+kapu-cor	7	0:1,1:1,2:1,1:2,1:1,4:1,19:1
+kapu-core	7	0:1,1:1,2:1,1:2,1:1,4:1,19:1
+kapu-doc	7	0:1,2:1,2:5,2:1,3:1,1:3,5:1
+kapu-docs	7	0:1,2:1,2:5,2:1,3:1,1:3,5:1
+kapu-gu	7	0:1,1:1,3:7,1:1,1:4,2:1,1:2
+kapu-gui	7	0:1,1:1,3:7,1:1,1:4,2:1,1:2
+kapu-mcp	10	0:2,1:1,1:1,2:6,1:1,4:2,1:1,3:2,3:1,6:1
+kapu-spec	5	0:1,1:1,3:1,5:1,6:1
+kapu_descr	7	0:1,1:1,3:1,9:1,3:2,3:1,2:1
+kapu_describ	7	0:1,1:1,3:1,9:1,3:2,3:1,2:1
+kapu_describe	7	0:1,1:1,3:1,9:1,3:2,3:1,2:1
+kapu_map	7	0:1,1:1,3:1,9:1,3:6,3:4,2:2
+kapu_mcp_cal	6	0:1,2:1,13:1,1:2,2:1,4:1
+kapu_mcp_call	6	0:1,2:1,13:1,1:2,2:1,4:1
+kapu_model_dir	2	4:1,9:1
+kapu_op	8	0:2,1:1,1:1,2:1,9:1,3:2,3:1,2:1
+kapu_open	8	0:2,1:1,1:1,2:1,9:1,3:2,3:1,2:1
+kapu_search	8	0:1,1:1,3:1,9:1,3:4,2:1,1:1,2:2
+kapu_writ	6	0:1,1:1,3:1,9:1,3:1,5:1
+kapu_write	6	0:1,1:1,3:1,9:1,3:1,5:1
+kapx	1	28:1
+keep	8	0:5,2:3,2:2,9:1,1:1,2:2,4:1,6:1
+keepachangelog	1	0:2
+keeps	7	0:3,2:3,2:1,10:1,2:2,4:1,6:1
+keywor	4	4:1,6:1,6:1,4:1
+keyword	5	4:2,3:1,3:1,6:2,4:2
+keywords	4	4:1,3:1,9:1,4:1
+ki	2	4:1,2:1
+kit	2	4:1,2:1
+knew	2	16:1,4:1
+know	2	16:2,9:2
+knowledg	7	4:3,7:2,3:2,2:7,1:2,8:1,2:4
+knowledge	7	4:3,7:2,3:2,2:7,1:2,8:1,2:4
+known	2	16:1,9:1
+korpusz	2	16:1,2:1
+kubernet	7	0:3,2:3,2:1,7:1,5:4,9:1,1:3
+kubernetes	7	0:3,2:3,2:1,7:1,5:4,9:1,1:3
+l	3	16:8,9:7,1:1
+lab	4	4:1,7:2,5:2,9:2
+label	2	16:1,8:1
+labels	2	16:1,8:1
+lang	2	0:1,2:1
+languag	9	0:2,2:2,2:3,1:2,7:1,1:1,3:3,4:1,5:2
+language	7	0:2,2:2,2:2,1:2,8:1,3:2,9:2
+languages	4	4:1,8:1,4:1,4:1
+larg	4	4:1,8:1,4:1,6:1
+large	4	4:1,8:1,4:1,6:1
+larges	3	16:2,7:1,2:1
+largest	3	16:2,7:1,2:1
+las	3	0:1,1:1,27:1
+last	3	0:1,1:1,27:1
+latenc	4	15:1,1:2,2:1,7:1
+latency	4	15:1,1:2,2:1,7:1
+later	3	16:1,3:1,9:1
+layer	2	4:1,1:2
+le	12	0:3,1:1,1:3,2:3,1:1,2:1,4:1,4:1,1:3,4:1,5:1,1:1
+leav	4	0:2,2:2,13:1,13:1
+leave	2	0:2,2:2
+leaves	2	15:1,13:1
+led	2	16:1,7:2
+lef	5	0:1,2:1,14:2,1:1,6:1
+left	5	0:1,2:1,14:2,1:1,6:1
+lei	5	0:1,1:1,3:2,1:1,2:1
+leiden	5	0:1,1:1,3:2,1:1,2:1
+leidenalg	2	4:1,1:1
+length	3	4:1,3:1,21:4
+lenien	2	16:2,4:2
+lenient	2	16:2,4:2
+level	12	0:3,1:1,1:3,2:3,1:1,2:1,4:1,4:1,1:3,4:1,5:1,1:1
+lf	1	28:2
+li	8	0:2,1:1,1:1,2:1,1:1,11:2,7:2,5:1
+lib	1	3:2
+libfuzz	1	3:5
+libfuzzer	1	3:5
+librari	3	3:1,1:1,10:1
+library	3	3:1,1:1,10:1
+librsvg	2	4:1,2:1
+librsvg2-dev	2	4:1,2:1
+libssl	2	4:1,2:1
+libssl-dev	2	4:1,2:1
+libweb	2	4:1,2:1
+libwebkit	2	4:1,2:1
+libwebkit2gtk-4	2	4:1,2:1
+libxd	2	4:1,2:1
+libxdo	2	4:1,2:1
+libxdo-dev	2	4:1,2:1
+licens	2	4:4,4:9
+license	2	4:4,4:9
+lim	6	0:1,2:1,14:5,6:1,3:2,1:2
+limit	11	0:1,2:1,1:1,1:1,7:1,5:7,4:1,2:1,2:4,1:2,1:2
+limitations	3	16:2,4:1,4:4
+limits	3	3:1,1:1,7:1
+lin	19	0:11,1:2,1:6,1:1,1:6,1:1,2:1,2:1,2:1,1:1,1:1,3:15,3:2,3:1,1:2,2:4,1:5,1:1,1:7
+line	21	0:12,1:2,1:7,1:2,1:7,1:1,2:1,2:1,2:1,1:1,1:1,1:1,2:20,3:2,2:1,1:2,1:4,2:5,1:5,1:1,1:8
+linear	2	16:1,9:1
+lines	11	0:1,2:1,1:1,1:1,10:1,2:5,5:1,1:1,1:2,2:1,3:1
+link	12	0:2,1:1,1:1,2:4,1:1,2:1,4:1,3:1,2:3,7:2,2:1,3:1
+links	6	4:3,3:1,4:1,3:1,2:1,9:1
+linux	6	0:2,1:2,3:4,1:1,1:1,6:2
+lis	5	4:1,8:1,4:2,7:1,2:1
+list	8	0:3,2:3,2:1,8:1,4:4,7:3,2:1,3:1
+lists	5	0:3,2:3,14:2,7:2,5:1
+liv	5	16:9,6:4,1:1,1:2,3:3
+live	5	16:9,6:4,1:1,1:2,3:3
+llms	5	0:1,2:1,14:2,8:1,1:1
+lo	5	4:2,6:2,5:1,1:1,11:1
+load	2	16:1,5:1
+loads	2	16:1,5:1
+local	3	16:2,1:2,1:1
+log	7	0:3,2:3,2:1,5:1,6:1,1:1,6:1
+logg	3	0:1,2:1,13:1
+logged	3	0:1,2:1,13:1
+logo	2	4:1,5:1
+logs	2	16:1,6:1
+long	7	0:1,2:1,2:2,3:1,6:1,3:3,9:3
+longer	4	0:4,2:4,2:2,3:2
+longes	2	16:1,10:1
+longest	2	16:1,10:1
+look	5	4:2,6:2,5:1,1:1,11:1
+los	2	4:2,10:2
+lose	2	4:2,10:2
+loses	2	4:1,10:1
+lost	2	4:1,10:1
+lr	2	4:1,1:1
+lto	1	16:2
+m	14	0:6,1:8,2:1,1:9,1:1,5:4,1:3,1:1,3:8,1:13,2:1,7:9,1:1,2:15
+m0-m7	2	0:1,1:2
+m1	3	3:1,12:5,13:13
+m10	2	0:1,1:1
+m2	1	28:1
+m3	2	15:1,13:1
+m8	2	0:1,1:1
+m9	2	0:1,1:1
+mac	5	0:2,1:2,3:3,1:1,7:2
+machin	6	4:1,7:1,5:5,1:1,7:1,2:1
+machine	6	4:1,7:1,5:5,1:1,7:1,2:1
+maco	5	0:2,1:2,3:3,1:1,7:2
+macos	5	0:2,1:2,3:3,1:1,7:2
+mad	2	16:1,7:4
+made	2	16:1,7:4
+magic	1	28:1
+mak	7	0:2,2:2,2:2,6:2,5:2,1:1,9:1
+make	8	0:2,2:2,1:1,1:2,6:2,5:3,1:1,9:1
+make_demo_svg	3	0:1,2:1,13:1
+make_exampl	3	0:1,2:1,13:1
+make_examples	3	0:1,2:1,13:1
+makes	2	3:1,12:1
+manag	2	16:1,1:1
+managemen	2	16:1,1:1
+management	2	16:1,1:1
+mani	4	0:1,2:1,2:1,10:1
+manual	2	4:5,10:2
+many	4	0:1,2:1,2:1,10:1
+map	22	0:6,1:3,1:3,1:1,1:10,2:1,1:3,3:1,1:1,2:2,1:2,1:1,1:19,1:1,2:4,2:2,1:2,1:3,2:4,1:1,1:1,1:2
+mark	1	28:2
+markdow	12	4:14,1:1,2:3,3:1,1:1,2:1,1:4,1:1,1:6,1:1,8:2,2:2
+markdown	12	4:14,1:1,2:3,3:1,1:1,2:1,1:4,1:1,1:6,1:1,8:2,2:2
+marker	2	4:1,3:1
+markers	2	4:1,3:1
+marks	1	28:2
+match	8	0:1,2:1,2:2,3:1,6:1,3:2,7:1,3:1
+matched	2	4:1,9:1
+matches	4	0:1,2:1,14:1,7:1
+matter	2	16:1,4:1
+matters	2	16:1,4:1
+max	3	0:1,2:1,1:1
+max_token	2	0:1,2:1
+max_tokens	2	0:1,2:1
+max_total_t	1	3:1
+max_total_tim	1	3:1
+max_total_time	1	3:1
+mb	10	0:8,1:1,1:4,2:4,7:3,3:1,2:7,5:1,4:3,1:1
+mcp	17	0:8,1:2,1:6,2:16,1:6,4:3,1:1,1:1,1:1,1:4,2:4,1:17,2:3,1:3,2:5,1:7,4:4
+mcp-builder	2	16:1,6:2
+mcp_e	3	0:1,2:1,13:1
+mcp_eval	3	0:1,2:1,13:1
+mcp_pro	6	0:1,2:1,13:1,1:2,2:1,1:1
+mcp_probe	6	0:1,2:1,13:1,1:2,2:1,1:1
+md	13	0:3,2:1,2:11,1:2,2:2,1:3,1:1,1:1,1:2,4:1,1:4,1:1,8:3
+mdn	8	0:4,2:4,2:1,7:1,5:7,1:1,8:1,1:5
+mean	7	0:1,2:2,2:2,3:1,3:1,6:1,10:1
+meaning	7	0:1,2:2,2:2,3:1,3:1,6:1,10:1
+measur	14	0:1,2:1,2:3,5:2,3:1,3:1,1:16,1:1,1:1,1:2,4:4,1:1,1:1,1:3
+measured	4	16:4,3:2,6:1,1:3
+measuremen	5	4:1,5:1,6:1,1:1,8:1
+measurement	5	4:1,5:1,6:1,1:1,8:1
+measurements	7	0:1,2:1,2:2,5:1,3:1,4:7,7:4
+measures	3	16:4,1:1,1:1
+med	11	0:1,2:1,2:1,7:1,5:21,3:3,2:2,2:2,2:5,1:3,1:3
+median	11	0:1,2:1,2:2,7:2,5:21,3:3,2:2,2:2,2:5,1:3,1:3
+medians	2	4:1,7:1
+memori	6	0:1,2:1,14:4,9:3,1:1,2:1
+memory	6	0:1,2:1,14:4,9:3,1:1,2:1
+merg	4	4:1,3:1,9:1,10:1
+merged	2	4:1,3:1
+merging	2	16:1,10:1
+merm	2	4:1,1:1
+mermaid	2	4:1,1:1
+meth	2	4:1,7:1
+method	2	4:1,7:1
+mi	7	0:1,2:1,2:1,4:2,8:4,9:2,1:2
+mib	5	0:1,2:1,14:4,9:2,1:2
+mileston	3	0:2,1:2,1:1
+milestone	2	0:1,2:1
+milestones	2	0:1,1:2
+mill	6	0:1,2:1,2:1,3:1,9:4,11:3
+million	6	0:1,2:1,2:1,3:1,9:4,11:3
+minishlab	2	4:2,6:2
+mint	2	15:1,13:2
+minta	2	15:1,13:2
+minta-1	1	28:1
+mismatch	1	28:1
+miss	3	16:2,6:1,1:1
+missing	3	16:2,6:1,1:1
+mit	2	4:1,4:2
+mix	2	16:1,7:2
+mixed	2	16:1,7:2
+mkdir	1	3:1
+mo	3	16:2,6:1,2:1
+mod	5	4:3,1:3,11:2,2:1,2:1
+mode	3	16:2,2:1,2:1
+model	21	0:1,1:1,3:12,1:1,2:1,1:1,1:1,1:3,3:2,1:1,1:1,1:13,1:1,1:2,2:1,1:1,3:2,1:2,1:1,1:1,1:1
+model2vec	2	4:1,1:1
+models	4	4:2,6:2,6:1,2:1
+moder	2	16:1,1:1
+modern	2	16:1,1:1
+more	3	16:2,6:1,2:1
+mos	6	0:4,2:5,14:5,1:2,6:1,2:3
+most	7	0:4,2:5,14:6,1:2,6:1,2:3,1:1
+mostly	2	16:1,10:1
+mrr	7	0:1,2:1,14:5,2:1,2:2,6:1,1:1
+ms	9	0:5,2:5,2:6,7:6,5:15,5:9,4:2,1:3,1:1
+multilingu	8	0:1,1:1,3:6,1:1,2:1,3:4,6:3,2:1
+multilingual	8	0:1,1:1,3:6,1:1,2:1,3:4,6:3,2:1
+mus	3	3:1,12:1,13:2
+must	3	3:1,12:1,13:2
+my	2	4:1,6:1
+my-not	2	4:1,6:1
+my-notes	2	4:1,6:1
+n	2	16:1,4:1
+nam	8	0:1,2:1,2:1,3:1,9:3,4:1,1:1,1:1
+name	12	0:4,2:4,2:3,1:1,2:1,7:1,2:5,4:1,1:1,1:1,1:1,3:1
+named	2	4:1,3:1
+names	8	0:3,2:3,2:2,1:1,9:1,2:2,7:1,3:1
+ne	2	16:1,4:1
+need	7	3:1,1:2,2:1,8:1,2:2,4:1,4:1
+needed	3	3:1,13:1,8:1
+needs	3	4:2,2:1,8:1
+neighbour	5	0:1,2:1,14:3,6:1,1:2
+neighbours	4	0:1,2:1,14:1,7:1
+networ	2	16:1,7:1
+network	2	16:1,7:1
+never	4	4:2,12:1,11:1,1:2
+new	6	0:1,1:1,15:2,7:1,1:1,4:1
+newes	2	16:1,1:1
+newest	2	16:1,1:1
+nex	8	0:1,2:1,2:1,3:1,9:5,5:2,4:2,1:1
+next	8	0:1,2:1,2:1,3:1,9:5,5:2,4:2,1:1
+nfr	1	3:13
+nfr-03	1	3:13
+night	1	3:2
+nightly	1	3:2
+no	12	0:4,2:4,1:1,1:3,1:1,2:1,7:1,2:4,1:1,7:1,1:1,1:1
+non	1	28:1
+none	1	28:1
+not	13	4:4,3:2,4:2,1:1,3:4,1:12,1:2,3:1,2:1,2:1,1:4,1:3,1:1
+note	8	4:4,6:2,3:2,1:1,2:3,3:1,2:2,3:1
+notes	8	4:4,6:2,3:2,1:1,2:3,3:1,2:2,3:1
+noth	3	4:2,10:2,14:1
+nothing	3	4:2,10:2,14:1
+notic	2	4:1,3:1
+notices	2	4:1,3:1
+now	4	4:1,3:1,9:2,10:2
+number	8	0:2,2:2,2:1,7:1,5:5,6:1,3:2,1:1
+numbers	7	0:2,2:2,2:1,7:1,5:4,9:2,1:1
+o	8	0:1,1:1,3:1,1:1,10:1,1:1,1:1,11:1
+o200k_bas	8	0:1,1:1,3:1,1:1,10:1,1:1,1:1,11:1
+o200k_base	8	0:1,1:1,3:1,1:1,10:1,1:1,1:1,11:1
+of	24	0:6,1:1,1:6,1:3,1:23,3:5,3:1,1:1,1:1,1:3,1:7,1:2,1:43,1:4,2:1,1:2,1:1,1:4,1:1,1:1,1:12,1:9,1:7,1:3
+off	1	28:1
+offici	2	16:1,3:2
+official	2	16:1,3:2
+offlin	2	4:1,10:1
+offline	2	4:1,10:1
+offs	3	4:2,3:2,21:1
+offset	3	4:2,3:2,21:1
+oft	3	16:2,6:1,2:1
+often	3	16:2,6:1,2:1
+ok	1	3:1
+on	27	0:11,1:2,1:11,1:1,1:18,1:1,1:1,1:3,2:1,1:1,1:3,1:1,1:1,1:4,1:3,1:52,1:1,2:6,1:3,1:1,1:2,1:5,1:3,1:23,1:9,1:1,1:9
+onc	4	0:1,2:1,14:1,10:1
+once	4	0:1,2:1,14:1,10:1
+one	19	0:3,2:4,1:1,1:10,3:3,2:1,1:1,1:2,3:3,1:2,1:27,3:6,1:2,2:2,1:2,1:3,1:8,1:3,2:7
+one-cal	1	15:1
+one-call	1	15:1
+one-lin	2	4:1,3:1
+one-line	2	4:1,3:1
+ones	2	16:1,9:1
+onli	13	0:1,2:1,1:1,1:1,10:1,1:10,1:8,2:1,3:1,1:1,1:1,3:2,1:1
+only	13	0:1,2:1,1:1,1:1,10:1,1:10,1:8,2:1,3:1,1:1,1:1,3:2,1:1
+op	16	0:4,1:2,1:2,1:1,1:5,4:1,2:1,1:2,2:1,2:2,1:9,3:1,2:1,1:5,3:2,3:1
+open	20	0:6,1:2,1:4,1:1,1:8,3:1,1:1,2:1,1:2,2:2,1:1,1:2,1:13,3:1,2:1,1:7,1:1,2:2,1:1,2:1
+opened	5	0:1,2:1,14:2,6:1,1:1
+opening	8	0:1,2:1,2:2,3:1,6:1,3:2,6:1,4:1
+opens	2	4:1,10:1
+option	4	4:3,1:1,5:1,4:1
+optional	4	4:3,1:1,5:1,4:1
+or	12	0:1,2:1,1:2,1:2,9:1,1:1,2:4,4:1,1:1,4:1,1:1,2:2
+order	2	16:1,10:1
+org	1	0:2
+os	5	0:2,1:2,3:3,1:1,7:2
+other	2	4:2,3:2
+out	8	0:2,2:2,1:1,1:1,10:1,2:2,1:1,6:1
+outpu	3	15:1,1:2,8:2
+output	3	15:1,1:2,8:2
+outs	2	4:1,9:1
+outsid	2	4:1,9:1
+outside	2	4:1,9:1
+over	10	0:1,1:1,3:5,1:1,6:1,2:1,3:5,4:1,5:1,1:3
+overflow	8	0:1,2:1,1:1,1:1,7:1,5:2,9:1,1:1
+overlap	5	0:1,2:2,14:1,10:1,2:1
+overlapping	2	0:1,2:2
+overlaps	1	28:1
+overr	2	4:1,3:1
+overrid	2	4:1,3:1
+override	2	4:1,3:1
+overst	1	28:1
+overstat	1	28:1
+overstated	1	28:1
+overview	3	4:6,6:1,4:1
+ow	9	0:3,2:1,2:3,1:1,5:2,6:5,1:1,6:1,3:1
+own	9	0:3,2:1,2:3,1:1,5:2,6:5,1:1,6:1,3:1
+p	6	4:3,2:1,4:2,6:3,3:2,2:2
+p90	3	16:3,3:2,2:2
+pac	2	0:2,1:2
+pack	2	0:2,1:2
+packag	6	0:1,1:1,3:1,5:1,7:1,6:1
+package	6	0:1,1:1,3:1,5:1,7:1,6:1
+packed	2	0:2,1:2
+pag	10	0:4,2:4,2:4,5:1,2:3,4:1,1:8,2:2,5:1,2:3
+page	11	0:4,2:4,2:5,5:1,2:3,1:1,3:1,1:9,2:2,5:1,2:4
+pages	2	16:1,9:1
+pagin	2	16:1,6:1
+paginat	2	16:1,6:1
+pagination	2	16:1,6:1
+paging	2	4:1,8:1
+panic	3	0:1,2:1,1:1
+panics	2	0:1,2:1
+par	8	0:2,1:1,1:1,2:1,10:1,2:2,1:1,8:1
+paramet	2	0:1,2:1
+parameter	2	0:1,2:1
+parameter-t	2	0:1,2:1
+parameter-tabl	2	0:1,2:1
+parameter-table	2	0:1,2:1
+paraphras	2	16:1,4:1
+paraphrase	2	16:1,4:1
+pars	6	0:1,2:1,1:1,13:3,9:1,1:2
+parse	3	3:1,13:1,10:1
+parser	1	3:3
+parsers	1	3:1
+parses	4	0:1,2:1,14:1,10:1
+parsing	2	16:1,9:1
+part	10	0:3,1:1,1:2,2:3,3:1,6:1,1:1,2:2,1:1,8:1
+parti	5	4:4,4:3,3:2,5:1,1:2
+parts	7	0:1,2:1,2:2,3:1,6:1,3:1,9:1
+party	5	4:4,4:3,3:2,5:1,1:2
+pas	1	28:1
+pass	2	16:1,1:1
+passes	2	16:1,1:1
+past	6	4:4,7:1,3:1,2:2,9:2,3:1
+pasted	4	4:1,7:1,5:1,9:1
+pasting	4	4:3,10:1,2:1,9:1
+path	2	4:1,9:1
+pay	4	4:1,10:1,2:1,3:4
+pays	4	4:1,10:1,2:1,3:4
+pdf	4	4:1,7:1,5:3,9:3
+pe	3	16:2,9:1,1:1
+peak	3	16:2,9:1,1:1
+pedant	2	4:1,1:1
+pedantic	2	4:1,1:1
+peopl	2	16:1,8:2
+people	2	16:1,8:2
+per	15	0:2,2:3,1:1,1:6,3:1,2:1,1:1,1:1,4:1,1:14,2:1,5:2,2:6,1:3,1:1
+perform	2	16:1,1:1
+performanc	2	16:1,1:1
+performance	2	16:1,1:1
+phas	2	16:1,6:1
+phase	2	16:1,6:1
+phras	2	16:1,4:1
+phrase	2	16:1,4:1
+phrased	2	16:1,4:1
+pi	1	28:1
+pick	2	4:1,10:1
+picks	2	4:1,10:1
+pil	8	0:1,2:1,2:1,8:1,4:10,2:1,7:9,1:2
+pilot	8	0:1,2:1,2:1,8:1,4:10,2:1,7:9,1:2
+pin	3	4:1,6:1,18:1
+pinn	2	4:1,6:1
+pinned	2	4:1,6:1
+pip	3	0:1,2:1,13:1
+pipe	2	0:1,2:1
+piszabolc	3	4:2,6:1,1:1
+piszabolcs	3	4:2,6:1,1:1
+pixel	4	4:1,7:2,5:2,9:2
+pixellab	4	4:1,7:2,5:2,9:2
+plac	1	28:1
+place	3	16:1,10:1,2:1
+places	2	16:1,10:1
+plai	3	4:2,1:1,2:2
+plain	3	4:2,1:1,2:2
+plan	2	0:3,2:3
+planning	2	0:1,2:1
+plans	2	0:1,2:1
+platfor	2	16:1,1:1
+platform	2	16:1,1:1
+plug	2	16:1,1:1
+plugin	2	16:2,1:2
+plugins	2	16:1,1:1
+plus	5	3:1,1:1,3:1,9:1,1:1
+poin	2	16:2,4:2
+point	5	4:1,9:1,3:2,4:2,8:2
+points	3	4:1,9:1,15:2
+popular	2	16:1,9:1
+portabl	2	0:1,1:1
+portable	2	0:1,1:1
+portfol	2	0:1,1:2
+portfolio	2	0:1,1:2
+pos	2	4:1,9:1
+pose	2	4:1,9:1
+posit	6	4:2,3:2,9:2,1:1,5:1,6:1
+positioning	2	16:1,6:1
+positions	5	4:2,3:2,9:1,1:1,11:1
+post	7	0:1,2:1,2:1,3:1,9:1,10:1,2:2
+posting	5	0:1,2:1,14:1,10:1,2:1
+postings	3	4:1,3:1,21:1
+pot	7	0:1,1:1,3:5,1:1,5:4,6:3,2:1
+potion	7	0:1,1:1,3:5,1:1,5:4,6:3,2:1
+potion-multilingual-128	6	0:1,1:1,3:5,1:1,5:4,6:2
+potion-multilingual-128m	6	0:1,1:1,3:5,1:1,5:4,6:2
+potion-multilingual-128m-i8	2	16:1,2:1
+pre	2	4:1,8:2
+pre-releas	2	4:1,8:2
+pre-release	2	4:1,8:2
+prebuil	2	4:1,8:1
+prebuilt	2	4:1,8:1
+prefer	2	0:1,2:1
+prefers	2	0:1,2:1
+prep	2	16:2,2:2
+prepar	4	0:1,2:1,14:2,2:2
+preparat	2	0:1,2:1
+preparation	2	0:1,2:1
+prepare	2	16:2,2:2
+prepare_corpus	2	16:1,2:1
+pric	4	4:3,9:1,1:2,14:1
+price	8	0:2,1:2,3:8,1:2,2:2,6:2,1:2,14:1
+prices	6	0:2,1:2,3:5,1:2,2:2,6:1
+pro	6	0:2,2:2,13:1,1:5,2:2,1:1
+probe	6	0:2,2:2,13:1,1:3,2:2,1:1
+produc	3	0:1,2:1,26:1
+produce	3	0:1,2:1,26:1
+program	2	16:1,9:1
+programming	2	16:1,9:1
+projec	4	4:3,5:4,1:1,4:1
+project	4	4:3,5:4,1:1,4:1
+promp	4	4:1,7:2,5:1,9:1
+prompt	4	4:1,7:2,5:1,9:1
+psz	2	0:1,1:1
+pu	1	15:1
+public	7	0:1,2:1,2:1,7:1,5:4,2:2,7:4
+publish	4	4:1,7:2,5:1,1:2
+published	4	4:1,7:2,5:1,1:2
+pure	1	15:1
+pure-pyth	1	15:1
+pure-python	1	15:1
+purpos	1	28:2
+purpose	1	28:2
+push	2	4:1,10:1
+pushes	2	4:1,10:1
+py	12	0:10,2:7,2:3,3:2,3:1,5:17,1:12,1:1,1:9,1:1,3:1,6:3
+python	11	0:1,1:1,3:4,1:1,2:1,2:1,1:1,5:3,1:4,2:3,1:2
+qualiti	4	4:1,1:1,11:1,4:4
+quality	4	4:1,1:1,11:1,4:4
+quantiz	4	4:2,5:1,1:1,5:1
+quantize	3	4:1,6:1,5:1
+quantizer	2	4:1,5:1
+queri	7	0:2,2:2,2:2,9:1,1:1,2:1,2:1
+queries	4	0:1,2:1,2:1,10:1
+query	6	0:1,2:1,2:1,9:1,3:1,2:1
+quest	9	4:4,7:1,1:1,4:7,4:1,3:1,1:1,1:2,2:1
+question	15	0:3,2:4,2:8,7:4,1:1,4:37,1:1,1:4,2:6,2:4,1:2,1:4,1:8,1:4,1:3
+questions	14	0:3,2:4,2:4,7:3,5:30,1:1,1:4,2:5,2:4,1:1,1:3,1:6,1:4,1:2
+quickstar	4	0:1,2:1,2:1,6:4
+quickstart	4	0:1,2:1,2:1,6:4
+r	3	4:3,1:3,10:1
+ra	4	4:2,3:2,9:1,4:1
+rag	7	0:2,2:2,2:1,10:1,2:2,8:1,1:1
+rank	5	4:1,3:1,9:6,4:2,6:4
+ranking	3	16:5,4:1,6:4
+rare	2	4:1,3:1
+rarer	2	0:1,2:1
+raw	5	4:2,5:1,2:1,5:3,9:2
+re	12	0:1,2:1,1:1,1:4,7:1,3:1,2:17,5:3,1:3,3:8,2:2,1:2
+reac	2	16:1,1:1
+reach	2	16:1,4:1
+react	2	16:1,1:1
+read	14	0:1,2:1,1:2,1:10,7:3,2:1,1:2,2:25,5:3,1:3,2:1,1:13,2:4,1:2
+reader	10	0:4,1:2,1:2,1:1,1:4,1:1,2:2,2:1,6:1,13:7
+reading	6	4:3,9:1,3:3,8:1,1:1,2:1
+readm	5	4:1,6:1,5:1,1:1,6:1
+readme	5	4:1,6:1,5:1,1:1,6:1
+readonlyhin	2	16:1,5:1
+readonlyhint	2	16:1,5:1
+reads	7	3:1,1:3,7:2,3:1,2:5,9:4,2:1
+real	10	0:2,2:3,2:1,7:1,4:1,1:4,6:1,1:1,1:1,1:1
+real-corpus	2	0:1,2:1
+rebuil	6	4:1,3:1,9:2,1:1,10:1,1:2
+rebuild	9	4:3,3:1,6:1,1:1,1:1,1:2,1:1,10:1,1:2
+rebuilds	5	4:3,3:1,6:1,1:1,1:1
+rebuilt	2	4:1,3:1
+recal	10	0:2,2:3,2:1,7:1,5:11,2:1,2:6,5:1,1:1,1:2
+recall	10	0:2,2:3,2:1,7:1,5:11,2:1,2:6,5:1,1:1,1:2
+reciproc	4	4:1,3:1,9:1,4:1
+reciprocal	4	4:1,3:1,9:1,4:1
+recommend	2	16:1,6:1
+recommended	2	16:1,6:1
+recomput	1	28:1
+recomputed	1	28:1
+record	1	28:1
+records	1	28:1
+ref	1	15:1
+refer	10	0:1,1:1,3:3,1:1,2:1,2:1,6:3,1:2,1:1,5:1
+referenc	10	0:1,1:1,3:3,1:1,2:1,2:1,6:3,1:2,1:1,5:1
+reference	10	0:1,1:1,3:3,1:1,2:1,2:1,6:3,1:2,1:1,5:1
+reject	2	0:1,2:1
+rejects	2	0:1,2:1
+relat	2	4:1,10:1
+related	2	4:1,10:1
+releas	11	0:2,1:3,2:1,1:10,2:2,4:5,1:1,1:3,4:5,9:1,1:2
+release	9	0:2,1:3,2:1,1:10,2:2,4:5,1:1,1:3,4:2
+released	3	16:3,9:1,1:2
+rem	2	16:1,7:1
+remov	2	0:1,2:1
+removed	2	0:1,2:1
+repeat	2	16:1,9:1
+repeated	2	16:1,9:1
+report	3	4:2,3:1,6:1
+reports	3	4:2,3:1,6:1
+repositori	3	0:1,2:1,13:1
+repository	3	0:1,2:1,13:1
+reproduc	3	15:1,1:1,2:4
+reproduce	3	15:1,1:1,2:4
+reques	2	16:2,9:2
+request	2	16:3,9:3
+requests	2	16:1,9:1
+requir	1	15:1
+requirements	1	15:1
+research	2	0:1,2:1
+respons	3	16:3,2:1,7:2
+response	3	16:3,2:1,7:2
+resul	3	16:3,10:1,1:2
+result	12	0:6,2:6,2:15,5:3,2:12,4:7,1:20,2:4,4:1,3:4,1:1,1:2
+results	10	0:6,2:6,2:15,5:3,2:12,4:7,1:17,2:4,4:1,3:4
+results_pag	5	0:1,2:1,13:1,1:1,2:1
+results_page	5	0:1,2:1,13:1,1:1,2:1
+retr	7	4:2,7:2,5:4,4:4,5:1,1:1,1:1
+retri	1	28:1
+retriev	7	4:2,7:2,5:4,4:4,5:1,1:1,1:1
+retrieval	7	4:2,7:2,5:4,4:4,5:1,1:1,1:1
+retry	1	28:1
+return	5	4:2,3:1,6:1,3:1,3:1
+returned	2	16:1,3:1
+returns	3	4:2,3:1,6:1
+rewrit	2	0:1,2:1
+rewrites	2	0:1,2:1
+righ	2	0:1,2:1
+right	2	0:1,2:1
+rm	3	0:2,1:1,1:1
+rmcp	2	4:1,1:1
+ro	19	0:8,1:1,1:8,2:6,3:2,3:1,1:1,1:1,1:1,2:1,1:16,1:1,2:2,1:4,2:2,1:3,2:1,1:3,2:8
+room	22	0:9,1:1,1:9,2:12,2:1,1:5,3:1,1:1,1:1,1:2,1:1,2:35,1:7,1:3,1:3,1:8,2:3,1:4,2:2,1:3,1:1,1:9
+room-l	7	0:2,2:3,2:1,7:1,5:2,9:1,1:1
+room-level	7	0:2,2:3,2:1,7:1,5:2,9:1,1:1
+rooms	17	0:1,2:1,2:6,2:1,1:3,6:1,1:1,2:19,1:6,1:3,1:1,1:4,2:1,1:1,2:1,2:1,1:1
+root	1	15:1
+rrf	4	0:1,1:1,3:2,1:2
+rs	4	4:2,1:1,5:2,18:1
+ru	9	3:2,1:1,10:1,2:12,7:2,1:1,1:5,1:1,1:3
+rul	3	15:1,1:1,7:1
+rule	3	15:1,1:1,7:1
+run	10	3:2,1:1,10:1,1:1,1:13,7:2,1:2,1:5,1:1,1:3
+runs	3	15:1,1:1,8:1
+rus	11	0:1,2:2,2:5,1:3,5:3,1:1,4:5,1:5,9:2,1:3,2:1
+rust	11	0:1,2:2,2:5,1:3,5:3,1:1,4:5,1:5,9:2,1:3,2:1
+rust-stemm	2	4:1,1:1
+rust-stemmers	2	4:1,1:1
+rust-toolch	2	4:1,6:1
+rust-toolchain	2	4:1,6:1
+rustup	2	4:1,6:2
+s	17	0:8,2:9,2:8,1:4,2:2,3:1,3:1,3:32,1:5,2:2,1:3,1:1,2:1,2:10,1:6,1:3,1:1
+s5	2	0:1,2:1
+saf	2	4:1,3:1
+safe	2	4:1,3:1
+safetensor	3	4:2,1:1,5:1
+safetensors	3	4:2,1:1,5:1
+sam	9	4:6,7:5,3:1,2:11,1:1,6:1,2:5,1:5,2:2
+same	9	4:6,7:5,3:1,2:11,1:1,6:1,2:5,1:5,2:2
+sampl	4	15:5,1:1,1:1,11:2
+sample	4	15:5,1:1,1:1,11:2
+scal	5	0:1,2:1,14:2,2:1,7:1
+scale	5	0:1,2:1,14:2,2:1,7:1
+scale_pr	2	16:1,2:1
+scale_prob	2	16:1,2:1
+scale_probe	2	16:1,2:1
+scan	11	0:4,1:1,1:3,2:2,3:1,6:1,3:5,3:1,4:1,1:1,1:2
+schedul	2	16:1,6:1
+scheduler	2	16:1,6:1
+score	2	16:1,10:1
+scores	2	16:1,10:1
+screenshot	2	4:1,5:1
+screenshots	2	4:1,5:1
+scrip	5	4:1,1:1,10:1,1:2,6:2
+script	6	4:4,1:1,4:3,6:4,1:2,6:2
+scripts	3	4:3,5:3,6:3
+sdk	2	16:1,6:1
+se	8	0:2,3:1,1:4,3:1,1:2,8:2,4:1,4:2
+search	26	0:13,1:4,1:7,2:17,1:2,1:1,1:1,2:1,1:3,1:3,1:1,1:1,1:1,1:1,1:44,1:1,1:1,1:1,1:1,1:3,1:12,1:1,1:1,1:11,1:6,1:3
+search-index	2	16:1,9:1
+searchabl	2	16:1,9:1
+searchable	2	16:1,9:1
+secon	3	16:2,1:1,10:1
+second	3	16:2,1:1,10:1
+sect	10	4:10,3:5,4:1,2:2,1:2,1:2,1:3,4:2,3:1,5:1
+section	18	0:2,2:2,1:1,1:17,3:6,3:1,1:1,2:4,1:5,1:2,1:10,1:1,2:1,1:2,3:2,2:1,1:3,2:1
+sections	14	0:2,2:2,1:1,1:7,3:1,3:1,3:2,1:3,2:7,1:1,2:1,4:1,2:1,1:3
+see	7	0:2,4:4,2:2,2:2,6:2,2:1,4:1
+seed	1	3:1
+seek	2	4:1,3:1
+seen	3	4:2,12:1,8:2
+sees	3	4:3,2:2,8:2
+sem	1	0:2
+semver	1	0:4
+sentenc	2	0:1,2:1
+sentence	2	0:1,2:1
+separ	5	0:1,16:3,1:1,3:1,5:1
+separat	4	16:3,1:1,3:1,5:1
+separate	4	16:3,1:1,3:1,5:1
+separately	1	0:1
+serv	4	0:1,2:1,1:1,25:2
+served	2	3:1,25:2
+server	14	0:3,1:1,1:2,2:6,5:1,2:1,1:1,1:2,1:1,2:5,5:4,3:1,1:2,1:1
+serves	2	0:1,2:1
+servic	2	4:2,10:2
+service	2	4:2,10:2
+sess	6	16:6,3:3,2:1,3:1,2:1,1:1
+session	6	16:6,3:3,2:1,3:1,2:1,1:1
+set	3	16:2,8:1,1:1
+setup	3	15:1,1:1,9:1
+sever	2	16:1,10:1
+several	2	16:1,10:1
+sha	1	28:1
+sha256	1	28:1
+shar	2	4:1,3:1
+share	2	4:1,3:1
+shared	2	4:1,3:1
+shift	1	28:1
+shifted	1	28:1
+ship	1	15:7
+shipp	1	15:7
+shipped	1	15:7
+shor	6	0:1,2:1,2:1,9:1,3:1,10:1
+short	6	0:1,2:1,2:1,9:1,3:1,10:1
+show	5	4:1,2:2,10:4,6:1,3:1
+shows	5	4:1,2:2,10:4,6:1,3:1
+si	4	0:1,1:1,3:1,1:1
+signatu	2	0:1,1:1
+signatur	2	0:1,1:1
+signature	2	0:1,1:1
+sil	2	4:1,4:1
+sim	4	0:1,1:1,3:1,1:1
+similar	2	4:1,3:1
+sinc	2	16:1,8:1
+since	2	16:1,8:1
+singl	2	4:1,3:2
+single	2	4:1,3:2
+siz	6	4:1,10:1,2:4,2:1,7:2,1:1
+size	7	4:1,10:1,2:6,2:2,4:1,3:2,1:1
+sizes	2	16:1,2:1
+sizing	2	16:1,6:1
+skill	9	0:1,2:1,2:1,10:1,2:9,1:4,1:2,2:2,2:2
+skills	7	0:1,2:1,2:1,10:1,2:6,1:4,1:2
+slight	2	16:1,8:1
+slightly	2	16:1,8:1
+small	4	4:1,10:1,2:1,9:1
+smaller	4	0:1,2:1,14:1,10:1
+snowbal	4	4:1,1:1,11:1,4:1
+snowball	4	4:1,1:1,11:1,4:1
+so	9	4:1,9:1,3:6,1:1,1:1,6:1,1:1,1:2,2:4
+so_quest	2	16:1,2:1
+so_questions	2	16:1,2:1
+som	1	28:2
+some	1	28:2
+someon	2	4:1,3:1
+someone	2	4:1,3:1
+sonn	4	16:5,6:1,2:1,1:3
+sonnet	4	16:5,6:1,2:1,1:3
+sourc	4	4:3,3:2,3:2,1:1
+source	4	4:3,3:2,3:2,1:1
+spac	1	28:1
+space	1	28:1
+span	1	28:1
+speak	2	16:1,6:1
+speaks	2	16:1,6:1
+spec	8	0:3,1:1,3:4,3:2,1:1,1:1,6:3,13:1
+spec-kapu	4	0:2,4:3,3:2,1:1
+specif	15	0:10,1:3,1:5,2:5,3:1,1:2,1:1,3:1,2:2,1:1,1:9,7:2,1:1,1:3,1:6
+specifi	2	4:1,3:1
+specificat	14	0:10,1:3,1:5,2:4,4:2,1:1,3:1,2:2,1:1,1:9,7:2,1:1,1:3,1:6
+specification	14	0:10,1:3,1:5,2:4,4:2,1:1,3:1,2:2,1:1,1:9,7:2,1:1,1:3,1:6
+specified	2	4:1,3:1
+spli	1	15:1
+split	3	15:1,1:1,9:1
+split_spec	1	15:1
+splitting	2	16:1,9:1
+spreadsh	2	16:1,6:1
+spreadsheet	2	16:1,6:1
+stac	7	0:1,2:1,2:1,7:1,5:2,9:1,1:1
+stack	7	0:1,2:1,2:1,7:1,5:2,9:1,1:1
+stage	2	4:1,9:1
+staging	2	4:1,9:1
+stal	3	4:1,3:1,21:4
+stale	3	4:1,3:1,21:4
+star	2	4:1,9:1
+start	5	4:2,3:1,6:1,3:1,8:1
+starts	4	4:1,3:1,9:1,8:1
+static	8	0:1,1:1,3:2,1:1,2:1,9:2,4:1,5:1
+status	4	0:1,2:1,2:1,8:4
+stay	5	4:1,3:1,9:2,9:1,1:1
+stays	3	16:2,9:1,1:1
+std	2	0:1,1:1
+std-1	2	0:1,1:1
+stdi	6	0:1,1:1,3:4,1:2,4:1,4:1
+stdio	6	0:1,1:1,3:4,1:2,4:1,4:1
+stem	5	4:2,1:1,2:1,9:1,4:1
+stemmer	2	4:1,1:1
+stemmers	2	4:1,1:1
+stemming	5	4:2,1:1,2:1,9:1,4:1
+step	4	0:1,2:1,14:1,5:1
+still	7	0:2,2:2,2:1,6:1,6:2,8:2,4:1
+stop	4	0:1,2:1,14:1,7:1
+stric	3	3:1,13:1,4:1
+strict	3	3:1,13:1,4:1
+strip	1	3:1
+stripping	1	3:1
+strong	2	16:1,4:1
+structu	3	4:3,5:4,5:2
+structur	3	4:3,5:4,5:2
+structure	3	4:3,5:4,5:2
+studi	6	0:3,2:3,13:2,1:5,2:2,7:6
+study	6	0:3,2:3,13:2,1:5,2:2,7:6
+style	2	16:1,8:1
+sub	3	0:1,2:1,26:1
+sub-door	3	0:1,2:1,26:1
+sub-doors	3	0:1,2:1,26:1
+subgraph	2	4:3,1:3
+sud	2	4:1,2:1
+sudo	2	4:1,2:1
+sum	2	16:1,10:1
+summari	2	16:3,11:4
+summary	2	16:3,11:4
+summing	2	16:1,10:1
+superpow	2	16:1,1:1
+superpowers	2	16:1,1:1
+suppor	2	16:1,1:1
+support	3	16:3,1:1,8:2
+supported	2	16:2,9:2
+svg	3	0:2,2:2,13:2
+synthet	2	4:1,5:1
+synthetic	2	4:1,5:1
+system	2	16:2,9:2
+systems	2	16:1,9:1
+szo	1	28:2
+szoba	1	28:2
+szomszéd	2	16:1,8:1
+szomszédok	2	16:1,8:1
+tabl	6	0:1,2:1,2:1,10:1,2:1,9:1
+table	6	0:1,2:1,2:1,10:1,2:1,9:1
+tag	5	0:1,1:1,3:2,3:1,6:1
+tags	5	0:1,1:1,3:2,3:1,6:1
+tailwin	2	16:1,1:1
+tailwind	2	16:1,1:1
+tak	3	16:2,5:1,5:1
+take	4	16:3,1:1,4:1,5:1
+taking	2	16:1,1:1
+targ	4	3:6,1:5,2:1,4:4
+target	7	0:1,1:1,2:24,1:6,2:1,3:1,1:4
+targets	5	0:1,1:1,2:18,1:1,5:1
+taur	5	0:1,1:1,3:3,1:2,4:1
+tauri	5	0:1,1:1,3:3,1:2,4:1
+technolog	2	4:1,1:2
+technology	2	4:1,1:2
+templat	1	28:1
+template	1	28:1
+ten	3	16:2,6:1,2:1
+ter	7	0:2,1:1,1:1,2:1,1:1,11:1,10:1
+term	8	0:2,1:1,1:1,2:2,1:1,2:1,9:1,10:1
+termin	3	0:1,2:1,13:1
+terminal	3	0:1,2:1,13:1
+terms	2	4:1,3:1
+tes	11	0:1,1:1,2:1,1:3,3:1,2:2,7:4,1:4,8:1,2:2,1:7
+test	13	0:1,1:1,2:2,1:7,3:3,2:3,3:1,3:2,1:4,1:4,8:1,2:2,1:9
+tested	2	4:1,8:1
+tests	6	3:1,1:3,3:2,2:1,6:2,13:2
+tex	16	0:1,2:2,1:1,1:11,1:1,2:5,2:1,2:1,1:1,1:1,1:2,2:5,1:2,3:3,6:1,2:2
+text	16	0:1,2:2,1:1,1:11,1:1,2:5,2:1,2:1,1:1,1:1,1:2,2:5,1:2,3:3,6:1,2:2
+tf	2	0:1,2:1
+than	5	4:1,3:1,9:2,8:1,1:1
+that	13	0:1,2:1,1:1,1:2,3:1,6:1,3:8,2:1,2:2,2:1,3:1,2:2,1:2
+the	28	0:40,1:5,1:32,1:4,1:93,2:3,1:17,1:1,1:7,1:5,1:16,1:13,1:16,1:14,1:18,1:161,1:12,1:4,1:2,1:13,1:5,1:14,1:4,1:8,1:50,1:31,1:18,1:10
+their	11	0:1,2:1,2:5,3:3,6:1,1:2,2:3,1:1,3:1,3:1,5:1
+them	8	0:2,2:2,14:5,1:2,3:1,5:1,1:1,2:3
+then	2	4:1,9:2
+there	5	16:4,1:1,3:2,5:1,1:1
+theref	2	16:1,8:1
+therefor	2	16:1,8:1
+therefore	2	16:1,8:1
+thes	5	16:4,1:1,6:4,2:2,3:3
+these	5	16:4,1:1,6:4,2:2,3:3
+they	3	16:3,4:2,6:1
+thing	3	16:2,6:1,4:1
+things	2	16:1,6:1
+thir	6	4:4,4:3,3:2,5:2,1:2,8:1
+third	6	4:4,4:3,3:2,5:2,1:2,8:1
+third-parti	5	4:4,4:3,3:2,5:1,1:2
+third-party	5	4:4,4:3,3:2,5:1,1:2
+this	10	0:1,2:1,2:2,5:1,1:1,5:1,1:5,1:1,7:1,1:4
+thre	5	4:1,7:1,5:4,9:2,1:3
+three	5	4:1,7:1,5:4,9:2,1:3
+through	3	16:2,3:2,3:1
+tigh	1	3:1
+tight	1	3:1
+tikt	3	4:1,1:1,10:1
+tiktoken	3	4:1,1:1,10:1
+tiktoken-r	2	4:1,1:1
+tiktoken-rs	2	4:1,1:1
+tim	4	3:1,13:3,9:1,1:2
+time	8	0:1,2:1,1:1,1:1,7:1,5:6,9:2,1:4
+times	7	0:1,2:1,2:1,7:1,5:3,9:1,1:2
+tini	2	4:1,5:1
+tiny	2	4:1,5:1
+titl	5	0:1,2:1,14:1,4:1,8:3
+title	5	0:1,2:1,14:1,4:1,8:3
+to	14	0:9,2:9,2:9,3:2,3:1,1:1,2:4,1:2,2:12,6:2,1:5,2:3,1:3,2:1
+tok	13	0:4,1:3,1:1,2:9,1:1,2:2,5:1,1:1,1:2,2:4,8:1,1:2,1:1
+token	21	0:6,1:3,1:4,2:24,1:2,2:5,3:1,1:4,1:1,1:1,1:3,2:43,1:1,2:1,3:1,1:5,1:1,1:19,1:3,1:7,1:1
+tokenizer	2	4:1,6:1
+tokenizers	2	4:1,1:1
+tokens	15	0:2,2:3,2:13,3:3,4:4,3:1,2:39,1:1,2:1,3:1,1:5,2:17,1:2,1:7,1:1
+toler	1	3:1
+toleran	1	3:1
+tolerant	1	3:1
+toml	2	4:1,6:1
+took	2	16:1,7:1
+tool	21	0:18,1:1,1:12,2:10,1:1,2:2,2:2,1:2,3:3,2:13,1:25,1:1,1:4,1:1,2:4,1:4,2:1,1:2,1:2,1:3,1:3
+toolch	2	4:2,6:2
+toolchain	2	4:2,6:2
+tools	18	0:16,2:11,2:8,1:1,2:2,2:1,1:2,3:2,2:13,1:18,1:1,1:4,1:1,2:2,1:3,3:2,2:2,1:3
+top	3	16:3,4:2,5:1
+topic	4	4:1,10:1,2:2,6:2
+topics	2	16:1,6:1
+total	8	0:2,2:2,1:1,13:5,3:2,3:1,1:1,2:1
+totals	6	0:2,2:2,14:4,3:2,4:1,2:1
+trac	2	16:1,4:1
+track	2	16:1,4:1
+trail	1	28:1
+trailing	1	28:1
+tri	4	4:1,3:1,9:1,10:1
+tries	2	4:1,3:1
+tru	2	0:1,2:1
+true	2	0:1,2:1
+truth	2	4:1,3:1
+try	2	16:1,10:1
+tur	2	4:1,10:1
+turn	4	4:1,10:1,2:1,2:1
+turns	2	16:1,2:1
+two	4	15:1,1:3,6:2,1:1
+txt	6	0:1,2:1,13:1,1:2,8:1,1:1
+type	2	16:1,6:1
+typescrip	2	16:1,6:1
+typescript	2	16:1,6:1
+u	2	0:4,2:4
+ui	3	4:2,4:1,1:1
+unchang	4	0:3,2:3,14:2,10:2
+unchanged	4	0:3,2:3,14:2,10:2
+under	6	0:1,2:1,14:3,7:1,3:1,1:1
+unescap	1	3:1
+unescape	1	3:1
+unexpect	2	4:1,3:1
+unexpected	2	4:1,3:1
+unit	2	16:3,9:1
+units	2	16:3,9:1
+unknow	3	3:1,13:1,5:1
+unknown	3	3:1,13:1,5:1
+unreleas	2	0:1,2:4
+unreleased	2	0:1,2:4
+unsaf	2	4:1,1:1
+unsafe	2	4:1,1:1
+until	3	4:2,3:1,7:1
+untouch	1	28:1
+untouched	1	28:1
+up	2	16:1,7:1
+uppercas	1	28:1
+uppercase	1	28:1
+us	9	4:6,6:1,2:1,1:8,2:2,1:3,8:1,3:1,1:1
+use	14	0:1,2:2,2:9,6:1,2:1,1:8,1:1,1:2,1:5,8:1,1:1,1:1,1:1,1:1
+use-it-from-claude-cod	2	4:1,6:1
+use-it-from-claude-code	2	4:1,6:1
+used	4	15:1,1:1,8:1,4:1
+usef	2	4:1,10:1
+useful	2	4:1,10:1
+uses	5	0:1,2:2,14:2,9:1,1:1
+using	1	4:2
+utf	4	4:3,1:1,2:2,7:1
+utf-8	4	4:3,1:1,2:2,7:1
+v	8	0:9,1:3,1:4,14:14,7:1,1:2,1:1,1:11
+v0	2	0:1,1:1
+v1	8	0:8,1:2,1:4,14:14,7:1,1:2,1:1,1:11
+val	1	28:1
+valid	9	0:2,1:2,2:2,1:2,1:1,4:1,7:1,2:1,10:1
+validat	5	0:1,1:1,2:2,13:1,2:1
+validate	5	0:1,1:1,2:1,13:1,2:1
+validation	1	3:1
+validator	5	0:1,1:1,3:2,1:1,4:1
+vec	4	0:1,2:1,2:1,1:1
+vecs	2	0:1,2:1
+vecs2	2	0:1,2:1
+vector	19	0:5,1:2,1:4,1:2,1:10,1:1,2:6,2:1,5:2,1:6,1:24,1:1,3:2,1:1,3:1,1:6,1:10,1:1,1:14
+vectors	13	0:2,1:1,1:1,1:2,1:7,1:1,2:5,2:1,6:5,1:6,9:1,1:5,2:14
+venv	1	15:4
+ver	1	0:2
+veri	2	4:1,8:1
+verifi	2	16:1,6:2
+verifiabl	2	16:1,6:2
+verifiable	2	16:1,6:2
+vers	6	0:3,1:1,15:6,1:1,5:2,3:1
+version	6	0:7,1:1,15:6,1:1,5:2,3:1
+versioned	1	0:2
+versioning	1	0:2
+very	2	4:1,8:1
+vi	1	15:1
+via	1	15:1
+view	2	0:1,1:1
+visibl	2	16:1,9:1
+visible	2	16:1,9:1
+vocabulari	1	15:1
+vocabulary	1	15:1
+wai	2	16:1,10:1
+wait	2	16:1,10:1
+wan	2	4:1,9:1
+want	2	4:1,9:1
+war	2	0:1,2:1
+warn	7	0:1,2:1,2:2,3:2,9:5,1:1,6:4
+warnings	3	16:5,1:1,6:4
+warns	2	4:2,3:2
+was	3	16:3,9:1,1:2
+way	2	4:1,2:2
+we	7	4:1,9:1,3:4,1:1,5:1,2:2,1:1
+weaker	2	16:1,9:1
+web	6	4:2,2:1,5:1,5:3,1:2,8:1
+webkitgt	2	4:1,2:1
+webkitgtk	2	4:1,2:1
+well	2	16:1,9:1
+well-know	2	16:1,9:1
+well-known	2	16:1,9:1
+were	5	16:4,1:1,5:1,2:2,1:1
+what	9	3:1,1:8,9:2,1:4,2:5,3:4,6:2,2:2,1:2
+whe	7	0:1,2:1,2:1,3:1,9:2,4:1,4:1
+when	7	0:1,2:1,2:1,8:1,4:2,4:1,2:1
+where	7	0:1,2:1,2:1,3:1,9:2,4:1,4:1
+whi	2	4:1,10:4
+which	6	4:2,6:1,4:1,2:2,6:1,5:1
+whil	3	4:2,12:1,5:1
+while	3	4:2,12:1,5:1
+who	2	16:1,8:2
+whol	10	3:6,1:5,7:1,3:2,2:8,1:1,3:2,1:1,2:1,2:3
+whole	10	3:6,1:5,7:1,3:2,2:8,1:1,3:2,1:1,2:1,2:3
+whos	3	16:2,8:1,1:1
+whose	3	16:2,8:1,1:1
+why	2	4:1,10:4
+window	15	0:7,1:4,1:5,2:13,1:3,1:5,1:1,2:1,2:1,1:4,2:1,1:1,1:9,10:6,1:1
+windows	9	0:3,1:2,1:1,2:4,1:1,6:1,1:2,3:1,1:2
+with	22	0:8,1:5,1:3,1:1,1:18,1:4,2:6,3:2,1:2,2:1,1:2,1:2,1:36,1:3,2:1,1:1,1:1,1:2,3:8,1:9,1:5,1:3
+within	2	0:1,2:1
+withou	9	3:1,1:3,6:1,3:1,1:1,2:2,6:1,3:1,3:2
+without	9	3:1,1:3,6:1,3:1,1:1,2:2,6:1,3:1,3:2
+wor	6	0:1,2:1,2:1,3:1,9:1,9:1
+word	7	0:4,2:4,2:1,3:1,9:2,7:1,2:1
+words	4	0:3,2:3,14:1,7:1
+work	8	4:5,3:4,3:1,2:2,1:1,1:2,2:1,4:1
+workflow	4	0:1,1:1,3:1,8:1
+working	4	4:3,8:2,1:1,1:2
+works	5	4:2,3:4,3:1,6:1,4:1
+wrapper	2	16:1,8:1
+writ	7	0:2,1:1,1:1,2:1,9:1,3:1,5:1
+write	10	0:2,1:1,1:1,2:2,3:1,6:1,2:2,1:2,2:1,3:1
+writes	3	15:2,1:1,2:1
+writing	2	4:1,3:1
+writt	4	0:1,2:1,14:1,8:2
+written	4	0:1,2:1,14:1,8:2
+wrong	1	28:2
+wrot	2	16:1,1:1
+wrote	2	16:1,1:1
+x	1	28:1
+yak	4	0:1,1:1,3:1,1:1
+yake	4	0:1,1:1,3:1,1:1
+yes	5	4:2,10:2,2:13,6:10,4:3
+yet	2	16:1,8:1
+yiel	2	16:1,6:1
+yield	2	16:1,6:1
+you	3	4:2,9:1,1:1
+your	2	4:1,6:1
+#END
+#DOCS
+changelog	@14+4961	b3:2750f2f0967f774edbc6c81f29cdf808c1c858bc6e82c442dd32489927831dd0	dl=1033	c=4961
+changelog/0-1-0-2026-10-23	@3694+1281	b3:d1ecda54e374a9a73bc7c8c60e02b6f2f9aec2e3de374738278849f4c38933b0	dl=284	c=1281
+changelog/unreleased	@250+3444	b3:812a97df823ae9a526f696076fa7104f5a288bec5d345d11bfe8e8b5c475002b	dl=714	c=3444
+fuzzing	@4988+1012	b3:3cf366bafe8c4832bccbf96877b5a49b8b892aad6024ae2155d6e49cdb365f3a	dl=255	c=1012
+overview	@6014+10271	b3:37ac9a809ce8a7f670a5a931b93ca8afabc96ff0170dc54290a3b4df7664e873	dl=1799	c=10181
+overview/architecture	@13327+1284	b3:8c1e30cc7fd4dc8391f79b0df9f4d7558e475982f77380fc7b88e899aff66b59	dl=217	c=1284
+overview/desktop-window	@13009+318	b3:b1ca9c2b178a088a104e8791cff7bfa596f9366f37854dc8d882a6bb474039c7	dl=85	c=318
+overview/how-it-works	@11110+1899	b3:6184c8f1d9293b5ecc1a86e13d056572362bb0bfcaaf1b7a41c4ef7ed5756a77	dl=346	c=1899
+overview/license	@16063+222	b3:75ff48c3a380de90e38cbe67299a8c03c50fc46e262a098cbf3f6c5afedab411	dl=53	c=222
+overview/project-structure	@14611+946	b3:ff228ce9b1b6f492407ef10ea7a236b579f43d2e350b39006e3b8dc8114cc363	dl=119	c=858
+overview/quickstart	@8988+1122	b3:1cf7317a67e54fda32b90071cc5b95b83ac5fd1ddf21792fcd15714015410015	dl=207	c=1122
+overview/results	@6326+1366	b3:6ae5183ef9f5af1f752aaf4c975be00bc54e85975da0740318a6b0bbfcea1892	dl=248	c=1364
+overview/status	@15557+506	b3:d4679c0464c23c0afa3d49c731f606b312f9cf3670f71f1da912b7453f3850bd	dl=102	c=506
+overview/use-it-from-claude-code	@10110+1000	b3:521f2b61377b536ac6369990ead75f9aec5fa1737c49ac8acb2ca8fccd3ece79	dl=200	c=1000
+overview/why	@7692+1296	b3:94a869381a43785dc8116574ac760d5011eb3e1f2bab0f350008cae0eea1b78e	dl=237	c=1296
+python-tools	@16303+1473	b3:d4bde4bc53fa99f60ecffd3eea079c9527efc08a885a71ac3474d70d52ad1289	dl=347	c=1473
+results	@17789+16902	b3:41445bb5cad641027d92c98b92d56e394bc000b0d4ddea032595fbf2e4cd65e1	dl=3243	c=16838
+results/1-test-corpus	@19483+1244	b3:fde258fc14b2e00112ad6ca9ef6d26654b27c8d454efe74597ccc5588ff30f0e	dl=230	c=1244
+results/10-reproduce	@33844+847	b3:268256d5d2d941dccedc26b16f84c601487b88621d447e29a0f9ec015a354807	dl=153	c=847
+results/2-what-an-agent-pays	@20727+623	b3:6339208727a073329a8ee1f7a6feffdd28474f798c9805c93e3b5b6a5689da6e	dl=136	c=623
+results/3-retrieval-quality	@21350+1316	b3:54cf00e191b735f3962cae0a90d250dc50bb2ebf01ae364a075f0fba59d7f908	dl=242	c=1316
+results/4-mcp-server	@22666+639	b3:8af59684e92e4537c1659e4f47d680952b8d628cee2f0271e3e80d51802730b0	dl=136	c=639
+results/5-live-evaluation	@23305+1461	b3:87bd7d5cac302e25f9a43c18b8606805a25f8db581566ae954498059cd86d9ef	dl=257	c=1461
+results/6-changes-made-from-these-measurements	@24766+969	b3:9bcd5b7e74296d4e317c8ea99e015b6969a4d9f7bd9c9ca14127c89760973c01	dl=209	c=969
+results/7-limitations	@25735+755	b3:cc84da01621b94c8e2af836bd93c247184b13b74337f8f88f9f5d0e1fffab439	dl=153	c=753
+results/8-pilot-on-public-documentation	@26490+4404	b3:444fc72b1b2b10b7595a02bf59cb1d5bbaf3f6a0b86fc4b1750120ddf2695c3b	dl=845	c=4404
+results/9-file-format-1-1-specification-v1-1	@30894+2950	b3:2a3ce6258d63aeac7f5cf81c7f42be953d3358745dd3f8ff862abd989535c22e	dl=648	c=2888
+results/summary	@18370+1113	b3:58ec00b23193afad92eac833932e7e34c7de86f14f2ec944791463f6a953ad03	dl=210	c=1113
+test-vectors	@34709+2301	b3:1018ecb37f2a841221f4637d8f8082e0ea2cda2f27e5909ee49a64e565ac0353	dl=535	c=2301
+#END
+#BODY
+@@@ changelog
+# Changelog
+
+Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
+The file format has its own version (`%KAPU 1.1`, see `SPEC-KAPU.md`); the tools below are versioned separately.
+
+## [Unreleased]
+
+### Changed
+- Search by meaning uses one vector per window of a door's text (at most 512 tokens, overlapping by an eighth); the best window counts (D141). Room-level recall@10 on real questions, hybrid: Rust book 0.46 to 0.49, Kubernetes docs 0.44 to 0.46; on MDN, with its many short sections, 0.28 to 0.27. The vector cache (`.vecs2`) keeps the windows of unchanged doors after a write, and `kapu import`, `build`, `add` and `rm` compute them right away.
+- File format 1.1 (specification v1.1, D140): an `#INDEX` posting is `<gap>:<tf>`, the gap between the doors' line numbers in `#DOCS`, instead of the door id. Files are about 4.5 times smaller (Kubernetes docs: 117 MB to 26 MB, MDN: 542 MB to 128 MB) and the 13-million-token MDN corpus builds within the 1 MiB line limit. Format 1.0 files are still read; `kapu build` rewrites them as 1.1.
+- Specification v1.0.5 (D139): one call parses and checks the file once, a term's `#INDEX` line is found by binary search, and the MCP server keeps a checked copy of an unchanged file. Search on the Kubernetes docs: 657 ms to 19 ms (median), on MDN 3.2 s to 158 ms; opening a door: 216 ms to 5 ms.
+- Specification v1.0.4 (D131-D138): group names leave out parameter-table words; the search excerpt prefers rarer query words; the map's totals line names the content language (`lang=`) and the guide asks for queries in that language; at most 10 content-scan lines on the map (`scan=true` lists all); `kapu_open` serves long doors in parts (`max_tokens`, `part`); the MCP server keeps unchanged files and door vectors in memory.
+- Specification v1.0.2: in-page anchors link to the room's own sections and no longer warn (D123); group names leave out stop words (D121).
+- `kapu-mcp`: tool annotations, at most 50 hits, a next step in every error (D120); an excerpt line under each search hit (D124); a group lists its rooms only and `room=` lists one room's sub-doors (D125); at most 8 neighbours per opened door (D126); a totals line on the map (D127).
+
+### Removed
+- The internal planning documents (status log, decision log, open questions, milestone plan, research plans, early concept archive) left the repository; decisions are still cited by their D-numbers in the specification and the code.
+
+### Fixed
+- Invisible characters (U+200B-U+200D, U+2060, U+FEFF) in a room's title or first sentence no longer produce a file the reader rejects (D135).
+- `kapu ... | head` no longer panics when the reader closes the pipe early (D138).
+- The S5 content scan no longer matches a command name inside another word (`async`, `confirm`) (D122).
+
+### Added
+- `examples/kapu-docs.kapu`: this documentation as a KAPU file, the quickstart example (`tools/make_examples.py`).
+- The results page `docs/results/index.html` (English and Hungarian, written by `tools/study/results_page.py` from `bench/results/`) and the animated terminal demo `docs/assets/demo.svg` (`tools/make_demo_svg.py`).
+- Real-corpus measurements: `bench/RESULTS.md`, `bench/results/`.
+- `kapu bench --json`: room-level recall@5/10 and MRR@10, where any door of the expected room is a hit (D130).
+- Study pilot tools in `tools/study/`: corpus preparation from public documentation, Stack Overflow questions with a gold page, chunk-RAG baselines, scale probe, logged file-search, llms.txt and RAG tools for agents.
+- Tools: `tools/collect_skills.py`, `tools/mcp_probe.py`, `tools/kapu_mcp_call.py`, `tools/mcp_eval.py`.
+
+## [0.1.0] - 2026-10-23
+
+First portfolio release. Specification v1.0.1, milestones M0-M7 and M10 done, M8 and M9 in part.
+
+### Added
+- `kapu-core`: reader, validator (error codes E001-E012), builder with BM25 index, token prices (o200k_base), YAKE tags, BLAKE3 fingerprints, graph (`link`, `term`, `sim` edges), Leiden groups and hybrid search (BM25 + static embeddings, RRF).
+- `kapu` command line tool: `new`, `import`, `export`, `add`, `rm`, `build`, `map`, `search`, `describe`, `open`, `validate`, `bench`; every command with `--json`.
+- `kapu-mcp`: MCP server over stdio with `kapu_map`, `kapu_search`, `kapu_describe`, `kapu_open`, `kapu_write`, the std-1 guide and the content scan (FR-19).
+- `kapu-gui`: desktop window (Tauri 2) with the map and token prices, room reader, search with a token budget, graph view and file checks.
+- Demo file `examples/kapu-spec.kapu`: the specification packed as a KAPU file.
+- Author signature `psz // v0.1.0`: last line of `kapu --help`, app info card on `--version` and in the window.
+- Packed vector model: `potion-multilingual-128M` in int8 (124 MB), portable Windows package, draft release workflow for Linux and macOS.
+- Byte-level Python reference builder, test vectors, cross-checks, fuzz targets, CI on Windows, Linux and macOS.
+
+@@@ fuzzing
+# Fuzz targets (NFR-03/5)
+
+`cargo-fuzz` (libFuzzer) targets for every parser of `kapu-core`. The goal is
+that no input, however broken, makes the library panic, overflow or read out
+of bounds: every input must end in `Ok` or an `Err` with an FR-20 code.
+
+| Target | What it feeds |
+|---|---|
+| `header` | any bytes into `Header::parse` |
+| `sections` | whole file, strict and tolerant, tight limits, door reads |
+| `docs` | `#DOCS` lines, unescape, comment stripping, served text |
+| `catalog` | `#MAP`, `#DESC`, `#GRAPH` line parsers |
+| `validate` | whole file, basic and full validation |
+| `reader` | whole file, open every door plus unknown ids, describe, frame |
+
+Run (nightly is needed only here; the seed corpus is the M1 test vectors):
+
+```
+mkdir fuzz/corpus/<target>; cp tests/vectors/*.kapu fuzz/corpus/<target>/
+cargo +nightly fuzz run <target> fuzz/corpus/<target> -- -max_total_time=3600
+```
+
+Release gate: one hour per target without a finding.
+`fuzz/corpus` and `fuzz/artifacts` are git-ignored.
+
+@@@ overview
+# KAPU overview
+
+> On a 207,000-token manual the model had never seen, Claude agents using KAPU answered **12 of 12** beginner questions while reading **4,104 tokens** per question: **half** of what the same agents read with grep over the Markdown file, and **2%** of pasting the whole manual into the context.
+
+## Results
+
+The same 12 questions about the PixelLab documentation (third-party, not published), the same prompt for every format, three blind judges checking every claim against the documentation:
+
+| How the agent got the knowledge | Tokens read per question (median) | Correct of 12 |
+|---|---:|---:|
+| **KAPU** (map, search, open) | **4,104** | **12** |
+| One Markdown file, grep and line reads | 8,280 | 12 |
+| The same text as a PDF, search and page reads | 8,207 | 11 |
+| The whole file pasted into the context | 206,899 | – |
+
+On public documentation with real Stack Overflow questions (format 1.1, one Windows 11 machine, release build):
+
+| Corpus | Knowledge | `.kapu` file | Search | Open a section | Retrieval: KAPU / chunked BM25 |
+|---|---:|---:|---:|---:|---:|
+| Rust book | 0.3 M tokens | 2.2 MB | 13 ms | 2 ms | 0.49 / 0.49 |
+| Kubernetes docs | 3.9 M tokens | 26 MB | 19 ms | 5 ms | 0.46 / 0.45 |
+| MDN Web Docs | 13.0 M tokens | 128 MB | 158 ms | 44 ms | 0.27 / 0.30 |
+
+Retrieval is room-level recall@10: the page the accepted answer links to is among the first 10 hits. Times are medians over the MCP server. Full results with charts, method and limits: **[results page](https://piszabolcs.github.io/kapu/results/)** ([source](docs/results/index.html)) and [bench/RESULTS.md](bench/RESULTS.md); raw numbers in [bench/results/](bench/results/).
+
+## Why
+
+AI agents get their working knowledge as Markdown: a manual, a specification, a library of skills, project notes. Pasting all of it costs tokens on every turn and pushes the useful part out of the context window. A vector database needs a server and an embedding service, cuts the text into chunks and loses the structure. Many small files lose the overview, and the agent has to guess which one to read.
+
+KAPU keeps the Markdown as it is and adds, in the same file, a map of every section with its token price, a search index, a graph of related sections and fingerprints. The agent sees the table of contents first and pays only for what it opens.
+
+| | A folder of Markdown | Vector database / RAG | KAPU |
+|---|---|---|---|
+| What you run | nothing | a database and an embedding service | one binary; the 124 MB embedding model is optional and offline |
+| What the agent sees first | file names | nothing until it queries | a map with every section and its token price |
+| What the agent reads | whole files, or grep lines without context | chunks cut at a fixed size | whole sections it picks |
+| Structure | files and headings | lost in the chunks | rooms, sections, links and topic groups |
+| In git | yes | no, a binary index | yes: one UTF-8 text file, byte-identical rebuilds |
+
+## Quickstart
+
+Build from source with [Rust](https://rustup.rs) (the toolchain is pinned in `rust-toolchain.toml`):
+
+```bash
+git clone https://github.com/piszabolcs/kapu.git
+cd kapu
+cargo build --release -p kapu-cli -p kapu-mcp
+```
+
+Look around in the example, which is this project's own documentation as a KAPU file:
+
+```bash
+target/release/kapu map examples/kapu-docs.kapu
+target/release/kapu search examples/kapu-docs.kapu "how do I connect it to Claude Code" --k 3
+target/release/kapu open examples/kapu-docs.kapu overview/use-it-from-claude-code
+```
+
+Make your own from a folder of Markdown files (one room per file, `##` headings become sections):
+
+```bash
+target/release/kapu import ./my-notes notes.kapu
+```
+
+Search by meaning is optional. For it, download [`minishlab/potion-multilingual-128M`](https://huggingface.co/minishlab/potion-multilingual-128M) (`config.json`, `README.md`, `tokenizer.json`, `model.safetensors`) into `models/potion-multilingual-128M` and make the int8 copy the tools look for: `python tools/quantize.py models/potion-multilingual-128M`. Without it, keyword search (BM25) still works.
+
+## Use it from Claude Code
+
+```bash
+claude mcp add kapu -- /path/to/kapu-mcp
+```
+
+Then ask, for example: "Use `notes.kapu` to answer: how do we deploy the staging server?" The server gives the agent five tools:
+
+| Tool | What it returns |
+|---|---|
+| `kapu_map` | the map: groups, rooms and their token prices, the content language, a short guide on first use |
+| `kapu_search` | the best sections for a query, each with its price and the line that matched |
+| `kapu_describe` | the description and tags of a section, without opening it |
+| `kapu_open` | the text of a section, framed so it cannot pose as instructions; long sections in parts |
+| `kapu_write` | adds a room from Markdown, rebuilds the file and reports what the content scan found |
+
+For Claude Desktop or another MCP client, start `kapu-mcp` over stdio; `KAPU_MODEL_DIR` points it at the model folder. Keep the `.kapu` file outside the agent's working directory if you want it to use the tools instead of reading the file directly.
+
+## How it works
+
+A `.kapu` file is plain UTF-8 text. The Markdown body is the single source of truth; every other section is rebuilt from it, byte for byte, by `kapu build`.
+
+```text
+%KAPU 1.1          512-byte header: where each section starts, fingerprints, counts
+#MAP    ... #END   groups and doors (rooms and their sections) with token prices
+#DESC   ... #END   one-line descriptions and tags
+#GRAPH  ... #END   links, shared rare terms and similar meaning between doors
+#INDEX  ... #END   BM25 index; postings are positions in #DOCS, not ids
+#DOCS   ... #END   byte offset, length, BLAKE3 fingerprint and word count of every door
+#BODY              the Markdown rooms, one after the other
+```
+
+- **Map first.** Even for 13 million tokens of documentation the map is about 2,000 tokens: groups (Leiden clusters named by their keywords) and their rooms with prices.
+- **Hybrid search.** BM25 with English and Hungarian stemming, plus a static multilingual embedding model with one vector per 512-token window of a section, merged with reciprocal rank fusion.
+- **Opening is a seek.** The reader jumps to the byte offset in `#DOCS`, checks the section's fingerprint and returns its text. A section longer than 2,000 tokens comes in parts.
+- **Edits stay safe.** If someone edits the body by hand, the fingerprints no longer match; the reader notices, rebuilds the positions from the room markers and reports a stale index until the next build.
+- **Content scan.** Writing a room warns about text that tries to override an agent's instructions, hidden characters, long encoded blocks and unexpected download commands. It warns, it does not block.
+
+The format is specified in [SPEC-KAPU.md](SPEC-KAPU.md) (in Hungarian for now), with test vectors for every error code in [tests/vectors](tests/vectors) and a byte-level Python reference builder in [tools/build_vectors.py](tools/build_vectors.py).
+
+## Desktop window
+
+`kapu-gui` shows a file the way an agent sees it: map, rooms, search, graph and checks.
+
+```bash
+cargo build --release -p kapu-gui
+target/release/kapu-gui examples/kapu-docs.kapu
+```
+
+On Linux the window needs WebKitGTK: `sudo apt install libwebkit2gtk-4.1-dev libxdo-dev libssl-dev librsvg2-dev`.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Input
+    MD["Markdown files"]
+    MOD["potion-multilingual-128M (int8, optional)"]
+  end
+  subgraph Core["kapu-core"]
+    B["Builder: index, prices, graph, groups"]
+    F[".kapu file"]
+    R["Reader and validator"]
+    S["Hybrid search (BM25 + window vectors, RRF)"]
+  end
+  subgraph Tools
+    CLI["kapu (CLI)"]
+    MCP["kapu-mcp (stdio)"]
+    GUI["kapu-gui (Tauri)"]
+  end
+  AG["AI agent"]
+  MD --> B --> F --> R --> S
+  MOD --> B
+  MOD --> S
+  R --> CLI & MCP & GUI
+  S --> CLI & MCP & GUI
+  MCP --> AG
+```
+
+| Layer | Technology |
+|---|---|
+| Language | Rust 1.99 (edition 2024), no `unsafe` |
+| File format | UTF-8 text, 512-byte header, BLAKE3 fingerprints, token prices with `tiktoken-rs` (o200k_base) |
+| Search | BM25 with Snowball stemming (`rust-stemmers`), Model2Vec static embeddings (`tokenizers`, safetensors), RRF |
+| Graph and groups | `link`, `term` and `sim` edges, own Leiden implementation (checked against `leidenalg`), YAKE group names |
+| Agent interface | MCP over stdio with `rmcp` |
+| Command line and window | `clap` 4; Tauri 2 with plain HTML, CSS and JavaScript |
+| Quality | clippy pedantic, cargo-deny, cargo-audit, cargo-fuzz, CI on Windows, Linux and macOS, a byte-level Python reference builder |
+
+## Project structure
+
+```text
+kapu/
+├── crates/
+│   ├── kapu-core/    format, builder, reader, validator, search, graph, groups
+│   ├── kapu-cli/     the `kapu` command line tool
+│   ├── kapu-mcp/     the `kapu-mcp` MCP server (stdio)
+│   ├── kapu-gui/     the `kapu-gui` desktop window (Tauri, ui/ is the interface)
+│   └── kapu-bench/   synthetic corpus generator and measurements
+├── examples/         kapu-docs.kapu (this documentation), kapu-spec.kapu (the specification)
+├── tests/            test vectors, one file per error code; the tiny test model
+├── bench/            RESULTS.md and the raw results as JSON
+├── docs/             results page, logo, screenshots, demo
+├── fuzz/             cargo-fuzz targets
+├── tools/            Python reference builder, quantizer, measurement scripts
+└── scripts/          check, fuzz and package scripts
+```
+
+## Status
+
+KAPU is a working pre-release: the format, the command line, the MCP server and the Windows window are in daily use; the measurements above are a pilot, not a benchmark.
+
+- [ ] Prebuilt binaries for Windows, Linux and macOS from the release workflow
+- [ ] The specification in English
+- [ ] Paging for the room list of very large groups (13M-token corpora)
+- [ ] Better search when the question and the text are in different languages
+- [ ] The desktop window tested by hand on Linux and macOS
+
+## License
+
+Code: MIT, see [LICENSE](LICENSE). Specification (`SPEC-KAPU.md`): CC BY 4.0. Fonts in `crates/kapu-gui/ui/fonts`: SIL Open Font License 1.1. Third-party crates and the model: [THIRD-PARTY.md](THIRD-PARTY.md).
+
+@@@ python-tools
+# Developer-only tools (not shipped)
+
+- `build_vectors.py`: builds `tests/vectors/` (the M1 sample file, one invalid
+  file per error code, two reader edge cases and `expected.json`). It is the
+  executable reference for every byte-level rule the spec leaves open
+  (decisions D56-D66); the Rust builder must reproduce `minta.kapu` byte
+  for byte (M3 check).
+- `blake3_ref.py`: pure-Python BLAKE3 reference used by the script.
+- `crosscheck.py`: builds a Markdown folder with the reference and compares it,
+  section by section, with the Rust build.
+- `quantize.py`: makes the int8 copy of the vector model the tools look for.
+- `make_examples.py`: rebuilds `examples/kapu-docs.kapu` (this documentation)
+  and `examples/kapu-spec.kapu` (the specification, via `split_spec.py`).
+- `make_demo_svg.py`: writes `docs/assets/demo.svg`, the animated terminal in
+  the README, from real `kapu map`, `search` and `open` output.
+- `study/`: the measurement scripts of `bench/RESULTS.md` chapters 8 and 9;
+  `study/results_page.py` writes `docs/results/index.html` from the results JSON.
+- `mcp_probe.py`, `mcp_eval.py`, `kapu_mcp_call.py`: MCP latency, isolated
+  agent runs and a logged one-call client for agents.
+
+Setup (Windows, from the repository root):
+
+```
+py -3.13 -m venv tools/.venv
+tools/.venv/Scripts/python -m pip install -r tools/requirements.txt
+tools/.venv/Scripts/python tools/build_vectors.py
+```
+
+`tiktoken` downloads the `o200k_base` vocabulary on first use.
+
+@@@ results
+# KAPU measurements
+
+English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file; chapter 9 measures it again with file format 1.1. The [results page](../docs/results/index.html) shows the pilot and format 1.1 with charts.
+
+- **Date:** 2026-10-23
+- **Version:** tools 0.1.0 with specification v1.0.2
+- **Machine:** Windows 11 Pro, release build (`lto`, `codegen-units = 1`)
+- **Vector model:** `potion-multilingual-128M`, int8 (124 MB)
+
+## Summary
+
+| What | Result |
+|---|---|
+| Knowledge in the test file | 2.35 million characters, 573,733 tokens of Markdown, 244 rooms |
+| Live run: Claude agents that could only use the KAPU tools | 10 of 10 questions answered correctly |
+| Tokens an agent read per question in the live run (median) | 842 (1.5 tool calls) |
+| Map call, the agent's first look at the file | 220 tokens (777 on the first call of a session, with the guide) |
+| Search with 5 hits and an excerpt line under each (median) | 333 tokens, 280 ms |
+| Retrieval, 77 English questions, hybrid search | recall@5 0.84, recall@10 0.90, MRR@10 0.67 |
+| Build with the vector model / full check with rebuild | 4.6 s / 3.3 s; the second build is byte-identical |
+
+An agent never reads the `.kapu` file itself: 33.0 million characters, 9.8 million tokens, 90% of it the search index that the tools read. The fair comparison is with the knowledge itself, the 573,733 tokens of Markdown, which do not fit into any current context window. In the live run an agent found its answer after reading a median of 842 tokens, about 1/680 of the knowledge.
+
+## 1. Test corpus
+
+A local corpus, not published, because most of it is third-party text:
+
+- **216 rooms:** the Claude skills installed on the author's machine. These are Anthropic's skills, the superpowers, Figma and claude-md-management plugins, and the author's own skills, each as a room, with its reference documents as separate rooms. `tools/collect_skills.py` collects them, taking the newest version of each plugin.
+- **28 rooms:** modern frontend sample code (CSS, the web platform, React 19, Tailwind 4, accessibility, performance). An agent wrote them, checking browser support against MDN, web.dev and caniuse.
+
+Hungarian rooms were left out, so this measures an English knowledge file with English questions.
+
+| Part of the file | Characters | Tokens (o200k_base) |
+|---|---:|---:|
+| Body: the Markdown knowledge | 2,350,156 | 573,733 |
+| Map, descriptions, graph, positions | 1,056,712 | 347,852 |
+| Search index | 29,569,515 | 8,887,658 |
+| Whole `.kapu` file | 32,976,901 | 9,809,442 |
+
+Build: 244 rooms, 1,916 doors (rooms and their `##` sections), 10 groups, 4.6 s with the vector model. A second build gives the same bytes, the full check (fingerprints plus a rebuild comparison) passes in 3.3 s, and there are no warnings.
+
+## 2. What an agent pays
+
+Measured through the official Python MCP client in one session (`tools/mcp_probe.py`):
+
+| Call | Tokens returned |
+|---|---:|
+| `kapu_map`, first call of a session (guide, totals line, 10 groups, content-scan notes) | 777 |
+| `kapu_map`, later calls (totals line and 10 groups) | 220 |
+| `kapu_map group=...`, one group's rooms | 399 - 2,005 (all 10 groups: 9,698) |
+| `kapu_map room=...`, one room's sections | 760 (example) |
+| `kapu_search`, 5 hits with excerpts (median / p90) | 333 / 382 |
+| `kapu_open`, one door (median / p90) | 1,655 / 5,401 |
+| `kapu_describe`, one door (median) | 53 |
+
+## 3. Retrieval quality
+
+There are 77 English questions:
+
+- 49 point at skill rooms and 28 at frontend rooms.
+- 18 of them point at one `##` section, not a whole room.
+
+They are phrased as a developer's need, and where a paraphrase works they avoid the room's title and the API's name. Their authors knew the content; see Limitations.
+
+- **Strict:** the expected door is in the top k.
+- **Lenient:** the expected door or its room is in the top k.
+
+| Mode | recall@5 | recall@10 | MRR@10 | lenient recall@10 |
+|---|---:|---:|---:|---:|
+| BM25 (keywords, Snowball stemming) | 0.83 | 0.90 | 0.68 | 0.95 |
+| Vector (static embeddings) | 0.64 | 0.73 | 0.47 | 0.79 |
+| Hybrid (reciprocal rank fusion) | 0.84 | 0.90 | 0.67 | 0.94 |
+
+| Questions | n | Hybrid recall@5 | Hybrid recall@10 | Hybrid MRR@10 |
+|---|---:|---:|---:|---:|
+| Skill rooms | 49 | 0.80 | 0.86 | 0.65 |
+| Frontend rooms | 28 | 0.93 | 0.96 | 0.71 |
+| Whole room expected | 59 | 0.92 | 0.93 | 0.76 |
+| One section expected | 18 | 0.61 | 0.78 | 0.40 |
+
+On English text with English questions, keyword search alone is already strong, and the hybrid ranking keeps that level. The vector model matters when the question and the text are in different languages. That is a separate track: Hungarian questions over English text reach a hybrid recall@10 of 0.45.
+
+## 4. MCP server
+
+| Tool | Median | p90 | Notes |
+|---|---:|---:|---|
+| initialize | 31 ms | | |
+| `kapu_map` | 80 ms | 83 ms | the whole 33 MB file is read and checked on every call |
+| `kapu_search` (k = 5, with excerpts) | 280 ms | 293 ms | the first search of a session is 1.5 s, while the vector model loads |
+| `kapu_open` | 71 ms | 91 ms | |
+| `kapu_describe` | 70 ms | 91 ms | |
+
+All five tools carry MCP annotations: the four read tools are `readOnlyHint`, and `kapu_write` is `destructiveHint`. Errors name the next step, for example: `E009: unknown door ... (next: take door ids from kapu_map door lines or from kapu_search)`.
+
+## 5. Live evaluation
+
+The evaluation followed the format of the mcp-builder skill: 10 questions, each with one verifiable answer. The topics and every call are in the results JSON.
+
+- **Agents:** five Claude Sonnet agents, two questions each.
+- **Tool access:** only the four read tools, through `tools/kapu_mcp_call.py`, which speaks real MCP to `kapu-mcp` and logs every call. The agents were not allowed to read the file.
+
+| # | Topic | Correct | Calls | Tools | Tokens read |
+|---:|---|:---:|---:|---|---:|
+| 1 | design reference: recommended button colour | yes | 3 | search, search, open | 1,785 |
+| 2 | debugging: phase before any fix | yes | 2 | search, open | 2,714 |
+| 3 | spreadsheet formula check script | yes | 2 | search, open | 907 |
+| 4 | MCP pagination default | yes | 3 | search, map room, open | 1,280 |
+| 5 | README badge limit | yes | 3 | search, open, search | 1,210 |
+| 6 | TypeScript MCP SDK package name | yes | 1 | search | 373 |
+| 7 | total number of rooms | yes | 1 | map | 777 |
+| 8 | CSS anchor positioning: browser version | yes | 1 | search | 355 |
+| 9 | `scheduler.yield()`: missing browser | yes | 1 | search | 337 |
+| 10 | `field-sizing`: Firefox version | yes | 1 | search | 334 |
+
+Five of the ten answers came from a search excerpt alone, without opening a door. The agents asked for two things:
+
+- an excerpt that shows the answer line more often (questions 4 and 5);
+- fewer neighbour lines when a large room is opened.
+
+## 6. Changes made from these measurements
+
+An earlier run on a mixed English and Hungarian corpus led to specification v1.0.2:
+
+| Change | Before | After |
+|---|---|---|
+| Group names left out stop words (D121) | "the, and, css" | "css, rem, element" |
+| Content-scan network rule matches whole commands only (D122) | 83 false warnings, first map 2,971 tokens | 4 real warnings, first map 777 tokens |
+| In-page anchors link to their own section (D123) | 274 false "missing door" warnings | 0 warnings, 113 new link edges |
+| An excerpt line under each search hit (D124) | median 2,238 tokens per live question | median 842 (different corpus, 8 of 10 questions the same) |
+| A group lists its rooms; `room=` lists one room's sections (D125) | largest group list 15,756 tokens | 2,005 tokens |
+| At most 8 neighbours per opened door (D126) | up to 31 neighbour lines | 8 lines and a count |
+| Totals line on the map (D127) | the room count took two calls | one call |
+
+## 7. Limitations
+
+- The questions were written by people (and an agent) who had seen the content. This is a first measurement, not a benchmark; an independent question set is still needed.
+- No baselines yet: full-context reading where it fits, chunk-based RAG, `grep`-style agentic file search and `llms.txt`.
+- One machine, one vector model, one agent model (Claude Sonnet), ten live questions.
+- The wrapper of the live run starts a new server for every call, so the guide and the content-scan notes appear more often than in a real session. Token counts are therefore slightly high.
+- The runs used specification v1.0.2, whose tool output still had a few Hungarian labels ("szomszédok", "alajtó"); since v1.0.3 all agent-facing output is English.
+
+## 8. Pilot on public documentation
+
+This is a first run of the study design. Raw numbers are in [results/2026-10-23-study-pilot.json](results/2026-10-23-study-pilot.json).
+
+**Corpora:**
+- S: The Rust Programming Language, 0.32M tokens;
+- M: the Kubernetes docs, 3.9M tokens;
+- L: MDN Web Docs, 13.0M tokens.
+
+**Questions:** real Stack Overflow questions whose accepted answer links exactly one page of the corpus. There are 68, 201 and 395 of them.
+
+**Run setup:** Claude Sonnet agents, Sonnet and Haiku judges, one run.
+
+### Scale
+
+| | S | M | L |
+|---|---:|---:|---:|
+| Rooms / doors / groups | 111 / 231 / 7 | 1,722 / 6,370 / 104 | 14,719 / 84,910 / 99 |
+| Build, peak memory | 3.4 s, 0.7 GB | 24 s, 1.4 GB | 190 s, 4.0 GB * |
+| File size | 7.6 MB | 117 MB | 542 MB * |
+| Search response (tokens, ms) | 249, 58 | 265, 666 | 213, 3,192 * |
+| Map (tokens) | 151 | 1,948 | 1,919 * |
+| Largest group list (tokens) | 804 | 6,957 | 30,118 * |
+
+\* L does not build with the released tools: one search-index line of a common word exceeds the 1 MiB line limit. The L column comes from an experimental build with a 64 MiB limit.
+
+What this shows:
+- A search response stays around 200-270 tokens at every size.
+- The map and the latency grow with the file, because the server reads the whole file on every call.
+- These are open items for the next specification version.
+
+### Retrieval without an agent
+
+The table gives room-level recall@10. A hit is any door or chunk of the gold page in the top 10 units.
+
+| | KAPU hybrid | KAPU BM25 | KAPU vector | 512-token chunks, BM25 | 512-token chunks, vector |
+|---|---:|---:|---:|---:|---:|
+| S (68) | 0.46 | 0.44 | 0.32 | 0.49 | 0.43 |
+| M (201) | 0.44 | 0.45 | 0.28 | 0.45 | 0.32 |
+| L (395) | 0.28 | 0.28 | 0.15 | 0.30 | 0.19 |
+
+- KAPU's hybrid search is on par with BM25 over chunks.
+- Its vector search is weaker than chunk vectors, because one static vector per long door blurs the content.
+
+### Agents on S, 30 questions
+
+| System | Correct (Sonnet / Haiku judge) | Tokens read per question (median) |
+|---|---:|---:|
+| Closed book, no tools | 30 / 28 | 0 |
+| Agentic chunk RAG | 30 / 27 | 4,150 |
+| grep/read on the Markdown folder | 29 / 28 | 1,290 |
+| llms.txt | 30 / 29 | 8,739 |
+| KAPU | 30 / 29 | 3,983 |
+
+The model answers these popular questions from memory, so accuracy cannot separate the systems. On a small, well-known corpus, grep reads the fewest tokens.
+
+### Same content as KAPU, one Markdown file and a PDF
+
+This test uses the PixelLab knowledge file, content the model does not know: 0.21M tokens and 12 beginner requests. The answers were graded blind against the documentation.
+
+| Format | Correct | Supported claims | Tokens read per request (median) |
+|---|---:|---:|---:|
+| KAPU | 12/12 | 122/123 | 2,624 |
+| One `.md` file, with search and line reads | 12/12 | 134/138 | 8,280 |
+| PDF (219 pages), with search and page reads | 11/12 | 146/151 | 8,207 |
+| Whole `.md` pasted into the conversation | - | - | 206,899 |
+
+Accuracy is the same. KAPU read about a third of the tokens of the searchable file formats, and about 1/79 of pasting the whole file.
+
+### After specification v1.0.4
+
+A first set of fixes followed the pilot (D131-D138, specification chapter 17). The most visible ones:
+- long doors open in parts of at most 2,000 tokens;
+- at most 10 content-scan lines on the map;
+- the content language on the totals line;
+- an in-memory file and vector cache in the server.
+
+Measured again with the same corpora and questions:
+
+| | Before | After |
+|---|---:|---:|
+| KAPU agents on S, tokens read per question (median), correct | 3,983, 30/30 | 2,331, 30/30 |
+| KAPU agents on S, tokens read for all 30 questions | 152,151 | 74,916 |
+| First map call on M / L (tokens) | 4,989 / 4,139 | 2,318 / 2,303 |
+| Search on M / L (ms, median) | 666 / 3,192 | 657 / 3,172 |
+
+The PixelLab run was repeated with the same prompt for all three formats:
+
+| Format | Correct | Supported claims | Tokens read per request (median) |
+|---|---:|---:|---:|
+| KAPU | 12/12 | 153/157 | 4,104 |
+| One `.md` file | 12/12 | 140/145 | 8,280 |
+| PDF | 11/12 | 147/151 | 8,207 |
+
+- Splitting long doors halved what the agents read on the Rust book, at the same accuracy.
+- The cache did not make search faster. The time goes to parsing the sections three times per search and to a linear scan of the search index, not to reading the file. That is the next fix.
+
+## 9. File format 1.1 (specification v1.1)
+
+Three changes after the pilot (D139-D141, specification chapters 18 and 19), measured on 2026-10-24 with the same corpora and questions:
+- **Compact index (format 1.1).** An `#INDEX` posting names a door by the gap between line numbers in `#DOCS` instead of its id. Files are about 4.5 times smaller, and the longest index line stays under the 1 MiB line limit, so MDN builds with the released tool.
+- **One parse per call.** A call parses and checks the file once (it was three times per search), finds a term's index line by binary search, and the MCP server keeps a checked copy of an unchanged file.
+- **Window vectors.** Search by meaning uses one vector per 512-token window of a door's text instead of one vector for its first 512 tokens; the best window counts. `kapu import` and `kapu build` compute them, so the first search does not wait.
+
+| | Rust book (S) | Kubernetes (M) | MDN (L) |
+|---|---:|---:|---:|
+| File size (MB), v1.0.4 → v1.1 | 7.6 → 2.2 | 117.4 → 26.2 | 542.2* → 128.3 |
+| Builds with the released tool | yes | yes | no (E005) → yes |
+| Import with the vector model (s) | 3.3 → 4.6 | 23.9 → 38.0 | 357.8* → 240.3 |
+| Peak memory of the import (GB) | 0.70 → 0.69 | 1.35 → 1.03 | 3.87* → 2.68 |
+| Search over MCP (ms, median) | 56 → 12.8 | 657 → 19.2 | 3,172 → 158.2 |
+| Opening a door over MCP (ms, median) | 17 → 2.4 | 216 → 4.9 | 1,040 → 44.1 |
+| Map over MCP (ms, median) | 18 → 3.0 | 253 → 46.6 | 1,400 → 390.9 |
+| First search of a session (s) | 1.1 → 1.1 | 1.7 → 1.0 | 4.3 → 1.3 |
+| `kapu bench` run time (s) | – → 1 | 187 → 8 | 1,774 → 127 |
+
+\* MDN with v1.0.4: an experimental build with a 64 MiB line limit, and its import time was not measured on an idle machine. The import now includes the window vectors.
+
+Retrieval on the same Stack Overflow questions, room-level recall@10 (MRR@10 in brackets):
+
+| | Rust book, 68 questions | Kubernetes, 201 | MDN, 395 |
+|---|---:|---:|---:|
+| KAPU hybrid, v1.0.4 | 0.456 (0.207) | 0.438 (0.227) | 0.281 (0.131) |
+| **KAPU hybrid, v1.1** | **0.485 (0.281)** | **0.458 (0.245)** | **0.271 (0.128)** |
+| KAPU vectors only, v1.0.4 → v1.1 | 0.324 → 0.426 | 0.279 → 0.318 | 0.154 → 0.142 |
+| KAPU BM25 only | 0.441 | 0.448 | 0.284 |
+| Chunks (512 tokens, 64 overlap), BM25 | 0.485 | 0.448 | 0.299 |
+| Chunks, vectors | 0.426 | 0.318 | 0.190 |
+
+- Window vectors bring the KAPU vector ranking to the chunk baseline on the Rust book and Kubernetes, and the hybrid ranking to or above chunked BM25 there.
+- On MDN they do not help: its 84,910 doors are mostly short sections, and a room and its own sections now match with the same window and take several of the first 10 places. Merging a room with its sections in the vector ranking is the next thing to try.
+- The BM25 ranking and every result of format 1.0 files are unchanged: the summing order of the scores is the same.
+
+## 10. Reproduce
+
+```bash
+python tools/collect_skills.py bench/korpusz/rooms           # the installed skills as rooms (local only)
+kapu import <rooms folder> corpus.kapu --model models/potion-multilingual-128M-i8
+kapu validate corpus.kapu --full
+kapu bench corpus.kapu questions.jsonl --json                # recall@5/10, MRR@10 per mode
+python tools/mcp_probe.py corpus.kapu questions.jsonl        # MCP latency and response sizes
+python tools/kapu_mcp_call.py call kapu_search '{"file": "...", "query": "..."}'
+```
+
+Chapters 8 and 9 (public documentation): `tools/study/prepare_corpus.py` and `so_questions.py` prepare the corpora and questions, `scale_probe.py` measures a size, `chunk_baseline.py` the chunk baselines, `collect_results.py` writes `results/2026-10-23-study-pilot.json`, and `results_page.py` turns that into the results page.
+
+@@@ test-vectors
+# Test vectors (M1)
+
+Generated by `tools/build_vectors.py`; never edit these files by hand (some
+contain a CR or a control byte on purpose, and `.gitattributes` marks them
+binary so git leaves every byte alone). `expected.json` records what each file
+must produce; the Rust tests in `crates/kapu-core/tests/acceptance.rs` read it.
+
+| File | Expected | What it exercises |
+|---|---|---|
+| `minta.kapu` | valid | 3 rooms, 4 sub-doors, 2 `link` edges, `@@@` escapes (0 and 1 backslash), a `## ` line inside a code fence, a `\|` in a title, one room with and one without a trailing LF, the untouched `kapu new` template as room `szoba`. Built without a model (`emb=none`), so FR-10/4 applies to every reader. |
+| `E001-magic.kapu` | E001 | first line `%KAPX 1.1` |
+| `E002-header.kapu` | E002 | byte 511 is a space instead of LF |
+| `E003-cr.kapu` | E003 | a CR inside `#MAP` (header recomputed, nothing else wrong) |
+| `E004-control.kapu` | E004 | ESC (0x1B) inside `#DESC` |
+| `E005-span.kapu` | E005 | `desc=` length overstated by 7 bytes, so it overlaps `#GRAPH` |
+| `E006-bodyhash.kapu` | E006 | `bodyhash=` field wrong, body intact |
+| `E007-doorhash.kapu` | E007 | one door's fingerprint altered in `#DOCS` |
+| `E008-id.kapu` | E008 | room id `Szoba` (uppercase) used consistently in every section |
+| `E009-dangling.kapu` | E009 | `#INDEX` posting that points past the last `#DOCS` line |
+| `E010-caption.kapu` | E010 | 201-character title in `#MAP` |
+| `E011-hashprefix.kapu` | E011 | `bodyhash=sha256:...` |
+| `edge-stale-same-length.kapu` | reader: `index: stale` | room 1 edited in place with equal length: fingerprint mismatch, retry, in-memory rebuild, edited text served |
+| `edge-stale-shifted.kapu` | reader: `index: stale` | room 1 grew by one line: later positions are off, rebuild from the `@@@` lines |
+
+`expected.json` also lists every door of the sample with its id, title, price
+(`o200k_base` tokens), character count, offset, length, BLAKE3 fingerprint,
+group and served text, so M2 and M3 can assert against them directly.
+
+`../compat/minta-1.0.kapu` is the same sample in format 1.0 (postings by door id);
+the reader must still read it (D140).
+
+The decisions that pin the open points of the spec for these vectors are
+D56-D66; `tools/build_vectors.py` is their executable form.
+

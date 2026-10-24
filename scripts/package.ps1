@@ -1,7 +1,7 @@
 # Portable package (NFR-06, M9): binaries + model folder, no installation.
 # Usage: powershell -ExecutionPolicy Bypass -File scripts/package.ps1
 # Output: dist/kapu-<version>-windows-x64/ and a .zip of it: kapu, kapu-mcp, kapu-gui,
-# the model folder and the demo file examples/kapu-spec.kapu.
+# the model folder and the example files examples/kapu-docs.kapu and kapu-spec.kapu.
 # Needs models/potion-multilingual-128M-i8 (tools/quantize.py makes it from the
 # downloaded f32 model).
 $ErrorActionPreference = "Stop"
@@ -22,7 +22,7 @@ if (Test-Path $out) { Remove-Item -Recurse -Force $out }
 New-Item -ItemType Directory -Force "$out\models\potion-multilingual-128M-i8" | Out-Null
 Copy-Item target\release\kapu.exe, target\release\kapu-mcp.exe, target\release\kapu-gui.exe $out
 New-Item -ItemType Directory -Force "$out\examples" | Out-Null
-Copy-Item examples\kapu-spec.kapu "$out\examples"
+Copy-Item examples\kapu-spec.kapu, examples\kapu-docs.kapu "$out\examples"
 Copy-Item "$model\model.safetensors", "$model\tokenizer.json", "$model\config.json", "$model\README.md" "$out\models\potion-multilingual-128M-i8"
 Copy-Item LICENSE, README.md, SPEC-KAPU.md, THIRD-PARTY.md $out
 Set-Content -Encoding utf8 "$out\LICENSE-SPEC.txt" "SPEC-KAPU.md is licensed under Creative Commons Attribution 4.0 International (CC BY 4.0): https://creativecommons.org/licenses/by/4.0/`nAuthor and originator: Pinter Szabolcs."

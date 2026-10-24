@@ -6,7 +6,17 @@
   (decisions D56-D66); the Rust builder must reproduce `minta.kapu` byte
   for byte (M3 check).
 - `blake3_ref.py`: pure-Python BLAKE3 reference used by the script.
-- `distill/`: Python distillation of the vector model (M8/5), arrives later.
+- `crosscheck.py`: builds a Markdown folder with the reference and compares it,
+  section by section, with the Rust build.
+- `quantize.py`: makes the int8 copy of the vector model the tools look for.
+- `make_examples.py`: rebuilds `examples/kapu-docs.kapu` (this documentation)
+  and `examples/kapu-spec.kapu` (the specification, via `split_spec.py`).
+- `make_demo_svg.py`: writes `docs/assets/demo.svg`, the animated terminal in
+  the README, from real `kapu map`, `search` and `open` output.
+- `study/`: the measurement scripts of `bench/RESULTS.md` chapters 8 and 9;
+  `study/results_page.py` writes `docs/results/index.html` from the results JSON.
+- `mcp_probe.py`, `mcp_eval.py`, `kapu_mcp_call.py`: MCP latency, isolated
+  agent runs and a logged one-call client for agents.
 
 Setup (Windows, from the repository root):
 

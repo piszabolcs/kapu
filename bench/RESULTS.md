@@ -1,6 +1,6 @@
 # KAPU measurements
 
-English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file.
+English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file; chapter 9 measures it again with file format 1.1. The [results page](../docs/results/index.html) shows the pilot and format 1.1 with charts.
 
 - **Date:** 2026-10-23
 - **Version:** tools 0.1.0 with specification v1.0.2
@@ -236,7 +236,43 @@ The PixelLab run was repeated with the same prompt for all three formats:
 - Splitting long doors halved what the agents read on the Rust book, at the same accuracy.
 - The cache did not make search faster. The time goes to parsing the sections three times per search and to a linear scan of the search index, not to reading the file. That is the next fix.
 
-## 9. Reproduce
+## 9. File format 1.1 (specification v1.1)
+
+Three changes after the pilot (D139-D141, specification chapters 18 and 19), measured on 2026-10-24 with the same corpora and questions:
+- **Compact index (format 1.1).** An `#INDEX` posting names a door by the gap between line numbers in `#DOCS` instead of its id. Files are about 4.5 times smaller, and the longest index line stays under the 1 MiB line limit, so MDN builds with the released tool.
+- **One parse per call.** A call parses and checks the file once (it was three times per search), finds a term's index line by binary search, and the MCP server keeps a checked copy of an unchanged file.
+- **Window vectors.** Search by meaning uses one vector per 512-token window of a door's text instead of one vector for its first 512 tokens; the best window counts. `kapu import` and `kapu build` compute them, so the first search does not wait.
+
+| | Rust book (S) | Kubernetes (M) | MDN (L) |
+|---|---:|---:|---:|
+| File size (MB), v1.0.4 → v1.1 | 7.6 → 2.2 | 117.4 → 26.2 | 542.2* → 128.3 |
+| Builds with the released tool | yes | yes | no (E005) → yes |
+| Import with the vector model (s) | 3.3 → 4.6 | 23.9 → 38.0 | 357.8* → 240.3 |
+| Peak memory of the import (GB) | 0.70 → 0.69 | 1.35 → 1.03 | 3.87* → 2.68 |
+| Search over MCP (ms, median) | 56 → 12.8 | 657 → 19.2 | 3,172 → 158.2 |
+| Opening a door over MCP (ms, median) | 17 → 2.4 | 216 → 4.9 | 1,040 → 44.1 |
+| Map over MCP (ms, median) | 18 → 3.0 | 253 → 46.6 | 1,400 → 390.9 |
+| First search of a session (s) | 1.1 → 1.1 | 1.7 → 1.0 | 4.3 → 1.3 |
+| `kapu bench` run time (s) | – → 1 | 187 → 8 | 1,774 → 127 |
+
+\* MDN with v1.0.4: an experimental build with a 64 MiB line limit, and its import time was not measured on an idle machine. The import now includes the window vectors.
+
+Retrieval on the same Stack Overflow questions, room-level recall@10 (MRR@10 in brackets):
+
+| | Rust book, 68 questions | Kubernetes, 201 | MDN, 395 |
+|---|---:|---:|---:|
+| KAPU hybrid, v1.0.4 | 0.456 (0.207) | 0.438 (0.227) | 0.281 (0.131) |
+| **KAPU hybrid, v1.1** | **0.485 (0.281)** | **0.458 (0.245)** | **0.271 (0.128)** |
+| KAPU vectors only, v1.0.4 → v1.1 | 0.324 → 0.426 | 0.279 → 0.318 | 0.154 → 0.142 |
+| KAPU BM25 only | 0.441 | 0.448 | 0.284 |
+| Chunks (512 tokens, 64 overlap), BM25 | 0.485 | 0.448 | 0.299 |
+| Chunks, vectors | 0.426 | 0.318 | 0.190 |
+
+- Window vectors bring the KAPU vector ranking to the chunk baseline on the Rust book and Kubernetes, and the hybrid ranking to or above chunked BM25 there.
+- On MDN they do not help: its 84,910 doors are mostly short sections, and a room and its own sections now match with the same window and take several of the first 10 places. Merging a room with its sections in the vector ranking is the next thing to try.
+- The BM25 ranking and every result of format 1.0 files are unchanged: the summing order of the scores is the same.
+
+## 10. Reproduce
 
 ```bash
 python tools/collect_skills.py bench/korpusz/rooms           # the installed skills as rooms (local only)
@@ -246,3 +282,5 @@ kapu bench corpus.kapu questions.jsonl --json                # recall@5/10, MRR@
 python tools/mcp_probe.py corpus.kapu questions.jsonl        # MCP latency and response sizes
 python tools/kapu_mcp_call.py call kapu_search '{"file": "...", "query": "..."}'
 ```
+
+Chapters 8 and 9 (public documentation): `tools/study/prepare_corpus.py` and `so_questions.py` prepare the corpora and questions, `scale_probe.py` measures a size, `chunk_baseline.py` the chunk baselines, `collect_results.py` writes `results/2026-10-23-study-pilot.json`, and `results_page.py` turns that into the results page.

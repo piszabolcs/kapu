@@ -2300,6 +2300,68 @@
      ]
     ]
    }
+  },
+  "kapu_tokens_by_tool_per_request": {
+   "p1": {
+    "kapu_map": 293,
+    "kapu_search": 415,
+    "kapu_open": 1459
+   },
+   "p2": {
+    "kapu_map": 0,
+    "kapu_search": 1003,
+    "kapu_open": 2320
+   },
+   "p3": {
+    "kapu_map": 0,
+    "kapu_search": 1009,
+    "kapu_open": 4346
+   },
+   "p4": {
+    "kapu_map": 571,
+    "kapu_search": 383,
+    "kapu_open": 3030
+   },
+   "p5": {
+    "kapu_map": 0,
+    "kapu_search": 526,
+    "kapu_open": 2054
+   },
+   "p6": {
+    "kapu_map": 0,
+    "kapu_search": 271,
+    "kapu_open": 821
+   },
+   "p7": {
+    "kapu_map": 293,
+    "kapu_search": 340,
+    "kapu_open": 2034
+   },
+   "p8": {
+    "kapu_map": 0,
+    "kapu_search": 1310,
+    "kapu_open": 5352
+   },
+   "p9": {
+    "kapu_map": 0,
+    "kapu_search": 484,
+    "kapu_open": 1073
+   },
+   "p10": {
+    "kapu_map": 0,
+    "kapu_search": 227,
+    "kapu_open": 893
+   },
+   "p11": {
+    "kapu_map": 0,
+    "kapu_search": 319,
+    "kapu_open": 1402
+   },
+   "p12": {
+    "kapu_map": 0,
+    "kapu_search": 628,
+    "kapu_open": 2097
+   }
   }
  },
  "remeasure_v104": {
@@ -2674,6 +2736,370 @@
     "read_tokens_total": 109675,
     "calls_median": 6.0
    }
+  }
+ },
+ "remeasure_v11": {
+  "specification": "v1.1, file format 1.1 (D139-D141)",
+  "date": "2026-10-24",
+  "scale": {
+   "s": {
+    "rooms_dir": "rooms-s",
+    "file": "s-v11.kapu",
+    "import": {
+     "seconds": 4.63,
+     "peak_mb": 711.5,
+     "exit": 0,
+     "stderr_tail": "",
+     "warnings": 0
+    },
+    "file_mb": 2.2,
+    "validate_full": {
+     "seconds": 2.42,
+     "peak_mb": 697.9,
+     "exit": 0,
+     "stderr_tail": ""
+    },
+    "cli_map": {
+     "seconds": 0.11,
+     "peak_mb": 34.4,
+     "exit": 0
+    },
+    "mcp": {
+     "map_first": {
+      "ms": 130.9,
+      "tokens": 322,
+      "error": false
+     },
+     "map": {
+      "ms": {
+       "n": 3,
+       "median": 3.0,
+       "p90": 3.3,
+       "max": 3.3
+      },
+      "tokens": 153
+     },
+     "totals_line": "rooms=111 doors=231 groups=7 tokens=321618 lang=en",
+     "groups": {
+      "n": 7,
+      "tokens": {
+       "n": 7,
+       "median": 661,
+       "p90": 804,
+       "max": 804
+      },
+      "sum_tokens": 4304
+     },
+     "search_first_ms": 1128.0,
+     "search": {
+      "ms": {
+       "n": 20,
+       "median": 12.8,
+       "p90": 20.1,
+       "max": 21.9
+      },
+      "tokens": {
+       "n": 20,
+       "median": 246.0,
+       "p90": 285,
+       "max": 286
+      }
+     },
+     "open": {
+      "ms": {
+       "n": 21,
+       "median": 2.4,
+       "p90": 4.1,
+       "max": 6.1
+      },
+      "tokens": {
+       "n": 21,
+       "median": 1689,
+       "p90": 2275,
+       "max": 2286
+      }
+     }
+    }
+   },
+   "m": {
+    "rooms_dir": "rooms-m",
+    "file": "m-v11.kapu",
+    "import": {
+     "seconds": 37.98,
+     "peak_mb": 1057.6,
+     "exit": 0,
+     "stderr_tail": "",
+     "warnings": 2
+    },
+    "file_mb": 26.2,
+    "validate_full": {
+     "seconds": 13.21,
+     "peak_mb": 1057.0,
+     "exit": 0,
+     "stderr_tail": ""
+    },
+    "cli_map": {
+     "seconds": 0.21,
+     "peak_mb": 76.9,
+     "exit": 0
+    },
+    "mcp": {
+     "map_first": {
+      "ms": 385.0,
+      "tokens": 2318,
+      "error": false
+     },
+     "map": {
+      "ms": {
+       "n": 3,
+       "median": 46.6,
+       "p90": 48.2,
+       "max": 48.2
+      },
+      "tokens": 1950
+     },
+     "totals_line": "rooms=1722 doors=6370 groups=104 tokens=3873333 lang=en",
+     "groups": {
+      "n": 104,
+      "tokens": {
+       "n": 104,
+       "median": 63.0,
+       "p90": 3019,
+       "max": 6957
+      },
+      "sum_tokens": 73795
+     },
+     "search_first_ms": 1047.5,
+     "search": {
+      "ms": {
+       "n": 20,
+       "median": 19.2,
+       "p90": 29.6,
+       "max": 29.9
+      },
+      "tokens": {
+       "n": 20,
+       "median": 259.5,
+       "p90": 358,
+       "max": 390
+      }
+     },
+     "open": {
+      "ms": {
+       "n": 21,
+       "median": 4.9,
+       "p90": 6.0,
+       "max": 7.3
+      },
+      "tokens": {
+       "n": 21,
+       "median": 240,
+       "p90": 587,
+       "max": 2121
+      }
+     }
+    }
+   },
+   "l": {
+    "rooms_dir": "rooms-l",
+    "file": "l-v11.kapu",
+    "import": {
+     "seconds": 240.3,
+     "peak_mb": 2746.2,
+     "exit": 0,
+     "stderr_tail": "",
+     "warnings": 28
+    },
+    "file_mb": 128.3,
+    "validate_full": {
+     "seconds": 123.57,
+     "peak_mb": 2760.2,
+     "exit": 0,
+     "stderr_tail": ""
+    },
+    "cli_map": {
+     "seconds": 0.81,
+     "peak_mb": 217.5,
+     "exit": 0
+    },
+    "mcp": {
+     "map_first": {
+      "ms": 2486.6,
+      "tokens": 2303,
+      "error": false
+     },
+     "map": {
+      "ms": {
+       "n": 3,
+       "median": 390.9,
+       "p90": 435.9,
+       "max": 435.9
+      },
+      "tokens": 1921
+     },
+     "totals_line": "rooms=14719 doors=84910 groups=99 tokens=12995136 lang=en",
+     "groups": {
+      "n": 99,
+      "tokens": {
+       "n": 99,
+       "median": 4118,
+       "p90": 17395,
+       "max": 30118
+      },
+      "sum_tokens": 634122
+     },
+     "search_first_ms": 1303.8,
+     "search": {
+      "ms": {
+       "n": 20,
+       "median": 158.2,
+       "p90": 172.4,
+       "max": 176.4
+      },
+      "tokens": {
+       "n": 20,
+       "median": 212.5,
+       "p90": 289,
+       "max": 303
+      }
+     },
+     "open": {
+      "ms": {
+       "n": 21,
+       "median": 44.1,
+       "p90": 46.8,
+       "max": 52.8
+      },
+      "tokens": {
+       "n": 21,
+       "median": 366,
+       "p90": 1142,
+       "max": 2029
+      }
+     }
+    }
+   }
+  },
+  "kapu_bench": {
+   "s": {
+    "bm25": {
+     "lenient_mrr@10": 0.2048144257703081,
+     "lenient_recall@10": 0.4264705882352941,
+     "lenient_recall@5": 0.29411764705882354,
+     "mrr@10": 0.2048144257703081,
+     "recall@10": 0.4264705882352941,
+     "recall@5": 0.29411764705882354,
+     "room_mrr@10": 0.25902194211017737,
+     "room_recall@10": 0.4411764705882353,
+     "room_recall@5": 0.3382352941176471
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.22072829131652658,
+     "lenient_recall@10": 0.45588235294117646,
+     "lenient_recall@5": 0.35294117647058826,
+     "mrr@10": 0.22072829131652658,
+     "recall@10": 0.45588235294117646,
+     "recall@5": 0.35294117647058826,
+     "room_mrr@10": 0.2811216153127918,
+     "room_recall@10": 0.4852941176470588,
+     "room_recall@5": 0.39705882352941174
+    },
+    "questions": 68,
+    "timing_ms": 1419.7149,
+    "vector": {
+     "lenient_mrr@10": 0.1426470588235294,
+     "lenient_recall@10": 0.4117647058823529,
+     "lenient_recall@5": 0.3235294117647059,
+     "mrr@10": 0.1426470588235294,
+     "recall@10": 0.4117647058823529,
+     "recall@5": 0.3235294117647059,
+     "room_mrr@10": 0.18406862745098038,
+     "room_recall@10": 0.4264705882352941,
+     "room_recall@5": 0.35294117647058826
+    },
+    "warnings": []
+   },
+   "m": {
+    "bm25": {
+     "lenient_mrr@10": 0.13068980494353624,
+     "lenient_recall@10": 0.3482587064676617,
+     "lenient_recall@5": 0.2537313432835821,
+     "mrr@10": 0.13068980494353624,
+     "recall@10": 0.3482587064676617,
+     "recall@5": 0.2537313432835821,
+     "room_mrr@10": 0.21827173655531878,
+     "room_recall@10": 0.44776119402985076,
+     "room_recall@5": 0.3482587064676617
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.17280857616678508,
+     "lenient_recall@10": 0.373134328358209,
+     "lenient_recall@5": 0.2935323383084577,
+     "mrr@10": 0.17280857616678508,
+     "recall@10": 0.373134328358209,
+     "recall@5": 0.2935323383084577,
+     "room_mrr@10": 0.2448926004896155,
+     "room_recall@10": 0.4577114427860697,
+     "room_recall@5": 0.373134328358209
+    },
+    "questions": 201,
+    "timing_ms": 7446.7612,
+    "vector": {
+     "lenient_mrr@10": 0.07576601121377241,
+     "lenient_recall@10": 0.23383084577114427,
+     "lenient_recall@5": 0.11940298507462686,
+     "mrr@10": 0.07576601121377241,
+     "recall@10": 0.23383084577114427,
+     "recall@5": 0.11940298507462686,
+     "room_mrr@10": 0.14733672905314696,
+     "room_recall@10": 0.31840796019900497,
+     "room_recall@5": 0.21890547263681592
+    },
+    "warnings": []
+   },
+   "l": {
+    "bm25": {
+     "lenient_mrr@10": 0.08804400241109102,
+     "lenient_recall@10": 0.22531645569620254,
+     "lenient_recall@5": 0.16455696202531644,
+     "mrr@10": 0.08804400241109102,
+     "recall@10": 0.22531645569620254,
+     "recall@5": 0.16455696202531644,
+     "room_mrr@10": 0.13465039180229063,
+     "room_recall@10": 0.28354430379746837,
+     "room_recall@5": 0.22025316455696203
+    },
+    "hybrid": {
+     "lenient_mrr@10": 0.09758890898131409,
+     "lenient_recall@10": 0.21772151898734177,
+     "lenient_recall@5": 0.13924050632911392,
+     "mrr@10": 0.09758890898131409,
+     "recall@10": 0.21772151898734177,
+     "recall@5": 0.13924050632911392,
+     "room_mrr@10": 0.12827004219409288,
+     "room_recall@10": 0.2708860759493671,
+     "room_recall@5": 0.17215189873417722
+    },
+    "questions": 395,
+    "timing_ms": 127395.8135,
+    "vector": {
+     "lenient_mrr@10": 0.03606690777576852,
+     "lenient_recall@10": 0.09873417721518987,
+     "lenient_recall@5": 0.060759493670886074,
+     "mrr@10": 0.03606690777576852,
+     "recall@10": 0.09873417721518987,
+     "recall@5": 0.060759493670886074,
+     "room_mrr@10": 0.054689572031344204,
+     "room_recall@10": 0.14177215189873418,
+     "room_recall@5": 0.08607594936708861
+    },
+    "warnings": []
+   }
+  },
+  "kapu_bench_seconds": {
+   "s": 1,
+   "m": 8,
+   "l": 127
   }
  }
 }

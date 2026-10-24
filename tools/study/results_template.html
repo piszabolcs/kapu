@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KAPU measurements</title>
+<meta name="description" content="Measurements of the KAPU knowledge-file format: tokens read by AI agents, retrieval quality and scale on public documentation.">
+<style>
+:root{
+  --bg:#f7f7f5;--panel:#ffffff;--fg:#1d1d1b;--muted:#5f5f5a;--line:#e3e2dd;--accent:#c4431d;
+  --c1:#c4431d;--c2:#2f6db5;--c3:#7a8b2f;--c4:#8a5cb8;--c5:#b88a1f;
+  --grid:#ecebe6;--axis:#bdbcb5;--radius:10px;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --serif:Georgia,"Times New Roman",serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#161614;--panel:#1f1f1c;--fg:#ecebe6;--muted:#a3a29b;--line:#34332f;--accent:#ee7a52;
+    --c1:#ee7a52;--c2:#6fa3e8;--c3:#a9bd55;--c4:#b590e0;--c5:#e0b54a;--grid:#2a2a27;--axis:#4a4944;color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161614;--panel:#1f1f1c;--fg:#ecebe6;--muted:#a3a29b;--line:#34332f;--accent:#ee7a52;
+  --c1:#ee7a52;--c2:#6fa3e8;--c3:#a9bd55;--c4:#b590e0;--c5:#e0b54a;--grid:#2a2a27;--axis:#4a4944;color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.5}
+.wrap{max-width:72rem;margin:0 auto;padding:32px 16px 64px;display:flex;flex-direction:column;gap:40px}
+header{display:flex;flex-direction:column;gap:12px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+h1{font-family:var(--serif);font-weight:400;font-size:2.2rem;margin:0;line-height:1.15}
+h1 span{color:var(--accent)}
+h2{font-size:1.3rem;font-weight:600;margin:0}
+h3{font-size:1.02rem;font-weight:600;margin:0}
+.lead{font-size:1.06rem;max-width:72ch;margin:0}
+.meta,.note,.card>p{color:var(--muted);margin:0;max-width:78ch}
+.meta{font-size:.85rem}
+.lang{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.lang button{all:unset;cursor:pointer;padding:4px 12px;font-size:.85rem;color:var(--muted)}
+.lang button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.lang button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+section{display:flex;flex-direction:column;gap:14px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr));gap:12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:4px}
+.tile .lbl,.tile .sub{font-size:.82rem;color:var(--muted)}
+.tile .big{font-family:var(--serif);font-size:1.9rem;font-variant-numeric:tabular-nums}
+.tile.dim .big{color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.card>p{font-size:.85rem}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.85rem;font-variant-numeric:tabular-nums}
+th,td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:600}
+td.better{color:var(--c3);font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.82rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.chart{position:relative;min-height:260px}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.18);padding:6px 10px;font-size:.8rem;z-index:2;min-width:10rem}
+.tip .tt{color:var(--muted);margin-bottom:2px}
+.tip .tl{display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+.tip .tl i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.tip .tl b{margin-left:auto;font-weight:600}
+.tip[hidden]{display:none}
+ul{margin:0;padding-left:1.2rem;color:var(--muted);max-width:80ch}
+li{margin:4px 0}
+footer{font-size:.85rem;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:16px}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="top">
+      <h1><span>KAPU</span> <span data-t="title_rest" style="color:inherit"></span></h1>
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="hu" aria-pressed="false">HU</button>
+      </div>
+    </div>
+    <p class="lead" id="lead"></p>
+    <p class="meta" id="meta"></p>
+    <div class="tiles">
+      <div class="tile"><span class="lbl" data-t="tile_kapu"></span><span class="big" id="t-kapu"></span><span class="sub" data-t="tile_sub"></span></div>
+      <div class="tile"><span class="lbl" data-t="form_md"></span><span class="big" id="t-md"></span><span class="sub" data-t="tile_sub"></span></div>
+      <div class="tile"><span class="lbl" data-t="form_pdf"></span><span class="big" id="t-pdf"></span><span class="sub" data-t="tile_sub"></span></div>
+      <div class="tile dim"><span class="lbl" data-t="tile_full"></span><span class="big" id="t-full"></span><span class="sub" data-t="tile_full_sub"></span></div>
+    </div>
+  </header>
+
+  <section>
+    <h2 data-t="v11_h"></h2>
+    <p class="note" data-t="v11_note"></p>
+    <div class="card">
+      <h3 data-t="v11_card"></h3>
+      <p data-t="v11_card_note"></p>
+      <div class="tablewrap"><table id="tb-changes"></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-t="px_h"></h2>
+    <p class="note" data-t="px_note"></p>
+    <div class="card">
+      <h3 data-t="px2_card"></h3>
+      <p data-t="px2_card_note"></p>
+      <div class="tablewrap"><table id="tb-px2"></table></div>
+    </div>
+    <div class="card">
+      <h3 data-t="px1_card"></h3>
+      <p data-t="px1_card_note"></p>
+      <div class="legend" id="lg-req"></div>
+      <div class="chart" id="ch-req"></div>
+      <div class="tablewrap"><table id="tb-px1"></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-t="split_h"></h2>
+    <p class="note" id="split-note"></p>
+    <div class="card">
+      <h3 data-t="split_card"></h3>
+      <p data-t="split_card_note"></p>
+      <div class="legend" id="lg-split"></div>
+      <div class="chart" id="ch-split"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-t="scale_h"></h2>
+    <p class="note" data-t="scale_note"></p>
+    <div class="card">
+      <h3 data-t="scale_card"></h3>
+      <div class="tablewrap"><table id="tb-scale"></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-t="ret_h"></h2>
+    <p class="note" data-t="ret_note"></p>
+    <div class="card">
+      <h3 data-t="ret_card"></h3>
+      <p data-t="ret_card_note"></p>
+      <div class="legend" id="lg-ret"></div>
+      <div class="chart" id="ch-ret"></div>
+      <div class="tablewrap"><table id="tb-ret"></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-t="ag_h"></h2>
+    <p class="note" data-t="ag_note"></p>
+    <div class="card">
+      <h3 data-t="ag_card"></h3>
+      <p data-t="ag_card_note"></p>
+      <div class="tablewrap"><table id="tb-agents"></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-t="v104_h"></h2>
+    <div class="card">
+      <div class="tablewrap"><table id="tb-v104"></table></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 data-t="method_h"></h2>
+    <ul id="method"></ul>
+  </section>
+
+  <footer>
+    <a href="https://github.com/piszabolcs/kapu" data-t="f_repo"></a>
+    <a href="https://github.com/piszabolcs/kapu/blob/main/bench/RESULTS.md">RESULTS.md</a>
+    <a href="https://github.com/piszabolcs/kapu/tree/main/bench/results" data-t="f_raw"></a>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+const DATA = /*__DATA__*/null;
+
+const I18N = {
+  en: {
+    title_rest: "measurements",
+    lead: "On a knowledge file the model had not seen (PixelLab documentation, {kt} tokens), an agent using KAPU read {k} tokens per request, an agent searching one Markdown file {md}, and one searching the same text as a PDF {pdf} (median, the same prompt for all three). Correct answers: KAPU {ck}, Markdown {cmd}, PDF {cpdf} of 12, by three blind judges.",
+    meta: "Measured {date} · specification {spec} · Windows 11, release build · every number comes from bench/results/ in the repository",
+    tile_kapu: "KAPU", tile_sub: "tokens per request (median)", tile_full: "Whole file in the context", tile_full_sub: "tokens on every request",
+    form_kapu: "KAPU", form_md: "One .md file + search", form_pdf: "PDF + search",
+    v11_h: "File format 1.1: smaller files, faster calls, better search by meaning",
+    v11_note: "Three changes after the pilot, measured again on the same corpora and questions. The index stores a door's position instead of its id, so files are about 4.5 times smaller and the 13-million-token MDN corpus now builds with the released tool. One call parses and checks the file once and finds index lines by binary search. Search by meaning uses one vector per 512-token window of a door, and the best window counts.",
+    v11_card: "Before and after", v11_card_note: "Room recall@10: any part of the expected page among the first 10 hits. MDN with v1.0.4 was an experimental build with a 64 MiB line limit.",
+    col_metric: "Metric", col_corpus: "Corpus", col_before: "v1.0.4", col_after: "v1.1",
+    m_file_mb: "File size (MB)", m_l_builds: "Builds with the released tool", m_search_ms: "Search over MCP (ms, median)", m_open_ms: "Opening a door over MCP (ms, median)",
+    m_r10_hybrid: "Room recall@10, hybrid search", m_r10_vector: "Room recall@10, vectors only", m_bench_s: "kapu bench run time (s)",
+    yes: "yes", no: "no (E005)",
+    px_h: "Same content in three formats: KAPU, one Markdown file, a PDF",
+    px_note: "The PixelLab documentation (third-party, not published), 12 requests of a beginner indie developer. The Markdown and PDF agents searched the text and read only what they found: lines of the Markdown file, pages of the PDF. Pasting the whole file into the conversation would cost {kt} tokens on every request. Three blind Claude Sonnet judges checked every claim against the documentation.",
+    px2_card: "Second round: the same prompt for all three formats", px2_card_note: "KAPU with specification v1.0.4. The Markdown and PDF answers are those of the first round, scored again by new judges.",
+    px1_card: "First round: tokens read per request", px1_card_note: "KAPU with specification v1.0.3 and its own prompt. Tokens: what the tools returned to the agent (o200k_base).",
+    col_form: "Format", col_correct: "Correct", col_partly: "Partly", col_supported: "Supported claims", col_claims: "All claims", col_help: "Helpfulness (1–5)",
+    col_tok_req: "Tokens/request", col_tok_total: "Tokens, 12 requests", col_calls: "Calls/request",
+    split_h: "Why thousands of tokens when the map is a few hundred?",
+    split_note: "The map and the search are the table of contents and the hit list. Most tokens come from the opened doors: the documentation text the answer is written from. Of the KAPU tokens of the 12 requests, opening doors took {open}, searching {search}, the map {map}.",
+    split_card: "KAPU tokens per request, by call", split_card_note: "A typical request: one or two searches (300–400 tokens), one or two opened doors (1,000–3,000 tokens), rarely the map.",
+    s_map: "Map", s_search: "Search", s_open: "Open",
+    scale_h: "Scale: small, medium and large documentation",
+    scale_note: "S: the Rust book, M: the Kubernetes documentation, L: MDN Web Docs, all in format 1.1. Over one MCP session: the map, every group list, 20 searches with room titles as queries and an open of each top hit.",
+    scale_card: "Build, size and responses",
+    c_size: "Size", c_corpus: "Corpus", c_know: "Knowledge (tokens)", c_rooms: "Rooms", c_doors: "Doors", c_groups: "Groups", c_build: "Build (s)", c_mem: "Memory (GB)",
+    c_file: "File (MB)", c_map: "Map (tokens)", c_fmap: "First map (tokens)", c_glist: "Largest group list (tokens)", c_stok: "Search (tokens)", c_sms: "Search (ms)",
+    c_fs: "First search (s)", c_otok: "Open (tokens)", c_oms: "Open (ms)",
+    ret_h: "Retrieval without an agent: KAPU against chunked RAG",
+    ret_note: "Real Stack Overflow questions whose accepted answer links exactly one page of the documentation: 68, 201 and 395 questions. A hit is any part of that page among the first results. The chunk baselines use 512-token chunks with 64 tokens of overlap and the same embedding model.",
+    ret_card: "Room recall@10 by size and method", ret_card_note: "KAPU returns doors (rooms and their sections), the baselines return chunks.",
+    meth_kapu_hybrid: "KAPU hybrid", meth_kapu_bm25: "KAPU BM25", meth_kapu_vector: "KAPU vectors", meth_chunk_bm25: "Chunks, BM25", meth_chunk_vector: "Chunks, vectors",
+    col_method: "Method", col_n: "Questions", col_r5: "Recall@5", col_r10: "Recall@10", col_mrr: "MRR@10", q: "questions",
+    ag_h: "Live run on the Rust book: five systems, 30 questions",
+    ag_note: "The model answered these popular questions well from memory too (closed book: 30 of 30), so here accuracy does not separate the systems; the cost does. KAPU with specification v1.0.3; with v1.0.4 the KAPU agents read a median of 2,331 tokens per question at the same accuracy.",
+    ag_card: "Correct answers and cost per system", ag_card_note: "Two blind judges (Claude Sonnet and Haiku). All agent tokens: the whole run divided by its questions, an estimate.",
+    col_system: "System", col_cs: "Correct (Sonnet judge)", col_ch: "Correct (Haiku judge)", col_q: "Questions", col_read: "Tokens read/question", col_cq: "Calls/question", col_all: "All agent tokens/question",
+    sys_c0: "Closed book, no tools", sys_c2b: "Agentic chunked RAG", sys_c3: "grep/read on the Markdown folder", sys_c4: "llms.txt", sys_c5: "KAPU",
+    v104_h: "Earlier fix round: specification v1.0.4", col_v103: "v1.0.3", col_v104: "v1.0.4",
+    r_rust_tokens_median: "KAPU on the Rust book: tokens read per question (median)", r_rust_correct: "KAPU on the Rust book: correct answers (of 30)",
+    r_first_map_m: "First map call, Kubernetes (tokens)", r_first_map_l: "First map call, MDN (tokens)",
+    method_h: "Method and limits",
+    method: [
+      "Corpora: the Rust book (MIT or Apache-2.0), the Kubernetes documentation (CC BY 4.0) and MDN Web Docs (CC BY-SA 2.5) at pinned commits. Questions: Stack Overflow API (CC BY-SA); only their ids are stored.",
+      "Agents: Claude Sonnet subagents that could only use logged tools. Tokens are counted with o200k_base.",
+      "Judges: blind Claude models; the answers were shuffled under random letters, and source lines were removed.",
+      "This is a pilot on one machine (Windows 11, release build), not a benchmark. The PixelLab file is third-party and is not published."
+    ],
+    f_repo: "Repository", f_raw: "Raw numbers (JSON)"
+  },
+  hu: {
+    title_rest: "mérések",
+    lead: "Egy, a modell számára ismeretlen tudásfájlon (PixelLab-dokumentáció, {kt} token) a KAPU-t használó ügynök kérésenként {k} tokent olvasott, az egy Markdown-fájlban kereső {md}, az ugyanezt PDF-ként kereső {pdf} tokent (medián, mindháromnál ugyanaz a feladatszöveg). Helyes válasz: KAPU {ck}, Markdown {cmd}, PDF {cpdf} a 12-ből, három vak bíráló szerint.",
+    meta: "Mérve: {date} · specifikáció {spec} · Windows 11, release build · minden szám a repó bench/results/ mappájából jön",
+    tile_kapu: "KAPU", tile_sub: "token/kérés (medián)", tile_full: "Az egész fájl a kontextusban", tile_full_sub: "token minden kérésnél",
+    form_kapu: "KAPU", form_md: "Egy .md fájl kereséssel", form_pdf: "PDF kereséssel",
+    v11_h: "1.1-es fájlformátum: kisebb fájl, gyorsabb hívás, jobb jelentés szerinti keresés",
+    v11_note: "Három változás a pilot után, ugyanazokon a korpuszokon és kérdéseken újramérve. Az index az ajtó azonosítója helyett a sorszámát tárolja, így a fájl kb. 4,5-ször kisebb, és a 13 millió tokenes MDN-korpusz már a kiadott eszközzel is megépül. Egy hívás a fájlt egyszer dolgozza fel és ellenőrzi, az indexsort bináris kereséssel találja meg. A jelentés szerinti keresés ajtónként 512 tokenes ablakonként egy vektort használ, és a legjobb ablak számít.",
+    v11_card: "Előtte és utána", v11_card_note: "Szobaszintű recall@10: a várt oldal bármely része az első 10 találat között. Az MDN a v1.0.4-gyel kísérleti, 64 MiB-os sorhatárú buildből.",
+    col_metric: "Mérőszám", col_corpus: "Korpusz", col_before: "v1.0.4", col_after: "v1.1",
+    m_file_mb: "Fájlméret (MB)", m_l_builds: "Megépül a kiadott eszközzel", m_search_ms: "Keresés MCP-n (ms, medián)", m_open_ms: "Ajtó kinyitása MCP-n (ms, medián)",
+    m_r10_hybrid: "Szobaszintű recall@10, hibrid", m_r10_vector: "Szobaszintű recall@10, csak vektor", m_bench_s: "kapu bench futásideje (s)",
+    yes: "igen", no: "nem (E005)",
+    px_h: "Ugyanaz a tartalom háromféle formában: KAPU, egy Markdown-fájl, PDF",
+    px_note: "A PixelLab-dokumentáció (harmadik féltől, nem publikus), egy kezdő indie-fejlesztő 12 kérése. A Markdown- és a PDF-ügynök rákeresett a szövegre, és csak a talált részt olvasta el: a Markdown-fájl sorait, a PDF oldalait. Ha az egész fájlt bemásolnánk a beszélgetésbe, minden kérés {kt} tokenbe kerülne. Három vak Claude Sonnet bíráló minden állítást a dokumentációhoz mért.",
+    px2_card: "Második kör: mindhárom forma ugyanazzal a feladatszöveggel", px2_card_note: "KAPU a v1.0.4-es specifikációval. A Markdown- és a PDF-válaszok az első körből valók, új bírálók pontozták őket.",
+    px1_card: "Első kör: olvasott token kérésenként", px1_card_note: "KAPU a v1.0.3-as specifikációval, saját feladatszöveggel. Token: amit az eszközök visszaadtak az ügynöknek (o200k_base).",
+    col_form: "Forma", col_correct: "Helyes", col_partly: "Részben", col_supported: "Alátámasztott állítás", col_claims: "Összes állítás", col_help: "Hasznosság (1–5)",
+    col_tok_req: "Token/kérés", col_tok_total: "Token, 12 kérés", col_calls: "Hívás/kérés",
+    split_h: "Miért több ezer token, ha a térkép csak pár száz?",
+    split_note: "A térkép és a keresés csak a tartalomjegyzék és a találati lista. A tokenek zöme a kinyitott ajtókból jön: ez az a dokumentációszöveg, amiből a válasz készül. A 12 kérés KAPU-tokenjeiből a kinyitás {open}, a keresés {search}, a térkép {map}.",
+    split_card: "KAPU-tokenek kérésenként, hívásfajta szerint", split_card_note: "Egy kérés jellemzően: 1–2 keresés (300–400 token), 1–2 kinyitott ajtó (1–3 ezer token), ritkán térkép.",
+    s_map: "Térkép", s_search: "Keresés", s_open: "Kinyitás",
+    scale_h: "Skálázás: kicsi, közepes és nagy dokumentáció",
+    scale_note: "S: a Rust Book, M: a Kubernetes-dokumentáció, L: az MDN Web Docs, mind 1.1-es formátumban. Egy MCP-munkamenetben: a térkép, minden csoportlista, 20 keresés a szobacímekkel mint lekérdezéssel, és minden első találat kinyitása.",
+    scale_card: "Build, méret és válaszok",
+    c_size: "Méret", c_corpus: "Korpusz", c_know: "Tudás (token)", c_rooms: "Szoba", c_doors: "Ajtó", c_groups: "Csoport", c_build: "Build (s)", c_mem: "Memória (GB)",
+    c_file: "Fájl (MB)", c_map: "Térkép (token)", c_fmap: "Első térkép (token)", c_glist: "Legnagyobb csoportlista (token)", c_stok: "Keresés (token)", c_sms: "Keresés (ms)",
+    c_fs: "Első keresés (s)", c_otok: "Kinyitás (token)", c_oms: "Kinyitás (ms)",
+    ret_h: "Visszakeresés ügynök nélkül: KAPU kontra darabolós RAG",
+    ret_note: "Valódi Stack Overflow-kérdések, ahol az elfogadott válasz pontosan egy dokumentációoldalra hivatkozik: 68, 201 és 395 kérdés. Találat: az oldal bármely része az első találatok között. A darabolós alapvonal 512 tokenes darabokkal, 64 token átfedéssel és ugyanazzal a beágyazómodellel dolgozik.",
+    ret_card: "Szobaszintű recall@10 méret és módszer szerint", ret_card_note: "A KAPU ajtókat ad vissza (szobákat és fejezeteiket), az alapvonal darabokat.",
+    meth_kapu_hybrid: "KAPU hibrid", meth_kapu_bm25: "KAPU BM25", meth_kapu_vector: "KAPU vektor", meth_chunk_bm25: "Darab, BM25", meth_chunk_vector: "Darab, vektor",
+    col_method: "Módszer", col_n: "Kérdés", col_r5: "Recall@5", col_r10: "Recall@10", col_mrr: "MRR@10", q: "kérdés",
+    ag_h: "Élő próba a Rust Bookon: öt rendszer, 30 kérdés",
+    ag_note: "Ezekre a népszerű kérdésekre a modell fejből is jól válaszolt (zárt könyv: 30-ból 30), ezért itt a pontosság nem különbözteti meg a rendszereket, a költség igen. KAPU a v1.0.3-as specifikációval; a v1.0.4-gyel a KAPU-ügynökök kérdésenként mediánban 2331 tokent olvastak, azonos pontossággal.",
+    ag_card: "Helyes válaszok és költség rendszerenként", ag_card_note: "Két vak bíráló (Claude Sonnet és Haiku). Az ügynök összes tokenje: a teljes futás a kérdésekre osztva, közelítés.",
+    col_system: "Rendszer", col_cs: "Helyes (Sonnet-bíráló)", col_ch: "Helyes (Haiku-bíráló)", col_q: "Kérdés", col_read: "Olvasott token/kérdés", col_cq: "Hívás/kérdés", col_all: "Ügynök összes tokenje/kérdés",
+    sys_c0: "Zárt könyv, eszköz nélkül", sys_c2b: "Ügynöki darabolós RAG", sys_c3: "grep/read a Markdown-mappán", sys_c4: "llms.txt", sys_c5: "KAPU",
+    v104_h: "Korábbi javítókör: a v1.0.4-es specifikáció", col_v103: "v1.0.3", col_v104: "v1.0.4",
+    r_rust_tokens_median: "KAPU a Rust Bookon: olvasott token/kérdés (medián)", r_rust_correct: "KAPU a Rust Bookon: helyes válasz (30-ból)",
+    r_first_map_m: "Első térképhívás, Kubernetes (token)", r_first_map_l: "Első térképhívás, MDN (token)",
+    method_h: "Módszer és korlátok",
+    method: [
+      "Korpuszok: a Rust Book (MIT vagy Apache-2.0), a Kubernetes-dokumentáció (CC BY 4.0) és az MDN Web Docs (CC BY-SA 2.5), rögzített commitokon. Kérdések: Stack Overflow API (CC BY-SA); csak az azonosítóik vannak tárolva.",
+      "Ügynökök: Claude Sonnet alügynökök, csak naplózott eszközökkel. A tokenszámlálás o200k_base.",
+      "Bírálók: vak Claude-modellek; a válaszok véletlen betűk alatt, a forrásjelölő sorok nélkül.",
+      "Ez pilot egyetlen gépen (Windows 11, release build), nem benchmark. A PixelLab-fájl harmadik féltől való, nem publikus."
+    ],
+    f_repo: "Repó", f_raw: "Nyers számok (JSON)"
+  }
+};
+
+const SERIES_COLORS = ["--c1", "--c2", "--c3", "--c4", "--c5"];
+const color = i => getComputedStyle(document.documentElement).getPropertyValue(SERIES_COLORS[i]).trim();
+let LANG = "en";
+
+function locale() {
+  return LANG === "hu"
+    ? d3.formatLocale({ decimal: ",", thousands: " ", grouping: [3], currency: ["", ""] })
+    : d3.formatLocale({ decimal: ".", thousands: ",", grouping: [3], currency: ["", ""] });
+}
+const t = k => I18N[LANG][k] ?? I18N.en[k] ?? k;
+function fill(text, vars) { return text.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? ""); }
+
+function fmt(field, v) {
+  const L = locale();
+  if (v == null || v === "") return "—";
+  if (typeof v === "string") return t(v) || v;
+  if (["helpfulness"].includes(field)) return L.format(",.2f")(v);
+  if (["r5", "r10", "mrr"].includes(field) || (typeof v === "number" && v < 1 && v > 0 && field === "value")) return L.format(".3f")(v);
+  if (["peak_gb"].includes(field)) return L.format(",.2f")(v);
+  if (Number.isInteger(v)) return L.format(",d")(v);
+  return L.format(",.1f")(v);
+}
+
+function table(id, cols, rows) {
+  const el = document.getElementById(id);
+  el.innerHTML = "";
+  const head = el.createTHead().insertRow();
+  for (const c of cols) { const th = document.createElement("th"); th.textContent = t(c.label); head.appendChild(th); }
+  const body = el.createTBody();
+  for (const r of rows) {
+    const tr = body.insertRow();
+    for (const c of cols) {
+      const td = tr.insertCell();
+      const v = c.get ? c.get(r) : r[c.key];
+      td.textContent = c.raw ? v : fmt(c.fmt || c.key, v);
+      if (c.better && c.better(r)) td.className = "better";
+    }
+  }
+}
+
+function legend(id, series) {
+  const el = document.getElementById(id);
+  el.innerHTML = "";
+  series.forEach((s, i) => {
+    const span = document.createElement("span");
+    const dot = document.createElement("i");
+    dot.style.background = color(s.color ?? i);
+    span.append(dot, document.createTextNode(s.label));
+    el.appendChild(span);
+  });
+}
+
+function tipFor(el) {
+  let tip = el.querySelector(".tip");
+  if (!tip) { tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; el.appendChild(tip); }
+  return tip;
+}
+function showTip(el, ev, title, lines) {
+  const tip = tipFor(el);
+  tip.innerHTML = "";
+  const head = document.createElement("div"); head.className = "tt"; head.textContent = title; tip.appendChild(head);
+  for (const l of lines) {
+    const row = document.createElement("div"); row.className = "tl";
+    const dot = document.createElement("i"); dot.style.background = l.color;
+    const b = document.createElement("b"); b.textContent = l.value;
+    row.append(dot, document.createTextNode(l.label), b);
+    tip.appendChild(row);
+  }
+  tip.hidden = false;
+  const box = el.getBoundingClientRect();
+  let x = ev.clientX - box.left + 12, y = ev.clientY - box.top - tip.offsetHeight - 8;
+  if (x + tip.offsetWidth > box.width) x = Math.max(0, ev.clientX - box.left - tip.offsetWidth - 12);
+  if (y < 0) y = ev.clientY - box.top + 12;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+const hideTip = el => { const tip = el.querySelector(".tip"); if (tip) tip.hidden = true; };
+
+function axis(svg, y, ticks, f, left, right) {
+  svg.append("g").selectAll("line").data(ticks).join("line")
+    .attr("x1", left).attr("x2", right).attr("y1", d => y(d)).attr("y2", d => y(d)).attr("stroke", "var(--grid)");
+  svg.append("g").selectAll("text").data(ticks).join("text")
+    .attr("x", left - 6).attr("y", d => y(d)).attr("dy", "0.32em").attr("text-anchor", "end")
+    .attr("fill", "var(--muted)").attr("font-size", 11).text(f);
+}
+const tickWidth = (ticks, f) => d3.max(ticks, v => String(f(v)).length) * 6.6 + 10;
+
+function grouped(el, groups, series, f) {
+  el.innerHTML = "";
+  const W = Math.max(280, el.clientWidth), H = 260;
+  const ymax = d3.max(groups, g => d3.max(series, s => g.values[s.field])) || 1;
+  const nice = d3.scaleLinear().domain([0, ymax]).nice(5);
+  const ticks = nice.ticks(5);
+  const m = { t: 10, r: 8, b: 30, l: tickWidth(ticks, f) };
+  const y = d3.scaleLinear(nice.domain(), [H - m.b, m.t]);
+  const x0 = d3.scaleBand(groups.map(g => g.key), [m.l, W - m.r]).paddingInner(0.22).paddingOuter(0.06);
+  const x1 = d3.scaleBand(series.map(s => s.field), [0, x0.bandwidth()]).padding(0.1);
+  const svg = d3.select(el).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img");
+  axis(svg, y, ticks, f, m.l, W - m.r);
+  svg.append("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", "var(--axis)");
+  svg.append("g").selectAll("text").data(groups).join("text")
+    .attr("x", g => x0(g.key) + x0.bandwidth() / 2).attr("y", H - m.b + 18).attr("text-anchor", "middle")
+    .attr("fill", "var(--muted)").attr("font-size", 11).text(g => g.label);
+  const gg = svg.append("g").selectAll("g").data(groups).join("g").attr("transform", g => `translate(${x0(g.key)},0)`);
+  gg.append("rect").attr("y", m.t).attr("width", x0.bandwidth()).attr("height", H - m.b - m.t).attr("fill", "transparent")
+    .on("mousemove", (ev, g) => showTip(el, ev, g.title, series.map((s, i) => ({ color: color(i), label: s.label, value: f(g.values[s.field]) }))))
+    .on("mouseleave", () => hideTip(el));
+  gg.selectAll("rect.bar").data(g => series.map((s, i) => ({ s, i, v: g.values[s.field] }))).join("rect")
+    .attr("class", "bar").attr("pointer-events", "none")
+    .attr("x", d => x1(d.s.field)).attr("width", x1.bandwidth())
+    .attr("y", d => y(d.v)).attr("height", d => Math.max(0, y(0) - y(d.v)))
+    .attr("rx", Math.min(3, x1.bandwidth() / 2)).attr("fill", d => color(d.i));
+}
+
+function stacked(el, rows, series, f) {
+  el.innerHTML = "";
+  const W = Math.max(280, el.clientWidth), H = 260;
+  const data = rows.map(r => Object.assign({ key: r.request, topic: r["topic_" + LANG] }, ...series.map(s => ({ [s.field]: +r[s.field] || 0 }))));
+  const st = d3.stack().keys(series.map(s => s.field))(data);
+  const ymax = d3.max(data, d => d3.sum(series, s => d[s.field])) || 1;
+  const nice = d3.scaleLinear().domain([0, ymax]).nice(5);
+  const ticks = nice.ticks(5);
+  const m = { t: 10, r: 8, b: 30, l: tickWidth(ticks, f) };
+  const y = d3.scaleLinear(nice.domain(), [H - m.b, m.t]);
+  const x = d3.scaleBand(data.map(d => d.key), [m.l, W - m.r]).padding(0.28);
+  const svg = d3.select(el).append("svg").attr("width", "100%").attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img");
+  axis(svg, y, ticks, f, m.l, W - m.r);
+  svg.append("g").selectAll("g").data(st).join("g").attr("fill", (s, i) => color(series[i].color))
+    .selectAll("rect").data(s => s).join("rect")
+    .attr("x", d => x(d.data.key)).attr("width", x.bandwidth())
+    .attr("y", d => y(d[1])).attr("height", d => Math.max(0, y(d[0]) - y(d[1])));
+  svg.append("line").attr("x1", m.l).attr("x2", W - m.r).attr("y1", y(0)).attr("y2", y(0)).attr("stroke", "var(--axis)");
+  svg.append("g").selectAll("text").data(data).join("text")
+    .attr("x", d => x(d.key) + x.bandwidth() / 2).attr("y", H - m.b + 18).attr("text-anchor", "middle")
+    .attr("fill", "var(--muted)").attr("font-size", 11).text(d => d.key);
+  svg.append("g").selectAll("rect").data(data).join("rect")
+    .attr("x", d => x(d.key) - x.step() * x.paddingInner() / 2).attr("width", x.step())
+    .attr("y", m.t).attr("height", H - m.b - m.t).attr("fill", "transparent")
+    .on("mousemove", (ev, d) => showTip(el, ev, `${d.key}: ${d.topic}`, series.map(s => ({ color: color(s.color), label: s.label, value: f(d[s.field]) }))))
+    .on("mouseleave", () => hideTip(el));
+}
+
+function render() {
+  const L = locale();
+  const int = L.format(",d");
+  document.documentElement.lang = LANG;
+  document.title = LANG === "hu" ? "KAPU mérések" : "KAPU measurements";
+  document.querySelectorAll("[data-t]").forEach(el => { el.textContent = t(el.dataset.t); });
+  document.querySelectorAll(".lang button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === LANG)));
+
+  const [k2, md2, pdf2] = DATA.pixellab2;
+  document.getElementById("lead").textContent = fill(t("lead"), {
+    kt: int(DATA.knowledge_tokens), k: int(k2.read_tokens_median), md: int(md2.read_tokens_median), pdf: int(pdf2.read_tokens_median),
+    ck: k2.correct, cmd: md2.correct, cpdf: pdf2.correct
+  });
+  document.getElementById("meta").textContent = fill(t("meta"), { date: DATA.date, spec: DATA.spec });
+  document.getElementById("t-kapu").textContent = int(k2.read_tokens_median);
+  document.getElementById("t-md").textContent = int(md2.read_tokens_median);
+  document.getElementById("t-pdf").textContent = int(pdf2.read_tokens_median);
+  document.getElementById("t-full").textContent = int(DATA.knowledge_tokens);
+  document.querySelector('[data-t="px_note"]').textContent = fill(t("px_note"), { kt: int(DATA.knowledge_tokens) });
+
+  const corpus = { s: "Rust book", m: "Kubernetes", l: "MDN" };
+  const lowerIsBetter = m => ["file_mb", "search_ms", "open_ms", "bench_s"].includes(m);
+  table("tb-changes", [
+    { label: "col_metric", get: r => t("m_" + r.metric), raw: true },
+    { label: "col_corpus", get: r => corpus[r.size], raw: true },
+    { label: "col_before", key: "before" },
+    { label: "col_after", key: "after", better: r => typeof r.after === "number" && (lowerIsBetter(r.metric) ? r.after < r.before : r.after > r.before) }
+  ], DATA.changes);
+
+  const formCols = [
+    { label: "col_form", get: r => t("form_" + r.form), raw: true },
+    { label: "col_correct", key: "correct" }, { label: "col_partly", key: "partly" },
+    { label: "col_supported", key: "claims_supported" }, { label: "col_claims", key: "claims_total" },
+    { label: "col_help", key: "helpfulness" }, { label: "col_tok_req", key: "read_tokens_median" },
+    { label: "col_tok_total", key: "read_tokens_total" }, { label: "col_calls", key: "calls_median" }
+  ];
+  table("tb-px2", formCols, DATA.pixellab2);
+  table("tb-px1", formCols, DATA.pixellab1);
+
+  const reqSeries = [{ field: "kapu", label: t("form_kapu") }, { field: "md", label: t("form_md") }, { field: "pdf", label: t("form_pdf") }];
+  legend("lg-req", reqSeries);
+  grouped(document.getElementById("ch-req"), DATA.requests.map(r => ({
+    key: r.request, label: r.request, title: `${r.request}: ${r["topic_" + LANG]}`, values: { kapu: r.kapu, md: r.md, pdf: r.pdf }
+  })), reqSeries, int);
+
+  const splitSeries = [{ field: "kapu_map", label: t("s_map"), color: 3 }, { field: "kapu_search", label: t("s_search"), color: 1 }, { field: "kapu_open", label: t("s_open"), color: 0 }];
+  legend("lg-split", splitSeries);
+  stacked(document.getElementById("ch-split"), DATA.requests, splitSeries, int);
+  const sum = f => d3.sum(DATA.requests, r => r[f] || 0);
+  const total = sum("kapu_map") + sum("kapu_search") + sum("kapu_open");
+  const pct = L.format(".0%");
+  document.getElementById("split-note").textContent = fill(t("split_note"), {
+    open: pct(sum("kapu_open") / total), search: pct(sum("kapu_search") / total), map: pct(sum("kapu_map") / total)
+  });
+
+  table("tb-scale", [
+    { label: "c_size", key: "size", raw: true }, { label: "c_corpus", key: "corpus", raw: true },
+    { label: "c_know", key: "knowledge_tokens" }, { label: "c_rooms", key: "rooms" }, { label: "c_doors", key: "doors" },
+    { label: "c_groups", key: "groups" }, { label: "c_build", key: "build_s" }, { label: "c_mem", key: "peak_gb" },
+    { label: "c_file", key: "file_mb" }, { label: "c_map", key: "map_tokens" }, { label: "c_fmap", key: "first_map_tokens" },
+    { label: "c_glist", key: "group_list_max" }, { label: "c_stok", key: "search_tokens" }, { label: "c_sms", key: "search_ms" },
+    { label: "c_fs", key: "first_search_s" }, { label: "c_otok", key: "open_tokens" }, { label: "c_oms", key: "open_ms" }
+  ], DATA.scale);
+
+  const methods = ["kapu_hybrid", "kapu_bm25", "kapu_vector", "chunk_bm25", "chunk_vector"];
+  const retSeries = methods.map(m => ({ field: m, label: t("meth_" + m) }));
+  legend("lg-ret", retSeries);
+  const sizes = [...new Set(DATA.retrieval.map(r => r.size))];
+  grouped(document.getElementById("ch-ret"), sizes.map(sz => {
+    const rows = DATA.retrieval.filter(r => r.size === sz);
+    return { key: sz, label: `${sz} (${rows[0].n} ${t("q")})`, title: `${sz}: ${rows[0].n} ${t("q")}, recall@10`,
+      values: Object.fromEntries(rows.map(r => [r.method, r.r10])) };
+  }), retSeries, L.format(".2f"));
+  table("tb-ret", [
+    { label: "c_size", key: "size", raw: true }, { label: "col_method", get: r => t("meth_" + r.method), raw: true },
+    { label: "col_n", key: "n" }, { label: "col_r5", key: "r5" }, { label: "col_r10", key: "r10" }, { label: "col_mrr", key: "mrr" }
+  ], DATA.retrieval);
+
+  table("tb-agents", [
+    { label: "col_system", get: r => t("sys_" + r.system), raw: true },
+    { label: "col_cs", key: "correct_sonnet" }, { label: "col_ch", key: "correct_haiku" }, { label: "col_q", key: "questions" },
+    { label: "col_read", key: "read_tokens_median" }, { label: "col_cq", key: "calls_median" }, { label: "col_all", key: "agent_tokens_per_q" }
+  ], DATA.agents);
+
+  table("tb-v104", [
+    { label: "col_metric", get: r => t("r_" + r.metric), raw: true },
+    { label: "col_v103", key: "before" }, { label: "col_v104", key: "after" }
+  ], DATA.v104);
+
+  const ul = document.getElementById("method");
+  ul.innerHTML = "";
+  for (const line of t("method")) { const li = document.createElement("li"); li.textContent = line; ul.appendChild(li); }
+}
+
+function setLang(lang) {
+  LANG = lang === "hu" ? "hu" : "en";
+  try { localStorage.setItem("kapu-results-lang", LANG); } catch (e) { /* storage may be blocked */ }
+  render();
+}
+
+let saved = null;
+try { saved = localStorage.getItem("kapu-results-lang"); } catch (e) { saved = null; }
+document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click", () => setLang(b.dataset.lang)));
+let resizeTimer;
+window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 150); });
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+setLang(saved || ((navigator.language || "").toLowerCase().startsWith("hu") ? "hu" : "en"));
+</script>
+</body>
+</html>

@@ -26,3 +26,6 @@ Thumbs.db
 
 # Test corpus (third-party skills, sample code, question sets): local only, never committed
 /bench/korpusz/
+
+# Local editor and agent settings
+/.claude/
