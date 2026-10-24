@@ -104,7 +104,7 @@ fn hybrid_search_with_matching_model_merges_both_rankings() {
     assert!(
         std::path::Path::new(&files[0])
             .extension()
-            .is_some_and(|e| e.eq_ignore_ascii_case("vecs"))
+            .is_some_and(|e| e.eq_ignore_ascii_case("vecs2"))
     );
     let again = search(
         &built,
@@ -259,4 +259,49 @@ fn a_format_1_0_file_is_still_read() {
     kapu_core::validate(&old, kapu_core::Level::Basic).unwrap();
     let opened = kapu_core::open_bytes(&old, &["szoba"]).unwrap();
     assert!(opened.doors[0].is_ok());
+}
+
+#[test]
+fn a46_words_late_in_a_long_door_are_found_by_meaning() {
+    // D141: a door gets one vector per window of its text; the best window counts
+    let model = tiny();
+    let filler = "szín színek sötét téma háttér minta szabály lásd mindig soha ".repeat(60);
+    let mut list = rooms();
+    list.push(RoomSource {
+        id: "hosszu".into(),
+        content: format!(
+            "# Hosszú\n{filler}\n\n{}\n",
+            "preload bridge ipc renderer context isolation ".repeat(50)
+        ),
+    });
+    let built = build_with(&list, Some(&model)).unwrap().bytes;
+    let cache = VectorCache::in_memory(&model);
+    let r =
+        kapu_core::search::rankings(&built, "preload bridge ipc renderer", Some(&cache)).unwrap();
+    let vector = r.vector.unwrap();
+    let at = vector.iter().position(|id| id == "hosszu").unwrap();
+    assert!(at <= 1, "{vector:?}");
+}
+
+#[test]
+fn warm_writes_the_window_bundle_before_the_first_search() {
+    // D141: a build can compute the search vectors, so the first search does not wait
+    let model = tiny();
+    let built = build_with(&rooms(), Some(&model)).unwrap().bytes;
+    let dir = temp_cache("warm");
+    let cache = VectorCache::in_dir(&model, &dir);
+    let s = kapu_core::Sections::parse(&built).unwrap();
+    kapu_core::search::warm_in(&s, &cache).unwrap();
+    let bundle = dir
+        .join(blake3_hex(&model))
+        .join(format!("{}.vecs2", hex32(&s.header.bodyhash.0)));
+    assert!(bundle.is_file(), "{}", bundle.display());
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+fn hex32(bytes: &[u8; 32]) -> String {
+    bytes.iter().fold(String::new(), |mut s, b| {
+        let _ = std::fmt::Write::write_fmt(&mut s, format_args!("{b:02x}"));
+        s
+    })
 }

@@ -170,11 +170,16 @@ fn reader_model(cli: &Cli, file: &[u8]) -> Result<Option<Model>, Error> {
 fn written(
     path: &Path,
     built: Built,
+    model: Option<&Model>,
     mut warnings: Vec<Warning>,
     extra: Value,
 ) -> Result<Output, Error> {
     write_atomic(path, &built.bytes)?;
     let s = kapu_core::Sections::parse(&built.bytes)?;
+    // D141: the search vectors are computed now, not at the first search
+    if let Some(model) = model {
+        kapu_core::search::warm_in(&s, &VectorCache::new(model))?;
+    }
     let summary = json!({
         "file": path.display().to_string(),
         "bytes": built.bytes.len(),
@@ -215,14 +220,14 @@ fn run(cli: &Cli) -> Result<Output, Error> {
             let model = writer_model(cli, &mut warnings)?;
             let base = kapu_core::edit::new_file()?;
             let built = rebuild_with(&base.bytes, model.as_ref())?;
-            written(file, built, warnings, json!({}))
+            written(file, built, model.as_ref(), warnings, json!({}))
         }
         Command::Import { dir, file } => {
             let model = writer_model(cli, &mut warnings)?;
             let imported = kapu_core::edit::import_dir(dir)?;
             warnings.extend(imported.warnings);
             let built = rebuild_with(&imported.bytes, model.as_ref())?;
-            written(file, built, warnings, json!({}))
+            written(file, built, model.as_ref(), warnings, json!({}))
         }
         Command::Export { file, dir } => {
             let paths = kapu_core::edit::export_dir(&read(file)?, dir)?;
@@ -247,7 +252,7 @@ fn run(cli: &Cli) -> Result<Output, Error> {
                     message: format!("content scan, room `{}`: {}", f.room, f.detail),
                 });
             }
-            let mut out = written(file, built, warnings, json!({ "id": room }))?;
+            let mut out = written(file, built, model.as_ref(), warnings, json!({ "id": room }))?;
             out.text = format!("room `{room}` saved; {}", out.text);
             Ok(out)
         }
@@ -255,12 +260,18 @@ fn run(cli: &Cli) -> Result<Output, Error> {
             let model = writer_model(cli, &mut warnings)?;
             let removed = kapu_core::edit::remove_room(&read(file)?, id)?;
             let built = rebuild_with(&removed.bytes, model.as_ref())?;
-            written(file, built, warnings, json!({ "removed": id }))
+            written(
+                file,
+                built,
+                model.as_ref(),
+                warnings,
+                json!({ "removed": id }),
+            )
         }
         Command::Build { file } => {
             let model = writer_model(cli, &mut warnings)?;
             let built = rebuild_with(&read(file)?, model.as_ref())?;
-            written(file, built, warnings, json!({}))
+            written(file, built, model.as_ref(), warnings, json!({}))
         }
         Command::Validate { file, full } => validate(cli, file, *full),
         Command::Map { file, group } => map(file, group.as_deref()),

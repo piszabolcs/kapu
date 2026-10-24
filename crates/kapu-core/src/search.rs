@@ -288,7 +288,7 @@ pub fn search_in(
     };
 
     let desc = parse_desc(s.desc)?;
-    let semantic = vector_ranking(s, &desc, &title, &allowed, cache, query)?;
+    let semantic = vector_ranking(s, &desc, &allowed, cache, query)?;
     let fused = rrf(&keyword, &semantic);
     let mut hits: Vec<SearchHit> = fused
         .into_iter()
@@ -316,43 +316,30 @@ pub fn search_in(
     })
 }
 
-/// The vector ranking (FR-16/2): cosine of the query vector with every
-/// allowed door's vector, best first, ties by id, at most [`TOP_N`].
+/// The vector ranking (FR-16/2): per allowed door the best cosine of the
+/// query vector with one of its window vectors (D141), best first, ties by
+/// id, at most [`TOP_N`].
 fn vector_ranking(
     s: &Sections<'_>,
     desc: &[crate::catalog::DescLine<'_>],
-    title: &dyn Fn(&str) -> String,
     allowed: &dyn Fn(&str) -> bool,
     cache: &crate::embed::VectorCache<'_>,
     query: &str,
 ) -> Result<Vec<(f64, String)>> {
     let q = cache.model().embed(query)?;
     let entries = s.doc_entries()?;
-    let texts = || -> Result<Vec<String>> {
-        entries
-            .iter()
-            .map(|entry| {
-                let served = s
-                    .stored(entry)
-                    .map_or_else(|_| Ok(String::new()), crate::docs::served_text)?;
-                let description = desc
-                    .iter()
-                    .find(|d| d.id == entry.id)
-                    .map_or("", |d| d.description);
-                Ok(crate::embed::door_text(
-                    &title(entry.id),
-                    description,
-                    &served,
-                ))
-            })
-            .collect()
-    };
-    let vectors = cache.door_vectors(&s.header.bodyhash, entries.len(), texts)?;
+    let vectors = door_vectors(s, &entries, desc, cache)?;
     let mut semantic: Vec<(f64, String)> = entries
         .iter()
         .zip(vectors.iter())
         .filter(|(entry, _)| allowed(entry.id))
-        .map(|(entry, v)| (crate::embed::cosine(&q, v), entry.id.to_owned()))
+        .map(|(entry, windows)| {
+            let best = windows
+                .iter()
+                .map(|v| crate::embed::cosine(&q, v))
+                .fold(None, |b: Option<f64>, c| Some(b.map_or(c, |b| b.max(c))));
+            (best.unwrap_or(0.0), entry.id.to_owned())
+        })
         .collect();
     semantic.sort_by(|a, b| {
         b.0.total_cmp(&a.0)
@@ -360,6 +347,47 @@ fn vector_ranking(
     });
     semantic.truncate(TOP_N);
     Ok(semantic)
+}
+
+/// The window vectors of every door in `#DOCS` order (D141): from the cache,
+/// or computed from title, description and served text and cached.
+fn door_vectors(
+    s: &Sections<'_>,
+    entries: &[crate::DocEntry<'_>],
+    desc: &[crate::catalog::DescLine<'_>],
+    cache: &crate::embed::VectorCache<'_>,
+) -> Result<crate::embed::Vectors> {
+    let texts = || -> Result<Vec<String>> {
+        let titles: BTreeMap<&str, String> = crate::catalog::parse_map(s.map)?
+            .doors
+            .iter()
+            .map(|d| (d.id, crate::catalog::unescape_field(d.title)))
+            .collect();
+        let descriptions: BTreeMap<&str, &str> =
+            desc.iter().map(|d| (d.id, d.description)).collect();
+        entries
+            .iter()
+            .map(|entry| {
+                let served = s
+                    .stored(entry)
+                    .map_or_else(|_| Ok(String::new()), crate::docs::served_text)?;
+                let description = descriptions.get(entry.id).copied().unwrap_or("");
+                let title = titles.get(entry.id).map_or("", String::as_str);
+                Ok(crate::embed::door_text(title, description, &served))
+            })
+            .collect()
+    };
+    cache.door_vectors(&s.header.bodyhash, entries.len(), texts)
+}
+
+/// Computes and caches the window vectors of every door (D141), so the first
+/// search after a build does not wait for them.
+///
+/// # Errors
+/// A broken section or a tokenizer failure.
+pub fn warm_in(s: &Sections<'_>, cache: &crate::embed::VectorCache<'_>) -> Result<()> {
+    let desc = crate::catalog::parse_desc(s.desc)?;
+    door_vectors(s, &s.doc_entries()?, &desc, cache).map(|_| ())
 }
 
 /// RRF (FR-16/3): `sum 1 / (60 + rank)`, ranks from 1. Per id: score, found
@@ -512,7 +540,7 @@ pub fn rankings_in(
     query: &str,
     cache: Option<&crate::embed::VectorCache<'_>>,
 ) -> Result<Rankings> {
-    use crate::catalog::{parse_desc, parse_map, unescape_field};
+    use crate::catalog::parse_desc;
     let bm25_ids: Vec<String> = bm25_in(s, query)?.into_iter().map(|h| h.id).collect();
     let options = SearchOptions {
         k: 2 * TOP_N,
@@ -522,14 +550,8 @@ pub fn rankings_in(
     let hybrid: Vec<String> = result.hits.iter().map(|h| h.id.clone()).collect();
     let vector = match (cache, &result.vector) {
         (Some(cache), VectorStatus::Available) => {
-            let map = parse_map(s.map)?;
             let desc = parse_desc(s.desc)?;
-            let title = |id: &str| {
-                map.door(id)
-                    .map(|d| unescape_field(d.title))
-                    .unwrap_or_default()
-            };
-            let ranked = vector_ranking(s, &desc, &title, &|_| true, cache, query)?;
+            let ranked = vector_ranking(s, &desc, &|_| true, cache, query)?;
             Some(ranked.into_iter().map(|(_, id)| id).collect())
         }
         _ => None,

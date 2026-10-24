@@ -228,6 +228,7 @@ tags:
   2. Az író a build során a csomagolt modellel (D29) kiszámolja minden ajtó vektorát (cím + leírás + tartalom, megjegyzések nélkül), és a gráfhoz és csoportokhoz használja.
   3. Az olvasó ugyanezzel a modellel számol, és a vektorokat gyorsítótárazza az operációs rendszer felhasználói gyorsítótár-mappájában, kulcs: `embhash` + a törzs `bodyhash`-e; egy gyorsítótár-bejegyzés a fájl összes ajtóvektora (v1.0.1, D97).
   4. Ha az olvasó csomagolt modelljének ujjlenyomata eltér a fejléc `embhash` mezőjétől, a jelentés szerinti keresés kimarad, és a válasz `vector: unavailable` állapotot jelez.
+  5. A kereséshez az olvasó ajtónként több vektort számol: az ajtó szövegét a modell karakterkorlátjánál (512 token) nem hosszabb ablakokra vágja, egy ablak a korlát 7/8-ával az előző után kezdődik; az ajtó pontja a legjobb ablak koszinusza. A gráf és a csoportok az első ablak vektorára (a 2. szabály vektorára) épülnek. A gyorsítótárban ablakonként egy vektor van, ajtónként a szöveg BLAKE3-ával; a változatlan szövegű ajtó ablakait az olvasó a legutóbbi bejegyzésből veszi át. A parancssor írás után kiszámolja őket (D141).
 - Acceptance: Given egy más modellel buildelt fájl, When keresés, Then BM25 találatok érkeznek és a válasz jelzi a vektoros keresés hiányát.
 
 ### FR-11 Gráf
@@ -632,6 +633,7 @@ A fájlformátum és a kimenetek nem változnak.
 
 ## 19. Változások v1.0.5 → v1.1 (2026-10-24)
 
-Formátumváltás: a fájl első sora `%KAPU 1.1`. Az olvasó a 1.0-s fájlt is olvassa; a `kapu build` 1.1-ként írja újra.
+Formátumváltás: a fájl első sora `%KAPU 1.1`. Az olvasó a 1.0-s fájlt is olvassa; a `kapu build` 1.1-ként írja újra. A 2. pont a fájlt nem érinti.
 
 1. **FR-03, FR-09/7, FR-20 E009 (D140, A42, A11):** az indexbejegyzés az ajtó azonosítója helyett a `#DOCS`-beli sorszámának különbsége az előző bejegyzéséhez képest (`<gap>:<tf>`). Indok: az index a fájl 85%-a volt, mert minden bejegyzés a teljes azonosítót tárolta (kb. 70 bájt), és egy gyakori szó sora 14 ezer ajtó fölött átlépte az 1 MiB-os sorhatárt (E005), így a 13 millió tokenes MDN-dokumentáció nem épült meg. Utána a 3,9 millió tokenes Kubernetes-dokumentáció 123 MB helyett 27,5 MB (az index 103 MB helyett 7,7 MB); a leggyakoribb szónál egy bejegyzés kb. 4 bájt, így a sorhatár kb. 250 ezer ajtóig elég.
+2. **FR-10/5, FR-16 (D141, A46):** a jelentés szerinti keresés ajtónként ablakonként egy vektort használ, és a legjobb ablak számít. Indok: egy ajtó egyetlen vektora csak a szövege első kb. 512 tokenjét látta, ezért a valódi kérdéseken a vektoros keresés gyengébb volt a darabolós vektorkeresésnél. Utána szobaszintű recall@10, vektor: S 0,32 → 0,43, M 0,28 → 0,32; hibrid: S 0,46 → 0,49, M 0,44 → 0,46, a darabolós BM25 szintjén vagy fölötte.

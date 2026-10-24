@@ -9,6 +9,7 @@
 //! rows, L2-normalise. The average is a plain sequential sum in f64 (D46): no
 //! SIMD, no parallel reduction, the same bits on every platform.
 
+use std::collections::BTreeMap;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -328,6 +329,42 @@ impl Model {
     }
 }
 
+impl Model {
+    /// FR-10/5 (D141): one vector per window of `text` (see [`windows`]),
+    /// each window at most the model's character limit. The first window is
+    /// what [`Model::embed`] sees.
+    ///
+    /// # Errors
+    /// A tokenizer failure (E012).
+    pub fn embed_windows(&self, text: &str) -> Result<Vec<Vec<f32>>> {
+        windows(text, self.max_chars)
+            .into_iter()
+            .map(|w| self.embed(w))
+            .collect()
+    }
+}
+
+/// D141: windows of `text` of at most `max` characters, each starting 7/8 of
+/// `max` characters after the previous one, until one reaches the end (one
+/// window for a short text).
+fn windows(text: &str, max: usize) -> Vec<&str> {
+    let starts: Vec<usize> = text.char_indices().map(|(i, _)| i).collect();
+    let chars = starts.len();
+    let max = max.max(1);
+    let step = (max - max / 8).max(1);
+    let at = |c: usize| starts.get(c).copied().unwrap_or(text.len());
+    let mut out = Vec::new();
+    let mut first: usize = 0;
+    loop {
+        let end = first.saturating_add(max).min(chars);
+        out.push(text.get(at(first)..at(end)).unwrap_or(""));
+        if end >= chars {
+            return out;
+        }
+        first += step;
+    }
+}
+
 /// FR-10/2: the text a door's vector is computed from: title, description
 /// and served content (comments already removed), one per line (D91).
 #[must_use]
@@ -458,10 +495,11 @@ impl<'m> VectorCache<'m> {
         self.model.embed(text)
     }
 
-    /// All door vectors of one file body, in `#DOCS` order (D97). The cache
-    /// file is `<cache>/<embhash>/<bodyhash>.vecs`: `count` and `dim` as
-    /// little-endian u32, then `count × dim` f32. A missing or malformed file
-    /// is recomputed with `texts` and written atomically; write failures are
+    /// The window vectors of every door of one file body, in `#DOCS` order
+    /// (D97, D141). The cache file is `<cache>/<embhash>/<bodyhash>.vecs2`:
+    /// `count` and `dim` as little-endian u32, the `count` window counts as
+    /// u32, then every window's `dim` f32. A missing or malformed file is
+    /// recomputed with `texts` and written atomically; write failures are
     /// silent (the cache can be deleted any time). The vectors of the last
     /// [`MEMO_BODIES`] bodies stay in memory for the process (A44, D137).
     ///
@@ -472,7 +510,7 @@ impl<'m> VectorCache<'m> {
         bodyhash: &Hash,
         count: usize,
         texts: impl FnOnce() -> Result<Vec<String>>,
-    ) -> Result<Arc<Vec<Vec<f32>>>> {
+    ) -> Result<Vectors> {
         let key = MemoKey {
             model: self.model.hash(),
             body: *bodyhash,
@@ -491,40 +529,77 @@ impl<'m> VectorCache<'m> {
         bodyhash: &Hash,
         count: usize,
         texts: impl FnOnce() -> Result<Vec<String>>,
-    ) -> Result<Vec<Vec<f32>>> {
+    ) -> Result<Vec<Vec<Vec<f32>>>> {
         let dim = self.model.dim();
         let path = self
             .dir
             .as_ref()
-            .map(|d| d.join(format!("{}.vecs", hex(bodyhash))));
-        if let Some(bytes) = path.as_ref().and_then(|p| std::fs::read(p).ok())
-            && let Some(vectors) = parse_bundle(&bytes, count, dim)
+            .map(|d| d.join(format!("{}.vecs2", hex(bodyhash))));
+        if let Some(doors) = path
+            .as_ref()
+            .and_then(|p| std::fs::read(p).ok())
+            .and_then(|b| parse_bundle(&b, dim))
+            .filter(|d| d.len() == count)
         {
-            return Ok(vectors);
+            return Ok(doors.into_iter().map(|(_, w)| w).collect());
         }
-        let vectors: Vec<Vec<f32>> = texts()?
+        // D141: a door whose text did not change keeps its windows from the
+        // newest other bundle, so a write recomputes only the changed doors
+        let mut known: BTreeMap<[u8; 32], Vec<Vec<f32>>> = self
+            .newest_bundle(path.as_deref())
+            .unwrap_or_default()
+            .into_iter()
+            .map(|(h, w)| (h.0, w))
+            .collect();
+        let doors: Vec<Door> = texts()?
             .iter()
-            .map(|t| self.model.embed(t))
+            .map(|t| {
+                let hash = crate::docs::blake3_of(t.as_bytes());
+                match known.remove(&hash.0) {
+                    Some(windows) => Ok((hash, windows)),
+                    None => Ok((hash, self.model.embed_windows(t)?)),
+                }
+            })
             .collect::<Result<_>>()?;
         if let (Some(dir), Some(path)) = (&self.dir, &path)
             && std::fs::create_dir_all(dir).is_ok()
         {
-            let mut bytes = Vec::with_capacity(8 + vectors.len() * dim * 4);
-            bytes.extend_from_slice(
-                &u32::try_from(vectors.len())
-                    .unwrap_or(u32::MAX)
-                    .to_le_bytes(),
-            );
-            bytes.extend_from_slice(&u32::try_from(dim).unwrap_or(u32::MAX).to_le_bytes());
-            for v in &vectors {
-                for x in v {
-                    bytes.extend_from_slice(&x.to_le_bytes());
-                }
-            }
-            let _ = crate::build::write_atomic(path, &bytes);
+            let _ = crate::build::write_atomic(path, &bundle_bytes(&doors, dim));
         }
-        Ok(vectors)
+        Ok(doors.into_iter().map(|(_, w)| w).collect())
     }
+
+    /// The most recently written bundle of this model other than `except`.
+    fn newest_bundle(&self, except: Option<&Path>) -> Option<Vec<Door>> {
+        let newest = std::fs::read_dir(self.dir.as_ref()?)
+            .ok()?
+            .filter_map(std::result::Result::ok)
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|x| x == "vecs2") && Some(p.as_path()) != except)
+            .max_by_key(|p| std::fs::metadata(p).and_then(|m| m.modified()).ok())?;
+        parse_bundle(&std::fs::read(newest).ok()?, self.model.dim())
+    }
+}
+
+/// One door's window vectors and the BLAKE3 of the text they came from.
+type Door = (Hash, Vec<Vec<f32>>);
+
+/// A `.vecs2` bundle: `count` and `dim` as little-endian u32; per door the
+/// 32-byte BLAKE3 of its text and its window count as u32; then every
+/// window's `dim` f32.
+fn bundle_bytes(doors: &[Door], dim: usize) -> Vec<u8> {
+    let le = |n: usize| u32::try_from(n).unwrap_or(u32::MAX).to_le_bytes();
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(&le(doors.len()));
+    bytes.extend_from_slice(&le(dim));
+    for (hash, windows) in doors {
+        bytes.extend_from_slice(&hash.0);
+        bytes.extend_from_slice(&le(windows.len()));
+    }
+    for x in doors.iter().flat_map(|(_, w)| w).flatten() {
+        bytes.extend_from_slice(&x.to_le_bytes());
+    }
+    bytes
 }
 
 /// How many bodies' door vectors stay in memory (A44, D137).
@@ -539,8 +614,8 @@ struct MemoKey {
     dir: Option<PathBuf>,
 }
 
-/// Door vectors shared between the memo and its callers.
-type Vectors = Arc<Vec<Vec<f32>>>;
+/// Window vectors per door, shared between the memo and its callers.
+pub type Vectors = Arc<Vec<Vec<Vec<f32>>>>;
 
 /// Memo entries, the most recent last.
 static MEMO: Mutex<Vec<(MemoKey, Vectors)>> = Mutex::new(Vec::new());
@@ -562,17 +637,39 @@ fn memo_put(key: MemoKey, vectors: Vectors) {
     }
 }
 
-/// Reads a `.vecs` bundle if its header and size match.
-fn parse_bundle(bytes: &[u8], count: usize, dim: usize) -> Option<Vec<Vec<f32>>> {
-    let (head, data) = bytes.split_at_checked(8)?;
+/// Reads a `.vecs2` bundle (see [`bundle_bytes`]) if its header and size match.
+fn parse_bundle(bytes: &[u8], dim: usize) -> Option<Vec<Door>> {
+    let u32_at = |b: &[u8]| -> Option<usize> {
+        usize::try_from(u32::from_le_bytes(b.try_into().ok()?)).ok()
+    };
+    let (head, rest) = bytes.split_at_checked(8)?;
     let (n, d) = head.split_at_checked(4)?;
-    let n = usize::try_from(u32::from_le_bytes(n.try_into().ok()?)).ok()?;
-    let d = usize::try_from(u32::from_le_bytes(d.try_into().ok()?)).ok()?;
-    if n != count || d != dim || data.len() != n.checked_mul(d)?.checked_mul(4)? {
+    let (n, d) = (u32_at(n)?, u32_at(d)?);
+    if d != dim || dim == 0 {
+        return None;
+    }
+    let (table, data) = rest.split_at_checked(n.checked_mul(36)?)?;
+    let table: Vec<(Hash, usize)> = table
+        .chunks(36)
+        .map(|entry| {
+            let (hash, windows) = entry.split_at_checked(32)?;
+            Some((Hash(hash.try_into().ok()?), u32_at(windows)?))
+        })
+        .collect::<Option<_>>()?;
+    let windows = table
+        .iter()
+        .try_fold(0usize, |a, (_, c)| a.checked_add(*c))?;
+    if data.len() != windows.checked_mul(dim)?.checked_mul(4)? {
         return None;
     }
     let values = f32_le(data);
-    Some(values.chunks(dim.max(1)).map(<[f32]>::to_vec).collect())
+    let mut rows = values.chunks(dim).map(<[f32]>::to_vec);
+    Some(
+        table
+            .into_iter()
+            .map(|(hash, c)| (hash, rows.by_ref().take(c).collect()))
+            .collect(),
+    )
 }
 
 fn hex(h: &Hash) -> String {
@@ -606,6 +703,48 @@ mod tests {
             })
             .unwrap();
         assert_eq!(first, second);
+    }
+
+    #[test]
+    fn unchanged_texts_keep_their_windows_from_the_newest_bundle() {
+        // D141: only a door whose text changed is embedded again
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/model/kapu-test-tiny");
+        let model = Model::load(&dir).unwrap();
+        let root = std::env::temp_dir().join(format!("kapu-reuse-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let cache = VectorCache::in_dir(&model, &root);
+        let bundles = cache.dir.clone().unwrap();
+        std::fs::create_dir_all(&bundles).unwrap();
+        let marker = vec![vec![0.5f32; model.dim()]];
+        let old = [(crate::docs::blake3_of(b"alpha"), marker.clone())];
+        std::fs::write(
+            bundles.join(format!("{}.vecs2", hex(&Hash([1u8; 32])))),
+            bundle_bytes(&old, model.dim()),
+        )
+        .unwrap();
+        let got = cache
+            .door_vectors(&Hash([2u8; 32]), 2, || {
+                Ok(vec!["alpha".to_owned(), "beta".to_owned()])
+            })
+            .unwrap();
+        assert_eq!(got[0], marker);
+        assert_eq!(got[1], model.embed_windows("beta").unwrap());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn windows_cover_a_long_text_with_an_eighth_of_overlap() {
+        // D141: windows of at most `max` characters, each starting 7/8 of `max` later
+        assert_eq!(windows("short", 16), vec!["short"]);
+        assert_eq!(windows("", 16), vec![""]);
+        let text: String = ('a'..='z').cycle().take(40).collect();
+        let w = windows(&text, 16);
+        assert_eq!(w.len(), 3);
+        assert_eq!(w[0], &text[0..16]);
+        assert_eq!(w[1], &text[14..30]);
+        assert_eq!(w[2], &text[28..40]);
+        let accented = "é".repeat(20);
+        assert!(windows(&accented, 8).iter().all(|w| w.chars().count() <= 8));
     }
 
     #[test]
