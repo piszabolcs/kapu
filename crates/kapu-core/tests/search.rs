@@ -243,3 +243,20 @@ button three
     let ex = kapu_core::search::excerpts(&built.bytes, &["glass"], "button blur").unwrap();
     assert!(ex[0].contains("blur"), "{ex:?}");
 }
+
+#[test]
+fn a_format_1_0_file_is_still_read() {
+    // D140: postings by door id (1.0) and by gap (1.1) give the same ranking
+    let old = std::fs::read(root().join("tests/compat/minta-1.0.kapu")).unwrap();
+    let new = std::fs::read(root().join("tests/vectors/minta.kapu")).unwrap();
+    assert!(old.starts_with(b"%KAPU 1.0\n") && new.starts_with(b"%KAPU 1.1\n"));
+    for query in ["electron preload", "szoba", "gomb", "escape"] {
+        let a = kapu_core::search::bm25(&old, query).unwrap();
+        let b = kapu_core::search::bm25(&new, query).unwrap();
+        assert!(!b.is_empty(), "{query}");
+        assert_eq!(a, b, "{query}");
+    }
+    kapu_core::validate(&old, kapu_core::Level::Basic).unwrap();
+    let opened = kapu_core::open_bytes(&old, &["szoba"]).unwrap();
+    assert!(opened.doors[0].is_ok());
+}

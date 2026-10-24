@@ -37,6 +37,54 @@ pub fn blake3_of(bytes: &[u8]) -> Hash {
     Hash(*blake3::hash(bytes).as_bytes())
 }
 
+/// The `(door id, tf)` pairs of one `#INDEX` posting list (FR-09, D140).
+/// Since format 1.1 a posting is `<gap>:<tf>`: the door's line number in
+/// `#DOCS` (from 0) minus the previous posting's, the first one counted from
+/// 0, every later gap at least 1. A 1.0 file has `<id>:<tf>`; those ids are
+/// returned unchecked.
+///
+/// # Errors
+/// E005 for a malformed posting or a gap of 0 after the first, E009 for a
+/// position past the last `#DOCS` line.
+pub fn postings<'a>(
+    list: &'a str,
+    entries: &[DocEntry<'a>],
+    header: &crate::Header,
+) -> Result<Vec<(&'a str, u64)>> {
+    let mut out = Vec::new();
+    let mut at: Option<usize> = None;
+    for posting in list.split(',') {
+        let (door, tf) = posting
+            .rsplit_once(':')
+            .ok_or_else(|| e005(format!("posting `{posting}` is not `<door>:<tf>`")))?;
+        let tf = parse_decimal(tf).ok_or_else(|| e005(format!("posting `{posting}`: bad tf")))?;
+        if header.version == "1.0" {
+            out.push((door, tf));
+            continue;
+        }
+        let gap = parse_decimal(door)
+            .and_then(|g| usize::try_from(g).ok())
+            .ok_or_else(|| e005(format!("posting `{posting}`: bad gap")))?;
+        if at.is_some() && gap == 0 {
+            return Err(e005(format!(
+                "posting `{posting}`: a gap of 0 after the first"
+            )));
+        }
+        let next = at
+            .map_or(Some(gap), |a| a.checked_add(gap))
+            .ok_or_else(|| e005(format!("posting `{posting}`: gap overflows")))?;
+        let entry = entries.get(next).ok_or_else(|| {
+            Error::new(
+                ErrorCode::E009,
+                format!("posting `{posting}` points past the last #DOCS line"),
+            )
+        })?;
+        out.push((entry.id, tf));
+        at = Some(next);
+    }
+    Ok(out)
+}
+
 /// Parses the inner text of `#DOCS` (without the frame lines).
 ///
 /// A line that does not have the five fields in the right shape is E005

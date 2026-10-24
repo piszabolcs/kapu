@@ -1,4 +1,4 @@
-# KAPU Specification  v1.0.5  (2026-10-24; v1.0: 2026-10-20)
+# KAPU Specification  v1.1  (2026-10-24; v1.0: 2026-10-20)
 
 Navigálható, egyfájlos tudáskonténer AI ügynököknek.
 Szerző és ötletgazda: Pintér Szabolcs. Specifikáció licence: CC BY 4.0. Kód licence: MIT.
@@ -118,7 +118,7 @@ A törzs a fájl egyetlen igazságforrása. Minden más szakasz a törzsből sz�
 
 ### FR-03 Fejléc
 
-- Behavior: pontosan 512 bájt. Első sor: `%KAPU 1.0`. Utána `kulcs=érték` sorok, majd szóközkitöltés, az 512. bájt (511-es index) LF.
+- Behavior: pontosan 512 bájt. Első sor: `%KAPU 1.1`. Utána `kulcs=érték` sorok, majd szóközkitöltés, az 512. bájt (511-es index) LF.
 - Kötelező mezők:
 
 | Mező | Jelentés |
@@ -134,7 +134,7 @@ A törzs a fájl egyetlen igazságforrása. Minden más szakasz a törzsből sz�
 | `bodyhash=b3:<64 hex>` | a teljes törzs BLAKE3 ujjlenyomata |
 | `guide=std-1` | melyik szabványos útmutatót adja az olvasó (FR-15) |
 
-- Rules: ismeretlen mezőt az olvasó figyelmen kívül hagy.
+- Rules: ismeretlen mezőt az olvasó figyelmen kívül hagy. Az író mindig `%KAPU 1.1`-et ír; az olvasó a `%KAPU 1.0` fájlt is elfogadja (indexbejegyzés ajtóazonosítóval, FR-09), és a `kapu build` 1.1-ként írja újra (D140). Más verzió: E001.
 - Acceptance: Given egy buildelt fájl, When a fejléc 512 bájtja beolvasásra kerül, Then minden szakasz egyetlen további seekkel elérhető.
 
 ### FR-04 Törzs és szobák
@@ -207,7 +207,7 @@ tags:
 
 ```
 #INDEX
-<term>\t<df>\t<id>:<tf>,<id>:<tf>,...
+<term>\t<df>\t<gap>:<tf>,<gap>:<tf>,...
 #END
 ```
 
@@ -218,6 +218,7 @@ tags:
   4. Az index ajtónként (szobák és alajtók) tartalmazza a cím, a tagek, a leírás és a tartalom kifejezéseit. A cím és a tagek kifejezései 3-szoros tf súllyal (ASSUMPTION-05).
   5. A sorok a kifejezés UTF-8 bájtsorrendje szerint rendezettek. Az olvasó erre építve bináris kereséssel találja meg egy kifejezés sorát (D139).
   6. Pontozás BM25, `k1=1.2`, `b=0.75`, a dokumentumhossz a `#DOCS` `dl` mezője.
+  7. Egy bejegyzés `<gap>:<tf>`: az ajtó sorának száma a `#DOCS`-ban (0-tól) mínusz az előző bejegyzésé; az első bejegyzésé maga a sorszám, minden későbbié legalább 1. A bejegyzések így a `#DOCS` sorrendjében (azonosító-bájtsorrend) állnak. A `df` a bejegyzések száma. A `%KAPU 1.0` fájlban a bejegyzés `<id>:<tf>` (D140).
 - Acceptance: Given „üvegszerű gomb” és „gombok” kifejezések, When keresés „gomb”-ra, Then mindkét ajtó találat.
 
 ### FR-10 Vektorok
@@ -376,7 +377,7 @@ S <id> | <cím> | <token>t
 | E006 | `bodyhash` eltérés |
 | E007 | ajtó ujjlenyomat-eltérés |
 | E008 | ismétlődő vagy szabálytalan azonosító |
-| E009 | hivatkozás nem létező ajtóra (index, gráf, docs, map) |
+| E009 | hivatkozás nem létező ajtóra (index, gráf, docs, map); az indexben a `#DOCS` utolsó során túli sorszám |
 | E010 | felirat a kemény korlát felett |
 | E011 | ismeretlen hash előtag |
 | E012 | környezeti hiba, nem a fájl hibája: nem olvasható vagy nem írható fájl, hiányzó vagy hibás vektormodell, hibás kérdésfájl (v1.0.1, D109) |
@@ -628,3 +629,9 @@ A pilotmérés (`bench/RESULTS.md` 8. fejezet) utáni gyors javítások, a felha
 A fájlformátum és a kimenetek nem változnak.
 
 1. **FR-09/5, FR-15 (D139, A44):** egy hívás a fájlt egyszer dolgozza fel és ellenőrzi (korábban keresésenként háromszor), a `#INDEX`-ben a kifejezés sorát bináris keresés találja meg, és az MCP szerver a fájlváltozat ellenőrzött másolatát tartja meg. Indok: a D137-es gyorsítótár után is 657 ms volt egy keresés a 117 MB-os fájlon, mert az idő a háromszori teljes ellenőrzésre és az index soronkénti végigolvasására ment el. Utána: 19 ms.
+
+## 19. Változások v1.0.5 → v1.1 (2026-10-24)
+
+Formátumváltás: a fájl első sora `%KAPU 1.1`. Az olvasó a 1.0-s fájlt is olvassa; a `kapu build` 1.1-ként írja újra.
+
+1. **FR-03, FR-09/7, FR-20 E009 (D140, A42, A11):** az indexbejegyzés az ajtó azonosítója helyett a `#DOCS`-beli sorszámának különbsége az előző bejegyzéséhez képest (`<gap>:<tf>`). Indok: az index a fájl 85%-a volt, mert minden bejegyzés a teljes azonosítót tárolta (kb. 70 bájt), és egy gyakori szó sora 14 ezer ajtó fölött átlépte az 1 MiB-os sorhatárt (E005), így a 13 millió tokenes MDN-dokumentáció nem épült meg. Utána a 3,9 millió tokenes Kubernetes-dokumentáció 123 MB helyett 27,5 MB (az index 103 MB helyett 7,7 MB); a leggyakoribb szónál egy bejegyzés kb. 4 bájt, így a sorhatár kb. 250 ezer ajtóig elég.

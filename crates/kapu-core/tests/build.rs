@@ -49,6 +49,29 @@ fn m3_rust_build_reproduces_minta_kapu_byte_for_byte() {
 }
 
 #[test]
+fn index_postings_are_gaps_between_door_positions() {
+    // D140: a posting is `<gap>:<tf>`, the gap counted in #DOCS lines
+    let built = build(&sample_rooms()).unwrap();
+    let s = Sections::parse(&built.bytes).unwrap();
+    let entries = s.doc_entries().unwrap();
+    for line in s.index.lines() {
+        let f: Vec<&str> = line.split('\t').collect();
+        let decoded = kapu_core::docs::postings(f[2], &entries, &s.header).unwrap();
+        assert_eq!(decoded.len().to_string(), f[1], "{line}");
+        let mut last = None;
+        for (posting, (id, tf)) in f[2].split(',').zip(&decoded) {
+            let (gap, t) = posting.split_once(':').unwrap();
+            let gap: usize = gap.parse().unwrap();
+            let at = last.map_or(gap, |l: usize| l + gap);
+            assert!(last.is_none() || gap > 0, "{line}");
+            assert_eq!(entries[at].id, *id);
+            assert_eq!(t.parse::<u64>().unwrap(), *tf);
+            last = Some(at);
+        }
+    }
+}
+
+#[test]
 fn build_twice_is_byte_identical_and_validates_full() {
     let a = build(&sample_rooms()).unwrap().bytes;
     let b = rebuild(&a).unwrap().bytes;

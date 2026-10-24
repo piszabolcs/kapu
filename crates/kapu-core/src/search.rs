@@ -102,18 +102,18 @@ pub fn bm25_in(s: &Sections<'_>, query: &str) -> Result<Vec<Hit>> {
             continue;
         };
         let mut f = line.splitn(3, '\t');
-        let (Some(_), Some(df), Some(postings)) = (f.next(), f.next(), f.next()) else {
+        let (Some(_), Some(df), Some(list)) = (f.next(), f.next(), f.next()) else {
             continue;
         };
         #[allow(clippy::cast_precision_loss)]
         let df = parse_decimal(df).unwrap_or(0) as f64;
         let idf = libm::log((n - df + 0.5) / (df + 0.5) + 1.0);
-        for posting in postings.split(',') {
-            let Some((id, tf)) = posting.rsplit_once(':') else {
-                continue;
-            };
+        let Ok(list) = crate::docs::postings(list, &docs, &s.header) else {
+            continue;
+        };
+        for (id, tf) in list {
             #[allow(clippy::cast_precision_loss)]
-            let tf = parse_decimal(tf).unwrap_or(0) as f64;
+            let tf = tf as f64;
             #[allow(clippy::cast_precision_loss)]
             let len = dl.get(id).copied().unwrap_or(0) as f64;
             let part = idf * tf * (K1 + 1.0) / (tf + K1 * (1.0 - B + B * len / avgdl));

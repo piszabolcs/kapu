@@ -815,23 +815,33 @@ fn desc_lines(doors: &[Door]) -> Vec<String> {
         .collect()
 }
 
-/// FR-09 `#INDEX`: terms in UTF-8 byte order (`BTreeMap` of `&str`), postings
-/// in id byte order.
+/// FR-09 `#INDEX`: terms in UTF-8 byte order (`BTreeMap` of `&str`); a
+/// posting is `<gap>:<tf>`, the gap between the doors' line numbers in
+/// `#DOCS`, which is in id byte order (D140).
 fn index_lines(doors: &[Door]) -> Vec<String> {
-    let mut postings: BTreeMap<&str, BTreeMap<&str, u64>> = BTreeMap::new();
+    let mut ids: Vec<&str> = doors.iter().map(|d| d.id.as_str()).collect();
+    ids.sort_unstable_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
+    let line_of: BTreeMap<&str, usize> = ids.iter().enumerate().map(|(n, id)| (*id, n)).collect();
+    let mut postings: BTreeMap<&str, BTreeMap<usize, u64>> = BTreeMap::new();
     for door in doors {
+        let at = line_of.get(door.id.as_str()).copied().unwrap_or(0);
         for (term, &tf) in &door.terms {
-            postings
-                .entry(term.as_str())
-                .or_default()
-                .insert(door.id.as_str(), tf);
+            postings.entry(term.as_str()).or_default().insert(at, tf);
         }
     }
     postings
         .iter()
         .map(|(term, list)| {
-            let list: Vec<String> = list.iter().map(|(id, tf)| format!("{id}:{tf}")).collect();
-            format!("{term}\t{}\t{}", list.len(), list.join(","))
+            let mut previous = 0;
+            let gaps: Vec<String> = list
+                .iter()
+                .map(|(&at, tf)| {
+                    let gap = at - previous;
+                    previous = at;
+                    format!("{gap}:{tf}")
+                })
+                .collect();
+            format!("{term}\t{}\t{}", gaps.len(), gaps.join(","))
         })
         .collect()
 }

@@ -45,8 +45,13 @@ pub use reader::{
 pub use sections::{BodyLength, CheckedFile, Limits, Sections};
 pub use validate::{Level, Report, is_valid_id, validate, validate_with};
 
-/// Format version written on the first header line (`%KAPU 1.0`, FR-03).
-pub const FORMAT_VERSION: &str = "1.0";
+/// Format version the builder writes on the first header line (`%KAPU 1.1`,
+/// FR-03).
+pub const FORMAT_VERSION: &str = "1.1";
+
+/// Format versions the reader accepts (D140): a 1.0 file stays readable until
+/// `kapu build` rewrites it as 1.1.
+pub const READ_VERSIONS: [&str; 2] = ["1.0", "1.1"];
 
 /// Exact size of the file header in bytes (FR-03).
 pub const HEADER_LEN: usize = 512;
@@ -62,6 +67,7 @@ mod tests {
 
     #[test]
     fn format_version_matches_spec() {
-        assert_eq!(FORMAT_VERSION, "1.0");
+        assert_eq!(FORMAT_VERSION, "1.1");
+        assert_eq!(READ_VERSIONS, ["1.0", "1.1"]);
     }
 }

@@ -19,9 +19,9 @@ use kapu_core::build::{RoomSource, build_with};
 use kapu_core::embed::Model;
 use kapu_core::{Level, Sections, validate_with};
 
-/// BLAKE3 of the corpus built with the tiny model (since D105). Change only on purpose,
+/// BLAKE3 of the corpus built with the tiny model (since D105, format 1.1 since D140). Change only on purpose,
 /// together with a decision-log entry.
-const GOLDEN: &str = "ab7f26dabfb88a4b161d34cf3c7040436c007ecae1a391196c33fa899c16acd0";
+const GOLDEN: &str = "445200c6a2f812509b77228d0f1f5dae840d8352da9893c1cc0d469f0b6d0f74";
 
 fn tiny() -> Model {
     Model::load(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/model/kapu-test-tiny"))

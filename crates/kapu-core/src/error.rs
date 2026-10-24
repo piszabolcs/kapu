@@ -10,7 +10,7 @@ use std::fmt;
 /// stable and part of the CLI's machine-readable output.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ErrorCode {
-    /// Missing or wrong magic line (`%KAPU 1.0`).
+    /// Missing or unknown magic line (`%KAPU 1.1` or `%KAPU 1.0`).
     E001,
     /// The header is not 512 bytes, does not end with LF, or is malformed.
     E002,

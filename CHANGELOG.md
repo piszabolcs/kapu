@@ -1,11 +1,12 @@
 # Changelog
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
-The file format has its own version (`%KAPU 1.0`, see `SPEC-KAPU.md`); the tools below are versioned separately.
+The file format has its own version (`%KAPU 1.1`, see `SPEC-KAPU.md`); the tools below are versioned separately.
 
 ## [Unreleased]
 
 ### Changed
+- File format 1.1 (specification v1.1, D140): an `#INDEX` posting is `<gap>:<tf>`, the gap between the doors' line numbers in `#DOCS`, instead of the door id. Files are about 4.5 times smaller (Kubernetes docs: 123 MB to 27.5 MB) and the 13-million-token MDN corpus builds within the 1 MiB line limit. Format 1.0 files are still read; `kapu build` rewrites them as 1.1.
 - Specification v1.0.5 (D139): one call parses and checks the file once, a term's `#INDEX` line is found by binary search, and the MCP server keeps a checked copy of an unchanged file. Search on a 117 MB file: 657 ms to 19 ms (median); opening a door: 216 ms to 5 ms.
 - Specification v1.0.4 (D131-D138): group names leave out parameter-table words; the search excerpt prefers rarer query words; the map's totals line names the content language (`lang=`) and the guide asks for queries in that language; at most 10 content-scan lines on the map (`scan=true` lists all); `kapu_open` serves long doors in parts (`max_tokens`, `part`); the MCP server keeps unchanged files and door vectors in memory.
 - Specification v1.0.2: in-page anchors link to the room's own sections and no longer warn (D123); group names leave out stop words (D121).

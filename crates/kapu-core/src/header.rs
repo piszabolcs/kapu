@@ -1,6 +1,6 @@
 //! The 512-byte header (FR-03): parsing and structural checks.
 //!
-//! Layout: `%KAPU 1.0\n`, then `key=value\n` lines, then space padding, and an
+//! Layout: `%KAPU 1.1\n` (or `1.0`, D140), then `key=value\n` lines, then space padding, and an
 //! LF at byte 511. The parser only reads those 512 bytes; it never trusts a
 //! position before it has been checked (NFR-01), and it allocates nothing whose
 //! size comes from the file.
@@ -8,7 +8,7 @@
 use std::collections::BTreeMap;
 
 use crate::error::{Error, ErrorCode, Result};
-use crate::{FORMAT_VERSION, HEADER_LEN};
+use crate::{FORMAT_VERSION, HEADER_LEN, READ_VERSIONS};
 
 /// An absolute byte range in the file, written as `start+len` (FR-03).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -35,6 +35,8 @@ pub struct Hash(pub [u8; 32]);
 /// (FR-03 rule: readers ignore unknown fields).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Header {
+    /// Format version from the first line, one of [`READ_VERSIONS`] (D140).
+    pub version: &'static str,
     /// Name of the vector model used by the build (`emb=`).
     pub emb: String,
     /// Fingerprint of that model (`embhash=`).
@@ -125,18 +127,14 @@ impl Header {
         let lines = without_final_lf.trim_end_matches(' ');
         let Some(lines) = lines.strip_suffix('\n') else {
             let first = lines.split('\n').next().unwrap_or("");
-            if first != format!("%KAPU {FORMAT_VERSION}") {
-                return Err(magic_error(first));
-            }
+            version_of(first)?;
             return Err(err(
                 ErrorCode::E002,
                 "header padding contains something other than spaces",
             ));
         };
         let (magic, fields) = lines.split_once('\n').unwrap_or((lines, ""));
-        if magic != format!("%KAPU {FORMAT_VERSION}") {
-            return Err(magic_error(magic));
-        }
+        let version = version_of(magic)?;
 
         let mut kv: BTreeMap<String, String> = BTreeMap::new();
         for line in fields.split('\n') {
@@ -170,6 +168,7 @@ impl Header {
             }
         }
         let header = Self {
+            version,
             emb: take(&mut kv, "emb")?,
             embhash: parse_hash("embhash", &take(&mut kv, "embhash")?, ErrorCode::E002)?,
             map: parse_span("map", &take_span(&mut kv, "map")?)?,
@@ -193,11 +192,18 @@ fn err(code: ErrorCode, detail: impl Into<String>) -> Error {
     Error::new(code, detail)
 }
 
-fn magic_error(found: &str) -> Error {
-    err(
-        ErrorCode::E001,
-        format!("first line is {found:?}, expected \"%KAPU {FORMAT_VERSION}\""),
-    )
+/// The version of a `%KAPU <version>` line, if the reader knows it (E001).
+fn version_of(magic: &str) -> Result<&'static str> {
+    magic
+        .strip_prefix("%KAPU ")
+        .and_then(|v| READ_VERSIONS.iter().find(|&&known| known == v))
+        .copied()
+        .ok_or_else(|| {
+            err(
+                ErrorCode::E001,
+                format!("first line is {magic:?}, expected \"%KAPU {FORMAT_VERSION}\""),
+            )
+        })
 }
 
 /// Removes a required field; a missing one is a malformed header (E002).
@@ -391,6 +397,19 @@ mod tests {
     #[test]
     fn wrong_version_is_e001() {
         let mut bytes = header_with(&[]);
+        bytes[8] = b'2';
+        assert_eq!(Header::parse(&bytes).unwrap_err().code, ErrorCode::E001);
+    }
+
+    #[test]
+    fn version_1_0_is_still_read() {
+        // D140: the builder writes 1.1; a 1.0 file stays readable until rebuilt
+        let refs: Vec<String> = valid_lines();
+        let refs: Vec<&str> = refs.iter().map(String::as_str).collect();
+        let mut bytes = header_with(&refs);
+        assert_eq!(Header::parse(&bytes).unwrap().version, "1.1");
+        bytes[8] = b'0';
+        assert_eq!(Header::parse(&bytes).unwrap().version, "1.0");
         bytes[8] = b'2';
         assert_eq!(Header::parse(&bytes).unwrap_err().code, ErrorCode::E001);
     }

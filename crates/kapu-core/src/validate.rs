@@ -110,7 +110,7 @@ pub fn validate_with(
         known(&ids, line.id, "#DESC")?;
     }
     check_graph(s.graph, &ids)?;
-    let terms = check_index(s.index, &ids)?;
+    let terms = check_index(s.index, &entries, &s.header, &ids)?;
 
     check_captions(&map, &desc)?;
     check_counts_and_order(&s, &entries, &terms, &map, &desc, rooms.len(), ids.len())?;
@@ -201,9 +201,14 @@ fn check_graph(text: &str, ids: &BTreeSet<&str>) -> Result<()> {
     Ok(())
 }
 
-/// `#INDEX` lines: postings name known doors (E009), `df` equals the number
-/// of postings (E005). Returns the terms in file order.
-fn check_index<'a>(text: &'a str, ids: &BTreeSet<&str>) -> Result<Vec<&'a str>> {
+/// `#INDEX` lines: postings name known doors (E009) in `#DOCS` order, `df`
+/// equals the number of postings (E005). Returns the terms in file order.
+fn check_index<'a>(
+    text: &'a str,
+    entries: &[crate::DocEntry<'_>],
+    header: &crate::Header,
+    ids: &BTreeSet<&str>,
+) -> Result<Vec<&'a str>> {
     let mut terms = Vec::new();
     for (n, line) in text.lines().enumerate() {
         let bad = |what: &str| err(ErrorCode::E005, format!("#INDEX line {}: {what}", n + 1));
@@ -212,15 +217,12 @@ fn check_index<'a>(text: &'a str, ids: &BTreeSet<&str>) -> Result<Vec<&'a str>> 
             return Err(bad("expected 3 fields"));
         };
         let df = parse_decimal(df).ok_or_else(|| bad("bad df"))?;
-        let mut count = 0u64;
-        for posting in postings.split(',') {
-            let (id, tf) = posting
-                .rsplit_once(':')
-                .ok_or_else(|| bad("posting is not `id:tf`"))?;
+        let list = crate::docs::postings(postings, entries, header)
+            .map_err(|e| err(e.code, format!("#INDEX line {}: {}", n + 1, e.detail)))?;
+        for (id, _) in &list {
             known(ids, id, "#INDEX")?;
-            parse_decimal(tf).ok_or_else(|| bad("bad tf"))?;
-            count += 1;
         }
+        let count = u64::try_from(list.len()).unwrap_or(u64::MAX);
         if count != df {
             return Err(bad(&format!("df is {df} but there are {count} postings")));
         }

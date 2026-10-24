@@ -34,7 +34,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "tests" / "vectors"
 
 HEADER_LEN = 512
-FORMAT_VERSION = "1.0"
+FORMAT_VERSION = "1.1"
 # D121: group names leave out the stop words of the YAKE list (same file as Rust).
 # D131: words of API parameter tables, never a group's topic (build.rs GROUP_NAME_SKIP)
 GROUP_NAME_SKIP = {"bool", "default", "false", "float", "int", "let", "none", "null", "optional", "required", "str", "true"}
@@ -600,14 +600,21 @@ def derive(doors: list[Door]) -> dict[str, bytes]:
     ]
     graph_lines = [f"{a}\t{b}\t{t}\t{fmt_weight(w)}" for a, b, t, w in edges]
 
-    postings: dict[str, dict[str, int]] = {}
+    # D140: a posting is <gap>:<tf>, the gap between the doors' line numbers in #DOCS (id byte order)
+    line_of = {d.id: n for n, d in enumerate(sorted(doors, key=lambda d: d.id.encode()))}
+    postings: dict[str, dict[int, int]] = {}
     for d in doors:
         for t, tf in d.terms.items():
-            postings.setdefault(t, {})[d.id] = tf
-    index_lines = [
-        f"{t}\t{len(p)}\t" + ",".join(f"{i}:{tf}" for i, tf in sorted(p.items(), key=lambda kv: kv[0].encode()))
-        for t, p in sorted(postings.items(), key=lambda kv: kv[0].encode())
-    ]
+            postings.setdefault(t, {})[line_of[d.id]] = tf
+
+    def gaps(p: dict[int, int]) -> str:
+        out, last = [], 0
+        for at in sorted(p):
+            out.append(f"{at - last}:{p[at]}")
+            last = at
+        return ",".join(out)
+
+    index_lines = [f"{t}\t{len(p)}\t{gaps(p)}" for t, p in sorted(postings.items(), key=lambda kv: kv[0].encode())]
     docs_lines = [
         f"{d.id}\t@{d.offset}+{len(d.stored)}\tb3:{blake3(d.stored)}\tdl={d.dl}\tc={d.chars}"
         for d in sorted(doors, key=lambda d: d.id.encode())
@@ -742,7 +749,7 @@ def main() -> None:
         return s
 
     # E001 bad magic
-    write("E001-magic.kapu", sample.replace(b"%KAPU 1.0", b"%KAPX 1.0", 1), "E001", "magic is %KAPX")
+    write("E001-magic.kapu", sample.replace(b"%KAPU 1.1", b"%KAPX 1.1", 1), "E001", "magic is %KAPX")
     # E002 header does not end with LF at byte 511
     e002 = bytearray(sample)
     e002[HEADER_LEN - 1] = ord(" ")
@@ -768,8 +775,8 @@ def main() -> None:
     write("E008-id.kapu", assemble(derive(bad_doors), bad_body), "E008", "room id `Szoba` violates the id grammar")
     # E009 index posting points to a door that does not exist
     s = dict(sections)
-    s["INDEX"] = s["INDEX"].replace(b"#END\n", b"zzz\t1\tnincs-ilyen:1\n#END\n")
-    write("E009-dangling.kapu", assemble(s, body), "E009", "#INDEX posting references `nincs-ilyen`")
+    s["INDEX"] = s["INDEX"].replace(b"#END\n", b"zzz\t1\t9999:1\n#END\n")
+    write("E009-dangling.kapu", assemble(s, body), "E009", "#INDEX posting points past the last #DOCS line")
     # E010 caption above the hard limit: 201-character title in #MAP
     long_title = "a" * (TITLE_MAX + 1)
     s = mutate_section("MAP", "| Electron leckék |".encode(), f"| {long_title} |".encode())
