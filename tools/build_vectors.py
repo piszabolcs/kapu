@@ -4,7 +4,7 @@ error code (E001-E011) and two reader edge cases (FR-15).
 
 This script is the executable reference for SPEC-KAPU.md v1.0. The Rust builder
 (M3) must reproduce minta.kapu byte for byte, so every rule that the spec leaves
-open is pinned here and recorded in DONTESNAPLO.md (D56-D66).
+open is pinned here (decisions D56-D66).
 
 Developer tool only. Run from the repository root:
 

@@ -65,7 +65,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-  # NFR-03/5, AGGALYOK A6: short fuzz run of every target on each push.
+  # NFR-03/5: short fuzz run of every target on each push.
   # The one-hour-per-target gate runs before a release (scripts/fuzz.ps1 -Seconds 3600).
   fuzz:
     name: fuzz smoke (Linux, 30 s per target)

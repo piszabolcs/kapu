@@ -1,4 +1,4 @@
-# Runs every cargo-fuzz target for a fixed time (NFR-03/5, TERV.md M2).
+# Runs every cargo-fuzz target for a fixed time (NFR-03/5).
 # Usage: powershell -ExecutionPolicy Bypass -File scripts/fuzz.ps1 [-Seconds 3600] [-Targets header,docs]
 # Windows needs the MSVC AddressSanitizer component (Visual Studio: "C++ AddressSanitizer");
 # its runtime DLL is put on PATH here. The seed corpus is the M1 test vectors.

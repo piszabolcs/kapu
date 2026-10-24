@@ -1,4 +1,4 @@
-//! M3 builder tests against the M1 vectors (TERV.md M3 checks).
+//! M3 builder tests against the M1 vectors (spec chapter 13, M3 checks).
 #![allow(
     clippy::panic,
     clippy::unwrap_used,

@@ -27,4 +27,4 @@ must produce; the Rust tests in `crates/kapu-core/tests/acceptance.rs` read it.
 group and served text, so M2 and M3 can assert against them directly.
 
 The decisions that pin the open points of the spec for these vectors are
-D56-D66 in `DONTESNAPLO.md`.
+D56-D66; `tools/build_vectors.py` is their executable form.

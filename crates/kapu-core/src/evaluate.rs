@@ -2,7 +2,7 @@
 //! question set.
 //!
 //! Questions are JSON lines `{"kerdes", "valasz_fajl", "valasz_szakasz",
-//! "nyelv"}` (`Archive/tesztkorpusz_prompt.md`). The expected door is
+//! "nyelv"}`. The expected door is
 //! `slug(file name without extension)/slug(section)`, or the room when the
 //! section is empty. A strict hit is the expected door in the top k; a
 //! lenient hit is the expected door or its room (D49); a room-level hit is any

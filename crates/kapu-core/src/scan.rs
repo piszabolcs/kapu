@@ -1,7 +1,7 @@
 //! Content scan (FR-19, D8): warnings, never a refusal. The writer and the
 //! MCP server report what looks suspicious; the file is saved anyway.
 //!
-//! Rules (S1..S5 from FR-19, S6 from AGGALYOK A2):
+//! Rules (S1..S5 from FR-19, S6 from D106):
 //! * S1 sentences that try to override an AI's instructions (`data/scan_patterns.txt`);
 //! * S2 instruction-like text inside an HTML comment;
 //! * S3 invisible characters in the body;

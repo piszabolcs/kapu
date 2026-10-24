@@ -1,4 +1,4 @@
-# Local equivalent of the CI quality gates (TERV.md section 6, NFR-03).
+# Local equivalent of the CI quality gates (NFR-03).
 # Usage: powershell -ExecutionPolicy Bypass -File scripts/check.ps1
 $ErrorActionPreference = "Continue"
 $root = Split-Path -Parent $PSScriptRoot

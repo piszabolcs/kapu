@@ -1,4 +1,4 @@
-//! Acceptance test skeletons for SPEC-KAPU.md v1.0 (TERV.md M1).
+//! Acceptance test skeletons for SPEC-KAPU.md v1.0 (milestone M1).
 //!
 //! One test per Acceptance point of the specification plus one per error code
 //! (FR-20) and per reader edge case (FR-15). Tests that need an implementation
@@ -528,7 +528,7 @@ fn fr12_build_twice_gives_identical_groups_and_file() {
 }
 
 // ---------------------------------------------------------------------------
-// Milestone-level checks from TERV.md
+// Milestone-level checks (spec chapter 13)
 // ---------------------------------------------------------------------------
 
 #[test]

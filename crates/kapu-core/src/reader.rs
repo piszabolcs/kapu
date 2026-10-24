@@ -178,7 +178,7 @@ pub fn frame(file_name: &str, door: &OpenedDoor) -> String {
 /// The frame with a given boundary: `<kapu-room file="…" id="…" tokens="…"
 /// boundary="…">`, the content, `</kapu-room boundary="…">`. A
 /// `</kapu-room` inside the content cannot close it, because it cannot carry
-/// the boundary (AGGALYOK A2).
+/// the boundary (D106).
 #[must_use]
 pub fn frame_with_boundary(file_name: &str, door: &OpenedDoor, boundary: &str) -> String {
     let file = file_name.replace('&', "&amp;").replace('"', "&quot;");

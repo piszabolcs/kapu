@@ -1,6 +1,6 @@
 # KAPU measurements
 
-English summary of the measurements. The full log of every measurement, including the earlier synthetic-corpus runs and the Hungarian-question track, is in [REPORT.md](REPORT.md) (Hungarian). Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file.
+English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file.
 
 - **Date:** 2026-10-23
 - **Version:** tools 0.1.0 with specification v1.0.2
@@ -78,7 +78,7 @@ They are phrased as a developer's need, and where a paraphrase works they avoid 
 | Whole room expected | 59 | 0.92 | 0.93 | 0.76 |
 | One section expected | 18 | 0.61 | 0.78 | 0.40 |
 
-On English text with English questions, keyword search alone is already strong, and the hybrid ranking keeps that level. The vector model matters when the question and the text are in different languages. That is a separate track, measured in REPORT.md chapter 6: Hungarian questions over English text reach a hybrid recall@10 of 0.45.
+On English text with English questions, keyword search alone is already strong, and the hybrid ranking keeps that level. The vector model matters when the question and the text are in different languages. That is a separate track: Hungarian questions over English text reach a hybrid recall@10 of 0.45.
 
 ## 4. MCP server
 
@@ -119,7 +119,7 @@ Five of the ten answers came from a search excerpt alone, without opening a door
 
 ## 6. Changes made from these measurements
 
-An earlier run on a mixed English and Hungarian corpus (REPORT.md chapters 5-8) led to specification v1.0.2:
+An earlier run on a mixed English and Hungarian corpus led to specification v1.0.2:
 
 | Change | Before | After |
 |---|---|---|
@@ -141,7 +141,7 @@ An earlier run on a mixed English and Hungarian corpus (REPORT.md chapters 5-8) 
 
 ## 8. Pilot on public documentation
 
-This is a first run of the study design. Raw numbers are in [results/2026-10-23-study-pilot.json](results/2026-10-23-study-pilot.json); the full log is in REPORT.md chapter 11 (Hungarian).
+This is a first run of the study design. Raw numbers are in [results/2026-10-23-study-pilot.json](results/2026-10-23-study-pilot.json).
 
 **Corpora:**
 - S: The Rust Programming Language, 0.32M tokens;

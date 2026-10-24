@@ -78,8 +78,8 @@ def main(data: Path, out: Path):
             "tokens": load(pilot / "token-stats.json"),
         },
         "format_comparison_pixellab": {
-            "content": "the user's PixelLab knowledge file (206,899 tokens; third-party, not published), the same 12 amateur requests as REPORT chapter 10",
-            "formats": {"kapu": "KAPU MCP (REPORT chapter 10 run)", "md": "one Markdown file with grep and line reads", "pdf": "the same text printed to a 219-page PDF, page reads (max 20) and a reader-style search"},
+            "content": "the user's PixelLab knowledge file (206,899 tokens; third-party, not published), the same 12 amateur requests as the live run of 2026-10-23",
+            "formats": {"kapu": "KAPU MCP (live run of 2026-10-23)", "md": "one Markdown file with grep and line reads", "pdf": "the same text printed to a 219-page PDF, page reads (max 20) and a reader-style search"},
             "judge": "three blind Claude Sonnet judges, claims checked against the documentation",
             "full_file_in_context_tokens_per_request": 206899,
             "result": load(data / "pixellab" / "compare-result.json"),

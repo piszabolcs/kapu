@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Local equivalent of the CI quality gates (TERV.md section 6, NFR-03). POSIX sh.
+# Local equivalent of the CI quality gates (NFR-03). POSIX sh.
 set -eu
 cd "$(dirname "$0")/.."
 run() { echo "==> $1"; shift; "$@"; }

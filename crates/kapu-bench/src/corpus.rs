@@ -1,4 +1,4 @@
-//! Deterministic synthetic corpus generator (TERV.md M1, used from M3 on).
+//! Deterministic synthetic corpus generator (milestone M1, used from M3 on).
 //!
 //! `kapu-bench gen --rooms N --seed S --out DIR` writes `N` Markdown rooms as
 //! `DIR/<room-id>.md`. The same `N` and `S` give the same bytes on every

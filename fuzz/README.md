@@ -20,5 +20,5 @@ mkdir fuzz/corpus/<target>; cp tests/vectors/*.kapu fuzz/corpus/<target>/
 cargo +nightly fuzz run <target> fuzz/corpus/<target> -- -max_total_time=3600
 ```
 
-Release gate (TERV.md M2, M9): one hour per target without a finding.
+Release gate: one hour per target without a finding.
 `fuzz/corpus` and `fuzz/artifacts` are git-ignored.

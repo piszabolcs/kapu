@@ -141,10 +141,10 @@ fn max_tokens_and_k_limit_the_hits() {
 /// FR-16 Acceptance. Fails with `potion-multilingual-128M`: a Hungarian query
 /// is closer to generic Hungarian prose (cosine 0.19) than to a CSS block
 /// (0.15), while the English query "glassy blurred button" finds it (0.45 vs
-/// 0.03). The model choice of M8/5 (D28) has to fix this; see AGGALYOK A21.
+/// 0.03). The model choice of M8/5 (D28) has to fix this.
 /// Run with `cargo test --release --test search -- --ignored`.
 #[test]
-#[ignore = "M8: fails with potion-multilingual-128M (AGGALYOK A21, D28 model choice)"]
+#[ignore = "M8: fails with potion-multilingual-128M (D28 model choice)"]
 fn fr16_semantic_hit_for_uvegszeru_homalyos_gomb() {
     let dir = root().join("models/potion-multilingual-128M");
     if !dir.join("model.safetensors").is_file() {

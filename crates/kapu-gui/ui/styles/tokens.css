@@ -1,7 +1,7 @@
 /* KAPU interface tokens (frontend-design-2026, register: Precision Linear).
    Components use these semantic names only. Neutrals sit on hue 255, the one
    accent is the gate's vermilion (hue 38, same as the app icon). Contrast pairs
-   are checked with the skill's contrast.py (docs in TERV.md M10). */
+   are checked with the skill's contrast.py. */
 
 @layer reset, tokens, base, components, views;
 

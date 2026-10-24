@@ -575,7 +575,7 @@ Ellenőrzés: MCP konformancia a hivatalos SDK teszteszközeivel; egyetlen vála
 4. Gráf élpontosság és csoportnevek kézi mintán.
 5. D28: `potion-multilingual-128M` i8 és saját desztillált modell (`tools/distill`, magyar+angol+kód szókincs) összehasonlítása ugyanazon a mérésen; a jobbik kerül a csomagba.
 6. Végponttól végpontig: a 1.3 forgatókönyv Claude Code-dal, MCP naplóval.
-Ellenőrzés: riport (`bench/REPORT.md`) minden fenti számmal, és a 1.3 sikerkritérium teljesül.
+Ellenőrzés: riport (`bench/RESULTS.md`) minden fenti számmal, és a 1.3 sikerkritérium teljesül.
 
 **M9 Kiadás.** Portable csomag platformonként (bináris + modell), README, specifikáció, licencek, harmadik féltől származó komponensek listája licencekkel.
 Ellenőrzés: tiszta gépen, telepítés nélkül a 1.3 forgatókönyv működik.
@@ -586,7 +586,7 @@ Ellenőrzés: tiszta gépen, telepítés nélkül a 1.3 forgatókönyv működik
 
 ## 14. Változások v1.0 → v1.0.1 (2026-10-23)
 
-A felhasználó jóváhagyásával, a fejlesztés közben talált spec-rések alapján. A fájl első sora (`%KAPU 1.0`) nem változik: a v1.0.1 pontosítás, nem formátumváltás. A részletek a `DONTESNAPLO.md` jelzett bejegyzéseiben.
+A felhasználó jóváhagyásával, a fejlesztés közben talált spec-rések alapján. A fájl első sora (`%KAPU 1.0`) nem változik: a v1.0.1 pontosítás, nem formátumváltás.
 
 1. **FR-11/2, ASSUMPTION-06 (D93):** a `term` élek 10%-os ritkasági küszöbe a legalább két szobában előforduló kifejezések között számolódik. Indok: a v1.0 szabály szerint a legritkább kifejezések mindig egyetlen szobában vannak, így soha nem keletkezett volna `term` él, és az FR-11 Acceptance sem teljesülhetett.
 2. **FR-10/3 (D97):** a vektor-gyorsítótár kulcsa `embhash` + `bodyhash`, egy bejegyzés a fájl összes ajtóvektora. Indok: 3000 szobánál a meleg keresés 0,16 s az ajtónkénti 1,2 s helyett.
@@ -598,7 +598,7 @@ A felhasználó jóváhagyásával, a fejlesztés közben talált spec-rések al
 
 ## 15. Változások v1.0.1 → v1.0.2 (2026-10-23)
 
-A valódi korpuszos teszt- és mérési kör (`bench/REPORT.md` 5-8. fejezet) után, a felhasználó jóváhagyásával. A fájl első sora (`%KAPU 1.0`) nem változik.
+A valódi korpuszos teszt- és mérési kör (`bench/RESULTS.md`) után, a felhasználó jóváhagyásával. A fájl első sora (`%KAPU 1.0`) nem változik.
 
 1. **FR-12/2 (D121):** a csoportnevekből kimaradnak a stopszavak. Indok: angol szövegen a nevek „the, and, …” formájúak lettek.
 2. **FR-11/1 (D123):** a `#x` link a forrás szobájának `x` alajtójára is mutathat; a `/` nélküli ismeretlen cél fájlon belüli horgony, nem ad W003-at. Indok: a valódi Markdown fájlon belüli horgonyai 274 hamis figyelmeztetést adtak.
@@ -612,7 +612,7 @@ A valódi korpuszos teszt- és mérési kör (`bench/REPORT.md` 5-8. fejezet) ut
 
 ## 17. Változások v1.0.3 → v1.0.4 (2026-10-24)
 
-A pilotmérés (`bench/REPORT.md` 11. fejezet) utáni gyors javítások, a felhasználó döntésével. A fájl első sora (`%KAPU 1.0`) és a szakaszok formája nem változik; a build kimenete csak a csoportnevekben (1. pont) és láthatatlan karakteres címeknél, leírásoknál (5. pont) lehet más.
+A pilotmérés (`bench/RESULTS.md` 8. fejezet) utáni gyors javítások, a felhasználó döntésével. A fájl első sora (`%KAPU 1.0`) és a szakaszok formája nem változik; a build kimenete csak a csoportnevekben (1. pont) és láthatatlan karakteres címeknél, leírásoknál (5. pont) lehet más.
 
 1. **FR-12/2 (D131, A41):** a csoportnevekből kimaradnak a paramétertáblák szavai (`bool`, `default`, `false`, `float`, `int`, `let`, `none`, `null`, `optional`, `required`, `str`, `true`). A címkék nem változnak. Indok: API-referencián a csoport neve „image, optional, str” lett.
 2. **FR-15 `kapu_search` (D132, A39):** a kivonatsor választásában a ritkább kérdésszó többet ér (`idf`-súly). Indok: az élő próbában a kivonat kétszer egy gyakori szó sorát mutatta a válaszsor helyett.

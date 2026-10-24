@@ -2,7 +2,7 @@
 //!
 //! `gen` writes a deterministic corpus (M1); `measure` builds generated
 //! corpora of several sizes in memory and reports build time, file size and
-//! the map/file token ratio (NFR-05, TERV.md M3 first measurement).
+//! the map/file token ratio (NFR-05, first measurement in M3).
 #![forbid(unsafe_code)]
 
 mod corpus;
