@@ -23,7 +23,7 @@ use serde_json::{Value, json};
 #[command(
     name = "kapu",
     version,
-    about = "KAPU: navigable single-file knowledge container"
+    about = "KAPU: a personal knowledge base in one text file, for AI agents"
 )]
 struct Cli {
     /// Machine-readable JSON output.
@@ -41,10 +41,27 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Create a file with one empty room (FR-05 template).
-    New { file: PathBuf },
-    /// Build a file from a folder of Markdown files, one room per `.md`.
-    Import { dir: PathBuf, file: PathBuf },
+    /// Create a file with one empty room (FR-05 template; `--kind project`
+    /// gives the project card).
+    New {
+        file: PathBuf,
+        /// skill, project, pattern or note.
+        #[arg(long)]
+        kind: Option<String>,
+    },
+    /// Print the room template of a kind (`--kind project`: the project card).
+    Template {
+        #[arg(long)]
+        kind: Option<String>,
+    },
+    /// Build a file from a folder of Markdown files, one room per `.md`;
+    /// `--skills`: a folder of agent skills (SKILL.md, scripts, references).
+    Import {
+        dir: PathBuf,
+        file: PathBuf,
+        #[arg(long)]
+        skills: bool,
+    },
     /// Write every room as `<id>.md` into a folder.
     Export { file: PathBuf, dir: PathBuf },
     /// Add a room from a Markdown file, or replace room `--id`.
@@ -64,11 +81,13 @@ enum Command {
         #[arg(long)]
         full: bool,
     },
-    /// Show the map: groups, or the door lines of one group.
+    /// Show the map: groups, the door lines of one group, or the rooms of a kind.
     Map {
         file: PathBuf,
         #[arg(long)]
         group: Option<String>,
+        #[arg(long)]
+        kind: Option<String>,
     },
     /// Hybrid search (BM25 + vectors, RRF).
     Search {
@@ -76,8 +95,12 @@ enum Command {
         query: String,
         #[arg(long, default_value_t = 10)]
         k: usize,
+        /// Leave out doors priced above this many tokens.
+        #[arg(long, alias = "max-tokens")]
+        max_price: Option<u64>,
+        /// Only doors of rooms of this kind.
         #[arg(long)]
-        max_tokens: Option<u64>,
+        kind: Option<String>,
     },
     /// Long description and all tags of doors.
     Describe {
@@ -210,7 +233,7 @@ fn written(
 fn run(cli: &Cli) -> Result<Output, Error> {
     let mut warnings = Vec::new();
     match &cli.command {
-        Command::New { file } => {
+        Command::New { file, kind } => {
             if file.exists() {
                 return Err(Error::new(
                     ErrorCode::E012,
@@ -218,13 +241,21 @@ fn run(cli: &Cli) -> Result<Output, Error> {
                 ));
             }
             let model = writer_model(cli, &mut warnings)?;
-            let base = kapu_core::edit::new_file()?;
+            let base = kapu_core::edit::new_file_of(kind.as_deref())?;
             let built = rebuild_with(&base.bytes, model.as_ref())?;
             written(file, built, model.as_ref(), warnings, json!({}))
         }
-        Command::Import { dir, file } => {
+        Command::Template { kind } => {
+            let text = kapu_core::build::template_for(kind.as_deref());
+            Ok(Output::new(json!({ "template": text }), text))
+        }
+        Command::Import { dir, file, skills } => {
             let model = writer_model(cli, &mut warnings)?;
-            let imported = kapu_core::edit::import_dir(dir)?;
+            let imported = if *skills {
+                kapu_core::skills::import_skills(dir)?
+            } else {
+                kapu_core::edit::import_dir(dir)?
+            };
             warnings.extend(imported.warnings);
             let built = rebuild_with(&imported.bytes, model.as_ref())?;
             written(file, built, model.as_ref(), warnings, json!({}))
@@ -274,13 +305,21 @@ fn run(cli: &Cli) -> Result<Output, Error> {
             written(file, built, model.as_ref(), warnings, json!({}))
         }
         Command::Validate { file, full } => validate(cli, file, *full),
-        Command::Map { file, group } => map(file, group.as_deref()),
+        Command::Map { file, group, kind } => map(file, group.as_deref(), kind.as_deref()),
         Command::Search {
             file,
             query,
             k,
-            max_tokens,
-        } => search(cli, file, query, *k, *max_tokens),
+            max_price,
+            kind,
+        } => {
+            let options = SearchOptions {
+                k: *k,
+                max_price: *max_price,
+                kind: kind.clone(),
+            };
+            search(cli, file, query, &options)
+        }
         Command::Describe { file, ids } => describe(file, ids),
         Command::Open { file, ids } => open(file, ids),
         Command::Bench { file, questions } => bench(cli, file, questions),
@@ -306,6 +345,7 @@ fn validate(cli: &Cli, file: &Path, full: bool) -> Result<Output, Error> {
             if full { ", full" } else { "" }
         ),
     );
+    out.warnings.extend(report.warnings.iter().cloned());
     if full && !report.rebuild_checked {
         out.warnings.push(Warning {
             code: "W001",
@@ -316,8 +356,24 @@ fn validate(cli: &Cli, file: &Path, full: bool) -> Result<Output, Error> {
     Ok(out)
 }
 
-fn map(file: &Path, group: Option<&str>) -> Result<Output, Error> {
-    let v = kapu_core::view::map_view(&read(file)?, group)?;
+fn map(file: &Path, group: Option<&str>, kind: Option<&str>) -> Result<Output, Error> {
+    let data = read(file)?;
+    if let Some(kind) = kind {
+        // D144: the rooms of one kind, across groups
+        let s = kapu_core::Sections::parse_with(
+            &data,
+            &kapu_core::Limits::default(),
+            kapu_core::BodyLength::Tolerate,
+        )?;
+        let lines = kapu_core::view::kind_lines_in(&s, kind)?;
+        let text = if lines.is_empty() {
+            format!("no room of kind `{kind}`")
+        } else {
+            lines.join("\n")
+        };
+        return Ok(Output::new(json!({ "kind": kind, "lines": lines }), text));
+    }
+    let v = kapu_core::view::map_view(&data, group)?;
     let groups: Vec<Value> = v
         .groups
         .iter()
@@ -326,7 +382,7 @@ fn map(file: &Path, group: Option<&str>) -> Result<Output, Error> {
     let doors: Vec<Value> = v
         .doors
         .iter()
-        .map(|d| json!({ "id": d.id, "title": d.title, "tokens": d.tokens, "group": d.gid, "tags": d.tags, "room": d.is_room }))
+        .map(|d| json!({ "id": d.id, "title": d.title, "tokens": d.tokens, "group": d.gid, "tags": d.tags, "room": d.is_room, "kind": d.kind }))
         .collect();
     let mut text = String::new();
     if group.is_none() {
@@ -340,22 +396,11 @@ fn map(file: &Path, group: Option<&str>) -> Result<Output, Error> {
     ))
 }
 
-fn search(
-    cli: &Cli,
-    file: &Path,
-    query: &str,
-    k: usize,
-    max_tokens: Option<u64>,
-) -> Result<Output, Error> {
+fn search(cli: &Cli, file: &Path, query: &str, options: &SearchOptions) -> Result<Output, Error> {
     let data = read(file)?;
     let model = reader_model(cli, &data)?;
     let cache = model.as_ref().map(VectorCache::new);
-    let r = kapu_core::search::search(
-        &data,
-        query,
-        SearchOptions { k, max_tokens },
-        cache.as_ref(),
-    )?;
+    let r = kapu_core::search::search(&data, query, options, cache.as_ref())?;
     let vector = match &r.vector {
         VectorStatus::Available => json!("available"),
         VectorStatus::Unavailable(why) => json!({ "unavailable": why }),

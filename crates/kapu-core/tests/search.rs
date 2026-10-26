@@ -57,7 +57,7 @@ fn fr10_model_mismatch_falls_back_to_bm25_with_vector_unavailable() {
     let data = std::fs::read(root().join("tests/vectors/minta.kapu")).unwrap();
     let model = tiny();
     let cache = VectorCache::in_memory(&model);
-    let r = search(&data, "gomb", SearchOptions::default(), Some(&cache)).unwrap();
+    let r = search(&data, "gomb", &SearchOptions::default(), Some(&cache)).unwrap();
     assert!(
         matches!(r.vector, VectorStatus::Unavailable(_)),
         "{:?}",
@@ -66,7 +66,7 @@ fn fr10_model_mismatch_falls_back_to_bm25_with_vector_unavailable() {
     assert_ne!(r.hits.len(), 0);
     assert!(r.hits.iter().all(|h| h.source == Source::Bm25));
     // and with no model at all
-    let r = search(&data, "gomb", SearchOptions::default(), None).unwrap();
+    let r = search(&data, "gomb", &SearchOptions::default(), None).unwrap();
     assert!(matches!(r.vector, VectorStatus::Unavailable(_)));
 }
 
@@ -79,7 +79,7 @@ fn hybrid_search_with_matching_model_merges_both_rankings() {
     let r = search(
         &built,
         "gomb türkiz",
-        SearchOptions::default(),
+        &SearchOptions::default(),
         Some(&cache),
     )
     .unwrap();
@@ -91,25 +91,14 @@ fn hybrid_search_with_matching_model_merges_both_rankings() {
         "vectors rank every door: {:?}",
         r.hits
     );
-    // second run hits the cache and gives the same ranking
-    let files: Vec<String> = std::fs::read_dir(dir.join(blake3_hex(&model)))
-        .unwrap()
-        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
-        .collect();
-    assert_eq!(
-        files.len(),
-        1,
-        "one vector bundle per file body (D97): {files:?}"
-    );
-    assert!(
-        std::path::Path::new(&files[0])
-            .extension()
-            .is_some_and(|e| e.eq_ignore_ascii_case("vecs2"))
-    );
+    // K-11 (D143): the vectors come from the file's #VEC section, so the first
+    // search needs no cache and leaves none behind
+    let files = std::fs::read_dir(dir.join(blake3_hex(&model))).map_or(0, Iterator::count);
+    assert_eq!(files, 0, "no vector bundle for a file with #VEC");
     let again = search(
         &built,
         "gomb türkiz",
-        SearchOptions::default(),
+        &SearchOptions::default(),
         Some(&cache),
     )
     .unwrap();
@@ -125,15 +114,16 @@ fn blake3_hex(model: &Model) -> String {
 }
 
 #[test]
-fn max_tokens_and_k_limit_the_hits() {
+fn max_price_and_k_limit_the_hits() {
     let model = tiny();
     let built = build_with(&rooms(), Some(&model)).unwrap().bytes;
     let cache = VectorCache::in_memory(&model);
     let options = SearchOptions {
         k: 2,
-        max_tokens: Some(15),
+        max_price: Some(15),
+        ..SearchOptions::default()
     };
-    let r = search(&built, "gomb color", options, Some(&cache)).unwrap();
+    let r = search(&built, "gomb color", &options, Some(&cache)).unwrap();
     assert!(r.hits.len() <= 2);
     assert!(r.hits.iter().all(|h| h.tokens <= 15), "{:?}", r.hits);
 }
@@ -167,7 +157,7 @@ fn fr16_semantic_hit_for_uvegszeru_homalyos_gomb() {
     let r = search(
         &built,
         "üvegszerű, homályos gomb",
-        SearchOptions::default(),
+        &SearchOptions::default(),
         Some(&cache),
     )
     .unwrap();
@@ -245,20 +235,29 @@ button three
 }
 
 #[test]
-fn a_format_1_0_file_is_still_read() {
-    // D140: postings by door id (1.0) and by gap (1.1) give the same ranking
+fn format_1_0_and_1_1_files_are_still_read() {
+    // D140: postings by door id (1.0) and by gap (1.1) give the same ranking;
+    // D143: the 1.2 reader reads both (the compat files have the same body)
     let old = std::fs::read(root().join("tests/compat/minta-1.0.kapu")).unwrap();
+    let mid = std::fs::read(root().join("tests/compat/minta-1.1.kapu")).unwrap();
     let new = std::fs::read(root().join("tests/vectors/minta.kapu")).unwrap();
-    assert!(old.starts_with(b"%KAPU 1.0\n") && new.starts_with(b"%KAPU 1.1\n"));
+    assert!(old.starts_with(b"%KAPU 1.0\n") && mid.starts_with(b"%KAPU 1.1\n"));
+    assert!(new.starts_with(b"%KAPU 1.2\n"));
     for query in ["electron preload", "szoba", "gomb", "escape"] {
         let a = kapu_core::search::bm25(&old, query).unwrap();
-        let b = kapu_core::search::bm25(&new, query).unwrap();
+        let b = kapu_core::search::bm25(&mid, query).unwrap();
         assert!(!b.is_empty(), "{query}");
         assert_eq!(a, b, "{query}");
+        assert!(
+            !kapu_core::search::bm25(&new, query).unwrap().is_empty(),
+            "{query}"
+        );
     }
-    kapu_core::validate(&old, kapu_core::Level::Basic).unwrap();
-    let opened = kapu_core::open_bytes(&old, &["szoba"]).unwrap();
-    assert!(opened.doors[0].is_ok());
+    for file in [&old, &mid] {
+        kapu_core::validate(file, kapu_core::Level::Basic).unwrap();
+        let opened = kapu_core::open_bytes(file, &["szoba"]).unwrap();
+        assert!(opened.doors[0].is_ok());
+    }
 }
 
 #[test]
@@ -284,19 +283,43 @@ fn a46_words_late_in_a_long_door_are_found_by_meaning() {
 }
 
 #[test]
-fn warm_writes_the_window_bundle_before_the_first_search() {
-    // D141: a build can compute the search vectors, so the first search does not wait
+fn warm_writes_the_window_bundle_only_for_a_file_without_vec() {
+    // D141: the search vectors of a file without #VEC are computed before the
+    // first search; D143: a file with #VEC needs no bundle at all
     let model = tiny();
     let built = build_with(&rooms(), Some(&model)).unwrap().bytes;
     let dir = temp_cache("warm");
     let cache = VectorCache::in_dir(&model, &dir);
     let s = kapu_core::Sections::parse(&built).unwrap();
-    kapu_core::search::warm_in(&s, &cache).unwrap();
     let bundle = dir
         .join(blake3_hex(&model))
         .join(format!("{}.vecs2", hex32(&s.header.bodyhash.0)));
+    kapu_core::search::warm_in(&s, &cache).unwrap();
+    assert!(!bundle.exists(), "{}", bundle.display());
+    let without = kapu_core::Sections { vec: None, ..s };
+    kapu_core::search::warm_in(&without, &cache).unwrap();
     assert!(bundle.is_file(), "{}", bundle.display());
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn vec_section_and_cache_rank_alike() {
+    // D143: the sign bits of #VEC pick the candidates and the float windows
+    // order them; a file of at most RESCORE doors ranks exactly as the cache
+    let model = tiny();
+    let built = build_with(&rooms(), Some(&model)).unwrap().bytes;
+    let s = kapu_core::Sections::parse(&built).unwrap();
+    assert!(s.doc_entries().unwrap().len() <= kapu_core::search::RESCORE);
+    let cache = VectorCache::in_memory(&model);
+    for query in ["gomb türkiz", "preload bridge", "színek"] {
+        let from_vec = kapu_core::search::rankings_in(&s, query, Some(&cache)).unwrap();
+        let without = kapu_core::Sections {
+            vec: None,
+            ..s.clone()
+        };
+        let from_cache = kapu_core::search::rankings_in(&without, query, Some(&cache)).unwrap();
+        assert_eq!(from_vec, from_cache, "{query}");
+    }
 }
 
 fn hex32(bytes: &[u8; 32]) -> String {

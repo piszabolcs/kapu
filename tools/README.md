@@ -13,7 +13,7 @@
   and `examples/kapu-spec.kapu` (the specification, via `split_spec.py`).
 - `make_demo_svg.py`: writes `docs/assets/demo.svg`, the animated terminal in
   the README, from real `kapu map`, `search` and `open` output.
-- `study/`: the measurement scripts of `bench/RESULTS.md` chapters 8 and 9;
+- `study/`: the measurement scripts of `bench/RESULTS.md` chapters 8 to 10;
   `study/results_page.py` writes `docs/results/index.html` from the results JSON.
 - `mcp_probe.py`, `mcp_eval.py`, `kapu_mcp_call.py`: MCP latency, isolated
   agent runs and a logged one-call client for agents.

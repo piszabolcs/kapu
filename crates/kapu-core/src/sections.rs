@@ -1,9 +1,9 @@
 //! Section layout (FR-01) and character rules (FR-02) of a whole file.
 //!
 //! [`Sections::parse`] takes the raw bytes of a file, parses the header, checks
-//! that the five derived sections sit exactly where the header says, back to
-//! back, each framed by `#NAME\n` ... `#END\n`, followed by `#BODY\n` and the
-//! body. It also runs the character rules of FR-02 over the file. Every slice
+//! that the five derived sections, and `#VEC` when the header names it (D143),
+//! sit exactly where the header says, back to back, each framed by `#NAME\n`
+//! ... `#END\n`, followed by `#BODY\n` and the body. It also runs the character rules of FR-02 over the file. Every slice
 //! it hands out has been bounds-checked against the file and against the
 //! parser limits (NFR-01, ASSUMPTION-08) first; nothing is allocated whose size
 //! comes from the file.
@@ -56,6 +56,8 @@ pub struct Sections<'a> {
     pub index: &'a str,
     /// Lines of `#DOCS` without the frame.
     pub docs: &'a str,
+    /// Lines of `#VEC` without the frame, if the file has the section (D143).
+    pub vec: Option<&'a str>,
     /// Stored body: everything after the `#BODY` line, to the end of the file.
     pub body: &'a [u8],
     /// True when `body=` in the header matches the file length exactly.
@@ -105,15 +107,25 @@ impl<'a> Sections<'a> {
             *slot = text;
             cursor = span.end().ok_or_else(|| e005("span end overflows"))?;
         }
+        // D143: the optional `#VEC` directly after #DOCS
+        let vec = match header.vec {
+            Some(span) => {
+                let text = section_text(file, file_len, "VEC", span, cursor, limits)?;
+                check_derived_text("VEC", text, limits)?;
+                cursor = span.end().ok_or_else(|| e005("span end overflows"))?;
+                Some(text)
+            }
+            None => None,
+        };
 
-        // `#BODY\n` directly after #DOCS, then the body content.
+        // `#BODY\n` directly after the last section, then the body content.
         let marker = b"#BODY\n";
         let body_start = cursor
             .checked_add(u64::try_from(marker.len()).unwrap_or(u64::MAX))
             .ok_or_else(|| e005("body start overflows"))?;
         if header.body.start != body_start {
             return Err(e005(format!(
-                "header says body starts at {}, but #DOCS ends at {cursor} so it must start at {body_start}",
+                "header says body starts at {}, but the last section ends at {cursor} so it must start at {body_start}",
                 header.body.start
             )));
         }
@@ -124,7 +136,7 @@ impl<'a> Sections<'a> {
         )
         .ok_or_else(|| e005("file ends before the #BODY line"))?;
         if marker_at != marker {
-            return Err(e005("expected the `#BODY` line after #DOCS"));
+            return Err(e005("expected the `#BODY` line after the last section"));
         }
         let body = slice(file, body_start, file_len - body_start).unwrap_or(&[]);
         let declared_end = header
@@ -158,6 +170,7 @@ impl<'a> Sections<'a> {
             graph,
             index,
             docs,
+            vec,
             body,
             body_length_matches,
         })
@@ -222,6 +235,7 @@ impl CheckedFile {
             graph: inner("GRAPH", h.graph),
             index: inner("INDEX", h.index),
             docs: inner("DOCS", h.docs),
+            vec: h.vec.map(|span| inner("VEC", span)),
             body: self.bytes().get(at(h.body.start)..).unwrap_or(&[]),
             body_length_matches: self.body_length_matches,
             header: h.clone(),

@@ -8,7 +8,7 @@ must produce; the Rust tests in `crates/kapu-core/tests/acceptance.rs` read it.
 | File | Expected | What it exercises |
 |---|---|---|
 | `minta.kapu` | valid | 3 rooms, 4 sub-doors, 2 `link` edges, `@@@` escapes (0 and 1 backslash), a `## ` line inside a code fence, a `\|` in a title, one room with and one without a trailing LF, the untouched `kapu new` template as room `szoba`. Built without a model (`emb=none`), so FR-10/4 applies to every reader. |
-| `E001-magic.kapu` | E001 | first line `%KAPX 1.1` |
+| `E001-magic.kapu` | E001 | first line `%KAPX 1.2` |
 | `E002-header.kapu` | E002 | byte 511 is a space instead of LF |
 | `E003-cr.kapu` | E003 | a CR inside `#MAP` (header recomputed, nothing else wrong) |
 | `E004-control.kapu` | E004 | ESC (0x1B) inside `#DESC` |
@@ -26,8 +26,9 @@ must produce; the Rust tests in `crates/kapu-core/tests/acceptance.rs` read it.
 (`o200k_base` tokens), character count, offset, length, BLAKE3 fingerprint,
 group and served text, so M2 and M3 can assert against them directly.
 
-`../compat/minta-1.0.kapu` is the same sample in format 1.0 (postings by door id);
-the reader must still read it (D140).
+`../compat/minta-1.0.kapu` and `../compat/minta-1.1.kapu` are the sample before
+the `kind: note` line of format 1.2, in format 1.0 (postings by door id) and 1.1
+(postings by gap, no `#VEC`); the reader must still read both (D140, D143).
 
 The decisions that pin the open points of the spec for these vectors are
 D56-D66; `tools/build_vectors.py` is their executable form.

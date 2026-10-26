@@ -1,9 +1,9 @@
 # KAPU measurements
 
-English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file; chapter 9 measures it again with file format 1.1. The [results page](../docs/results/index.html) shows the pilot and format 1.1 with charts.
+English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file; chapter 9 measures it again with file format 1.1, chapter 10 with format 1.2 ([results/2026-10-26-format-1.2.json](results/2026-10-26-format-1.2.json)). The [results page](../docs/results/index.html) shows the pilot and format 1.1 with charts.
 
 - **Date:** 2026-10-23
-- **Version:** tools 0.1.0 with specification v1.0.2
+- **Version:** tools 0.1.0 with specification v1.0.2 (chapters 1-8); chapters 9 and 10 name their own
 - **Machine:** Windows 11 Pro, release build (`lto`, `codegen-units = 1`)
 - **Vector model:** `potion-multilingual-128M`, int8 (124 MB)
 
@@ -272,7 +272,41 @@ Retrieval on the same Stack Overflow questions, room-level recall@10 (MRR@10 in 
 - On MDN they do not help: its 84,910 doors are mostly short sections, and a room and its own sections now match with the same window and take several of the first 10 places. Merging a room with its sections in the vector ranking is the next thing to try.
 - The BM25 ranking and every result of format 1.0 files are unchanged: the summing order of the scores is the same.
 
-## 10. Reproduce
+## 10. File format 1.2 (specification v1.2)
+
+Measured on 2026-10-26 with tools 0.2.0, the same corpora, questions and machine as chapter 9, after the changes of specification chapter 20 (D142-D150):
+- **Search vectors in the file.** A `#VEC` section holds one sign bit per component of every window vector (43 base64 characters per window). The sign bits pick the 200 best candidates, and the model's float window vectors, computed for those at query time and kept in memory, order them.
+- **Reply budgets.** Every MCP reply starts with its own price (`reply: N tokens`), every reading tool takes `max_tokens` (map 1,000, search 600, the others 2,000 by default), and `kapu_ask` searches and opens in one call.
+- **Kinds and skills.** A room can name its kind (`kind: skill`, `project`, `pattern`, `note`); `kapu import --skills` imports a folder of agent skills.
+
+| | Rust book (S) | Kubernetes (M) | MDN (L) | 244 skills and notes, English |
+|---|---:|---:|---:|---:|
+| File size, v1.1 → v1.2 (MB) | 2.31 → 2.35 | 27.5 → 28.1 | 134.6 → 139.0 | 5.83 → 5.95 |
+| Growth from `#VEC` | 1.7% | 2.2% | 3.3% | 2.0% |
+| Search over MCP (ms, median) | 32 | 50 | 282 | 26 |
+| Opening a door over MCP (ms, median) | 3.6 | 7.9 | 48.0 | 2.9 |
+| Map reply, first / next (tokens) | 328 / 159 | 967 / 983 | 969 / 980 | 600 / 224 |
+| Search reply, 10 hits with excerpts (tokens, median / max) | 527 / 580 | 528 / 586 | 500 / 583 | 547 / 585 |
+| `kapu_ask` reply (tokens, median) | 1,657 | 1,795 | 1,664 | 1,786 |
+| `kapu_ask` opens the expected room in its one reply | 21% | 20% | 12% | 83% |
+
+On a generated file of 3,000 rooms (12,024 doors) the first map reply is 306 tokens and opening a door takes 7.6 ms (median). The six tools' descriptions and input schemas are 797 tokens (names, descriptions and schemas as compact JSON, o200k_base); the five tools of format 1.1 were 1,174.
+
+Retrieval, room-level recall@10 of the hybrid ranking (MRR@10 in brackets):
+
+| | Rust book, 68 questions | Kubernetes, 201 | MDN, 395 | Skills, 77 English | Skills, 60 Hungarian | Skills, the 60 translated |
+|---|---:|---:|---:|---:|---:|---:|
+| v1.1, float vectors from the cache | 0.485 (0.281) | 0.458 (0.245) | 0.271 (0.128) | 0.948 (0.851) | 0.633 (0.464) | – |
+| v1.2, sign bits alone | 0.500 (0.288) | 0.458 (0.263) | 0.246 (0.116) | 0.922 (0.783) | 0.583 (0.442) | 0.833 (0.735) |
+| **v1.2, sign bits and float rescoring** | **0.485 (0.281)** | **0.458 (0.243)** | **0.278 (0.131)** | **0.961 (0.841)** | **0.633 (0.453)** | **0.833 (0.750)** |
+
+- The sign bits alone were as good as the float vectors on the Rust book and Kubernetes, the corpora they were first tried on, but lost on MDN, on the skills corpus and most of all with Hungarian questions on English text (strict hybrid recall@10 0.55 to 0.45). With the rescoring they are back at the float level everywhere; on a file of at most 200 doors the ranking is exactly the float one.
+- The price of the rescoring is search time: Kubernetes 33 to 50 ms, MDN 198 to 282 ms (median, sign bits alone versus rescored).
+- Hungarian questions on English text: translated into English, as an agent does after reading `lang=en` on the map, strict hybrid recall@10 is 0.78 and room-level 0.83; without translation 0.55 and 0.63. The translations are in `tools/study/translate_hu.py`; Claude wrote them without looking at the expected files.
+- `kapu_ask` answers in one call where retrieval is good (the skills corpus, 83%); on the Stack Overflow questions, where even recall@10 is 0.28-0.49, one call is rarely enough.
+- The file grows by more than 3% only on MDN, with its 84,910 mostly short doors.
+
+## 11. Reproduce
 
 ```bash
 python tools/collect_skills.py bench/korpusz/rooms           # the installed skills as rooms (local only)
@@ -283,4 +317,4 @@ python tools/mcp_probe.py corpus.kapu questions.jsonl        # MCP latency and r
 python tools/kapu_mcp_call.py call kapu_search '{"file": "...", "query": "..."}'
 ```
 
-Chapters 8 and 9 (public documentation): `tools/study/prepare_corpus.py` and `so_questions.py` prepare the corpora and questions, `scale_probe.py` measures a size, `chunk_baseline.py` the chunk baselines, `collect_results.py` writes `results/2026-10-23-study-pilot.json`, and `results_page.py` turns that into the results page.
+Chapter 10: `tools/study/measure_v12.py` (reply prices, `kapu_ask`, open times over MCP), `tools/study/measure_scale.py` (a file of a given size), `tools/study/translate_hu.py` (the translated questions) and `tools/study/collect_v12.py` (the results file). Chapters 8 and 9 (public documentation): `tools/study/prepare_corpus.py` and `so_questions.py` prepare the corpora and questions, `scale_probe.py` measures a size, `chunk_baseline.py` the chunk baselines, `collect_results.py` writes `results/2026-10-23-study-pilot.json`, and `results_page.py` turns that into the results page.

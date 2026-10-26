@@ -19,9 +19,9 @@ use kapu_core::build::{RoomSource, build_with};
 use kapu_core::embed::Model;
 use kapu_core::{Level, Sections, validate_with};
 
-/// BLAKE3 of the corpus built with the tiny model (since D105, format 1.1 since D140). Change only on purpose,
-/// together with a decision-log entry.
-const GOLDEN: &str = "445200c6a2f812509b77228d0f1f5dae840d8352da9893c1cc0d469f0b6d0f74";
+/// BLAKE3 of the corpus built with the tiny model (since D105, format 1.1 since D140, 1.2
+/// with `#VEC` since D143). Change only on purpose, together with a decision-log entry.
+const GOLDEN: &str = "710cdc340ee7fce03f1702e462f4464c2bd7c8a0123c3fea4cbdf7319ad1648f";
 
 fn tiny() -> Model {
     Model::load(&PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/model/kapu-test-tiny"))
@@ -99,6 +99,11 @@ fn build_with_tiny_model_is_identical_on_every_platform() {
     assert!(kinds.contains(&"sim"), "the corpus must produce sim edges");
     assert!(kinds.contains(&"link"));
     assert!(s.header.groups >= 2, "Leiden must find more than one group");
+    // K-14 (D143): the window sign vectors are part of the compared bytes
+    let vec = s.vec.expect("a build with a model writes #VEC");
+    let doors = s.doc_entries().unwrap().len();
+    let signs = kapu_core::embed::SignVectors::parse(vec, doors).unwrap();
+    assert_eq!((signs.doors(), signs.dim()), (doors, model.dim()));
     // the full validator rebuilds with the same model and compares bytes
     let report = validate_with(&built.bytes, Level::Full, Some(&model)).unwrap();
     assert!(report.rebuild_checked);

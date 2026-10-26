@@ -387,7 +387,7 @@ async function runSearch(query) {
     status.replaceChildren(el("span", { text: "Loading the vector model (first search only)…" }));
   }, 700);
   try {
-    const r = await call("search", { query: q, k, max_tokens: budget });
+    const r = await call("search", { query: q, k, max_price: budget });
     clearTimeout(slow);
     renderResults(r, budget);
   } catch (e) {

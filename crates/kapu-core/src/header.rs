@@ -51,6 +51,8 @@ pub struct Header {
     pub index: Span,
     /// `#DOCS` section span.
     pub docs: Span,
+    /// `#VEC` section span, if the file holds vectors (`vec=`, FR-10/6, D143).
+    pub vec: Option<Span>,
     /// Body content after the `#BODY` line, up to the end of the file.
     pub body: Span,
     /// Number of rooms.
@@ -176,6 +178,10 @@ impl Header {
             graph: parse_span("graph", &take_span(&mut kv, "graph")?)?,
             index: parse_span("index", &take_span(&mut kv, "index")?)?,
             docs: parse_span("docs", &take_span(&mut kv, "docs")?)?,
+            vec: kv
+                .remove("vec")
+                .map(|v| parse_span("vec", &v))
+                .transpose()?,
             body: parse_span("body", &take_span(&mut kv, "body")?)?,
             rooms: parse_count("rooms", &take(&mut kv, "rooms")?)?,
             doors: parse_count("doors", &take(&mut kv, "doors")?)?,
@@ -397,21 +403,47 @@ mod tests {
     #[test]
     fn wrong_version_is_e001() {
         let mut bytes = header_with(&[]);
-        bytes[8] = b'2';
+        bytes[8] = b'9';
         assert_eq!(Header::parse(&bytes).unwrap_err().code, ErrorCode::E001);
     }
 
     #[test]
-    fn version_1_0_is_still_read() {
-        // D140: the builder writes 1.1; a 1.0 file stays readable until rebuilt
+    fn older_versions_are_still_read() {
+        // D140, D143: the builder writes 1.2; 1.0 and 1.1 files stay readable until rebuilt
         let refs: Vec<String> = valid_lines();
         let refs: Vec<&str> = refs.iter().map(String::as_str).collect();
         let mut bytes = header_with(&refs);
+        assert_eq!(Header::parse(&bytes).unwrap().version, "1.2");
+        bytes[8] = b'1';
         assert_eq!(Header::parse(&bytes).unwrap().version, "1.1");
         bytes[8] = b'0';
         assert_eq!(Header::parse(&bytes).unwrap().version, "1.0");
-        bytes[8] = b'2';
+        bytes[8] = b'3';
         assert_eq!(Header::parse(&bytes).unwrap_err().code, ErrorCode::E001);
+    }
+
+    #[test]
+    fn vec_span_is_optional() {
+        // D143: `vec=` only in a file with vectors
+        let mut lines: Vec<String> = valid_lines();
+        let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+        assert_eq!(Header::parse(&header_with(&refs)).unwrap().vec, None);
+        lines.push("vec=900+40".to_owned());
+        let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+        assert_eq!(
+            Header::parse(&header_with(&refs)).unwrap().vec,
+            Some(Span {
+                start: 900,
+                len: 40
+            })
+        );
+        lines.pop();
+        lines.push("vec=900".to_owned());
+        let refs: Vec<&str> = lines.iter().map(String::as_str).collect();
+        assert_eq!(
+            Header::parse(&header_with(&refs)).unwrap_err().code,
+            ErrorCode::E005
+        );
     }
 
     #[test]

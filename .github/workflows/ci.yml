@@ -18,6 +18,10 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    # D142: CI pins the toolchain it lints and tests with; rust-toolchain.toml says
+    # `stable`, so an occasional builder does not have to download this version.
+    env:
+      RUSTUP_TOOLCHAIN: "1.99.1"
     steps:
       - uses: actions/checkout@v4
       # kapu-gui (M10, D115): Tauri needs the WebKitGTK webview and its headers on Linux.
@@ -38,12 +42,28 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends -o Dir::Cache::Archives="$HOME/apt-cache" libwebkit2gtk-4.1-dev libxdo-dev libssl-dev librsvg2-dev
           sudo chown -R "$USER" ~/apt-cache
-      # rustup reads rust-toolchain.toml and installs the pinned version.
+      - run: rustup toolchain install 1.99.1 --profile minimal --component clippy,rustfmt
       - run: rustup show
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
+
+  # K-23 (D142): the declared minimum (`rust-version` in Cargo.toml) builds the whole
+  # workspace and passes the tests. On Windows, so kapu-gui needs no extra libraries.
+  msrv:
+    name: MSRV (Rust 1.90)
+    runs-on: windows-latest
+    env:
+      RUSTUP_TOOLCHAIN: "1.90.0"
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install 1.90.0 --profile minimal
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: msrv
+      - run: cargo check --workspace --all-targets --locked
+      - run: cargo test --workspace --exclude kapu-gui --locked
 
   deny:
     name: cargo-deny (licences, sources, advisories)
@@ -79,7 +99,7 @@ jobs:
       - run: cargo install --locked cargo-fuzz
       - name: run every target
         run: |
-          for t in header sections docs catalog validate reader; do
+          for t in header sections docs catalog validate reader vec; do
             mkdir -p "fuzz/corpus/$t"
             cp tests/vectors/*.kapu "fuzz/corpus/$t/"
             cargo +nightly fuzz run "$t" "fuzz/corpus/$t" --debug-assertions -- -max_total_time=30

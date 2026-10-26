@@ -1,31 +1,31 @@
-%KAPX 1.1
+%KAPX 1.2
 eol=LF
 enc=UTF-8
 tok=o200k_base
 emb=none
 embhash=b3:af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262
-map=512+508
-desc=1020+582
-graph=1602+197
-index=1799+3582
-docs=5381+810
-body=6197+1719
+map=512+517
+desc=1029+582
+graph=1611+197
+index=1808+3582
+docs=5390+810
+body=6206+1810
 rooms=3
 doors=7
 groups=2
-bodyhash=b3:c270f0b0de63871de4b3071aa3abad125153680f90ba46edee1ac8b1ed4a0a10
+bodyhash=b3:aa6ca8df1044fe0e24b0bd3364d94826780f94f90b353f8428beaea6fb2d93e3
 guide=std-1
                                                                                                                                                                                         
 #MAP
-G g1 | electron, design, frontend | 2 | 472t
+G g1 | electron, design, frontend | 2 | 476t
 R frontend-design-alapok | Frontend design alapok | 257t | g1 | frontend, design, glass, színek, css
 S frontend-design-alapok/szinek | Színek | 96t
 S frontend-design-alapok/glass-gomb | Glass gomb | 108t
-R electron-leckek | Electron leckék | 215t | g1 | electron, preload, ipc, hiba
+R electron-leckek | Electron leckék | 219t | g1 | electron, preload, ipc, hiba | note
 S electron-leckek/preload-bridge | Preload bridge | 102t
 S electron-leckek/szobajelolo-escape | Szobajelölő \| escape | 79t
-G g2 |  | 1 | 7t
-R szoba |  | 7t | g2 | 
+G g2 |  | 1 | 10t
+R szoba |  | 10t | g2 | 
 #END
 #DESC
 frontend-design-alapok	Sötét téma, glassmorphism, bronz és türkiz színek: az alap stílus minden apphoz.	frontend, design, glass, színek, css, gomb
@@ -245,13 +245,13 @@ world	2	0:1,1:1
 üvegszerű	2	3:1,1:2
 #END
 #DOCS
-electron-leckek	@735+673	b3:9a9512e7ed4afd1ad5c35b2f387c42af83401336e698b77f8a5994ad6edb314b	dl=116	c=644
-electron-leckek/preload-bridge	@847+340	b3:29693b25b506046462eed10d9cf2f5be9ee5cfb48b2171d0115299e173e42fc6	dl=72	c=332
-electron-leckek/szobajelolo-escape	@1187+221	b3:e684a140962a5c380a31daeb0962552da08b3ef2116f9b48dc61b05a40adb118	dl=41	c=206
+electron-leckek	@735+684	b3:239117412c5cc2a4fb4663b65dfac44f71b2496f69a5ba07ccbd78617cd7980c	dl=116	c=655
+electron-leckek/preload-bridge	@858+340	b3:29693b25b506046462eed10d9cf2f5be9ee5cfb48b2171d0115299e173e42fc6	dl=72	c=332
+electron-leckek/szobajelolo-escape	@1198+221	b3:e684a140962a5c380a31daeb0962552da08b3ef2116f9b48dc61b05a40adb118	dl=41	c=206
 frontend-design-alapok	@27+687	b3:2b293d292806511af684c772ab42dd735d1bb665cfe64548ba3562d467ec7317	dl=147	c=664
 frontend-design-alapok/glass-gomb	@402+312	b3:cb74508d7839326a4d7e8f6a7b9cca8677342e4be64734bc1130f546c1dbe608	dl=65	c=306
 frontend-design-alapok/szinek	@193+209	b3:e9718d43b2f921c6aef7b599b8398061d3db05480bbeefc16e02a497c6e2f1f2	dl=48	c=200
-szoba	@1419+299	b3:c2c64eb3d58aa71bc2c106289c3a912f54fbf7624a5b22929a948f7910d46204	dl=0	c=16
+szoba	@1430+379	b3:55a2139eb8630acc46f0834479377ed5edc9a65922675d85ccf616b4fbcb092d	dl=0	c=24
 #END
 #BODY
 @@@ frontend-design-alapok
@@ -285,6 +285,7 @@ Az üvegszerű gomb elmosott hátteret kap, lásd még az [Electron preload](#el
 # Electron leckék
 > Visszatérő Electron hibák és a helyes megoldásuk.
 tags: electron, preload, ipc, hiba
+kind: note
 
 ## Preload bridge
 Soha ne kapcsold ki a contextIsolation-t. A renderer csak a preloadban kiengedett függvényeket látja, a stílushoz lásd a [Frontend design alapok](#frontend-design-alapok) szobát.
@@ -310,6 +311,9 @@ A `@@@` sor csak a sor elején jelöl szobát. Egy tartalomsor így is kezdődhe
 
 tags: 
 <!-- Keresőszavak vesszővel. Ha üres marad, a szövegből lesznek. -->
+
+kind: 
+<!-- Fajta: skill, project, pattern vagy note. Üresen is maradhat. -->
 
 <!-- Innen jöhet a tartalom, sima Markdownban. -->
 

@@ -142,7 +142,7 @@ impl Session {
     /// | `open`     | `path`                        | header, groups with door lines, quick check |
     /// | `reload`   |                               | as `open`, for the open file |
     /// | `room`     | `id`                          | door with rendered text, description, neighbours |
-    /// | `search`   | `query`, `k`?, `max_tokens`?  | hybrid search hits (FR-16) |
+    /// | `search`   | `query`, `k`?, `max_price`?, `kind`? | hybrid search hits (FR-16) |
     /// | `graph`    |                               | doors and `#GRAPH` edges |
     /// | `validate` | `full`?                       | FR-20 result |
     ///
@@ -345,7 +345,7 @@ impl Session {
         let file = self.current()?;
         let query = arg_str(args, "query")?;
         let k = arg_u64(args, "k").map_or(10, |k| usize::try_from(k).unwrap_or(10));
-        let max_tokens = arg_u64(args, "max_tokens");
+        let max_price = arg_u64(args, "max_price").or_else(|| arg_u64(args, "max_tokens"));
         let start = Instant::now();
         let model = self.model_for(&file.bytes)?;
         let model_ms = elapsed_ms(start);
@@ -354,7 +354,11 @@ impl Session {
         let r = kapu_core::search::search(
             &file.bytes,
             query,
-            SearchOptions { k, max_tokens },
+            &SearchOptions {
+                k,
+                max_price,
+                kind: args.get("kind").and_then(Value::as_str).map(str::to_owned),
+            },
             cache.as_ref(),
         )?;
         let vector = match &r.vector {
@@ -408,13 +412,16 @@ impl Session {
         };
         let answer = match kapu_core::validate_with(&file.bytes, level, model.as_deref()) {
             Ok(report) => {
-                let warnings: Vec<Value> = if full && !report.rebuild_checked {
-                    vec![
+                let mut warnings: Vec<Value> = report
+                    .warnings
+                    .iter()
+                    .map(|w| json!({ "code": w.code, "detail": w.message }))
+                    .collect();
+                if full && !report.rebuild_checked {
+                    warnings.push(
                         json!({ "code": "W001", "detail": "model not available, rebuild check skipped (D50)" }),
-                    ]
-                } else {
-                    Vec::new()
-                };
+                    );
+                }
                 json!({
                     "valid": true,
                     "rooms": report.rooms,
@@ -462,7 +469,7 @@ mod tests {
         assert_eq!(v["groups"].as_array().unwrap().len(), 2);
         assert_eq!(v["groups"][0]["doors"].as_array().unwrap().len(), 6);
         assert_eq!(v["check"]["valid"], true);
-        assert_eq!(v["tokens"], 479);
+        assert_eq!(v["tokens"], 486);
     }
 
     #[test]

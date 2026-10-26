@@ -39,20 +39,20 @@
    {
     "id": "electron-leckek",
     "title": "Electron leckék",
-    "tokens": 215,
-    "chars": 644,
+    "tokens": 219,
+    "chars": 655,
     "offset": 735,
-    "length": 673,
-    "hash": "9a9512e7ed4afd1ad5c35b2f387c42af83401336e698b77f8a5994ad6edb314b",
+    "length": 684,
+    "hash": "239117412c5cc2a4fb4663b65dfac44f71b2496f69a5ba07ccbd78617cd7980c",
     "group": "g1",
-    "served": "# Electron leckék\n> Visszatérő Electron hibák és a helyes megoldásuk.\ntags: electron, preload, ipc, hiba\n\n## Preload bridge\nSoha ne kapcsold ki a contextIsolation-t. A renderer csak a preloadban kiengedett függvényeket látja, a stílushoz lásd a [Frontend design alapok](#frontend-design-alapok) szobát.\n```ts\ncontextBridge.exposeInMainWorld('api', { ping: () => ipcRenderer.invoke('ping') });\n## ez a sor kódblokkban van, nem alajtó\n```\n\n## Szobajelölő | escape\nA `@@@` sor csak a sor elején jelöl szobát. Egy tartalomsor így is kezdődhet:\n```\n@@@ hamis\n\\@@@ ez sem szoba\n```\nÍráskor mindkét sor még egy visszaperjelet kap, olvasáskor lekerül.\n"
+    "served": "# Electron leckék\n> Visszatérő Electron hibák és a helyes megoldásuk.\ntags: electron, preload, ipc, hiba\nkind: note\n\n## Preload bridge\nSoha ne kapcsold ki a contextIsolation-t. A renderer csak a preloadban kiengedett függvényeket látja, a stílushoz lásd a [Frontend design alapok](#frontend-design-alapok) szobát.\n```ts\ncontextBridge.exposeInMainWorld('api', { ping: () => ipcRenderer.invoke('ping') });\n## ez a sor kódblokkban van, nem alajtó\n```\n\n## Szobajelölő | escape\nA `@@@` sor csak a sor elején jelöl szobát. Egy tartalomsor így is kezdődhet:\n```\n@@@ hamis\n\\@@@ ez sem szoba\n```\nÍráskor mindkét sor még egy visszaperjelet kap, olvasáskor lekerül.\n"
    },
    {
     "id": "electron-leckek/preload-bridge",
     "title": "Preload bridge",
     "tokens": 102,
     "chars": 332,
-    "offset": 847,
+    "offset": 858,
     "length": 340,
     "hash": "29693b25b506046462eed10d9cf2f5be9ee5cfb48b2171d0115299e173e42fc6",
     "group": "g1",
@@ -63,7 +63,7 @@
     "title": "Szobajelölő | escape",
     "tokens": 79,
     "chars": 206,
-    "offset": 1187,
+    "offset": 1198,
     "length": 221,
     "hash": "e684a140962a5c380a31daeb0962552da08b3ef2116f9b48dc61b05a40adb118",
     "group": "g1",
@@ -72,16 +72,16 @@
    {
     "id": "szoba",
     "title": "",
-    "tokens": 7,
-    "chars": 16,
-    "offset": 1419,
-    "length": 299,
-    "hash": "c2c64eb3d58aa71bc2c106289c3a912f54fbf7624a5b22929a948f7910d46204",
+    "tokens": 10,
+    "chars": 24,
+    "offset": 1430,
+    "length": 379,
+    "hash": "55a2139eb8630acc46f0834479377ed5edc9a65922675d85ccf616b4fbcb092d",
     "group": "g2",
-    "served": "# \n\n> \n\ntags: \n\n"
+    "served": "# \n\n> \n\ntags: \n\nkind: \n\n"
    }
   ],
-  "header_body": "6197+1719"
+  "header_body": "6206+1810"
  },
  "E001-magic.kapu": {
   "expect": "E001",
@@ -140,6 +140,6 @@
   "door": "frontend-design-alapok",
   "served": "# Frontend design alapok\n> Sötét téma, glassmorphism, bronz és türkiz színek: az alap stílus minden apphoz.\ntags: frontend, design, glass, színek, css, gomb\n\n## Színek\nA paletta három alapszínre épül, a `--turkiz` változó a kiemelés színe.\n```css\n:root {\n  --bg: #12161c;\n  --bronz: #c08a4a;\n  --turkiz: #3fb6a8;\n  --glass: rgba(255, 255, 255, 0.08);\n}\n```\n\n## Glass gomb\nAz üvegszerű gomb elmosott hátteret kap, lásd még az [Electron preload](#electron-leckek/preload-bridge) alajtót.\n```css\n.btn-glass {\n  background: var(--glass);\n  backdrop-filter: blur(12px);\n  border: 1px solid rgba(255, 255, 255, 0.18);\n  border-radius: 12px;\n  color: var(--turkiz);\n}\n```\nÚj sor, amit kézzel írtak a fájlba.",
   "second_door": "electron-leckek",
-  "second_served": "# Electron leckék\n> Visszatérő Electron hibák és a helyes megoldásuk.\ntags: electron, preload, ipc, hiba\n\n## Preload bridge\nSoha ne kapcsold ki a contextIsolation-t. A renderer csak a preloadban kiengedett függvényeket látja, a stílushoz lásd a [Frontend design alapok](#frontend-design-alapok) szobát.\n```ts\ncontextBridge.exposeInMainWorld('api', { ping: () => ipcRenderer.invoke('ping') });\n## ez a sor kódblokkban van, nem alajtó\n```\n\n## Szobajelölő | escape\nA `@@@` sor csak a sor elején jelöl szobát. Egy tartalomsor így is kezdődhet:\n```\n@@@ hamis\n\\@@@ ez sem szoba\n```\nÍráskor mindkét sor még egy visszaperjelet kap, olvasáskor lekerül.\n"
+  "second_served": "# Electron leckék\n> Visszatérő Electron hibák és a helyes megoldásuk.\ntags: electron, preload, ipc, hiba\nkind: note\n\n## Preload bridge\nSoha ne kapcsold ki a contextIsolation-t. A renderer csak a preloadban kiengedett függvényeket látja, a stílushoz lásd a [Frontend design alapok](#frontend-design-alapok) szobát.\n```ts\ncontextBridge.exposeInMainWorld('api', { ping: () => ipcRenderer.invoke('ping') });\n## ez a sor kódblokkban van, nem alajtó\n```\n\n## Szobajelölő | escape\nA `@@@` sor csak a sor elején jelöl szobát. Egy tartalomsor így is kezdődhet:\n```\n@@@ hamis\n\\@@@ ez sem szoba\n```\nÍráskor mindkét sor még egy visszaperjelet kap, olvasáskor lekerül.\n"
  }
 }

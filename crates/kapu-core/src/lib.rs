@@ -1,6 +1,6 @@
 //! KAPU core: reading, validating, building and searching `.kapu` files.
 //!
-//! The on-disk format is defined by `SPEC-KAPU.md` v1.0. The body of a file is the
+//! The on-disk format is defined by `SPEC-KAPU.md` v1.2. The body of a file is the
 //! single source of truth; every other section is derived from it by the builder
 //! and must be reproduced byte for byte (NFR-02).
 #![forbid(unsafe_code)]
@@ -29,6 +29,7 @@ pub mod reader;
 pub mod scan;
 pub mod search;
 pub mod sections;
+pub mod skills;
 pub mod terms;
 pub mod text;
 pub mod validate;
@@ -45,13 +46,13 @@ pub use reader::{
 pub use sections::{BodyLength, CheckedFile, Limits, Sections};
 pub use validate::{Level, Report, is_valid_id, validate, validate_with};
 
-/// Format version the builder writes on the first header line (`%KAPU 1.1`,
+/// Format version the builder writes on the first header line (`%KAPU 1.2`,
 /// FR-03).
-pub const FORMAT_VERSION: &str = "1.1";
+pub const FORMAT_VERSION: &str = "1.2";
 
-/// Format versions the reader accepts (D140): a 1.0 file stays readable until
-/// `kapu build` rewrites it as 1.1.
-pub const READ_VERSIONS: [&str; 2] = ["1.0", "1.1"];
+/// Format versions the reader accepts (D140, D143): an older file stays
+/// readable until `kapu build` rewrites it as 1.2.
+pub const READ_VERSIONS: [&str; 3] = ["1.0", "1.1", "1.2"];
 
 /// Exact size of the file header in bytes (FR-03).
 pub const HEADER_LEN: usize = 512;
@@ -67,7 +68,7 @@ mod tests {
 
     #[test]
     fn format_version_matches_spec() {
-        assert_eq!(FORMAT_VERSION, "1.1");
-        assert_eq!(READ_VERSIONS, ["1.0", "1.1"]);
+        assert_eq!(FORMAT_VERSION, "1.2");
+        assert_eq!(READ_VERSIONS, ["1.0", "1.1", "1.2"]);
     }
 }

@@ -17,8 +17,8 @@ pub const SIGNATURE: &str = concat!("psz // v", env!("CARGO_PKG_VERSION"));
 pub const REPOSITORY: &str = "https://github.com/piszabolcs/kapu";
 
 /// One or two sentences on what the tools are for.
-pub const PURPOSE: &str = "Navigable single-file knowledge container for AI agents. One .kapu file \
-holds the Markdown body with a map, an index and a graph, so an agent opens only the rooms it needs.";
+pub const PURPOSE: &str = "A personal knowledge base in one text file that any MCP agent searches \
+for a few hundred tokens: skills, code patterns and project notes, for coding agents and local models.";
 
 /// The layers the tools are built from, with their role.
 pub const LAYERS: [(&str, &str); 3] = [
@@ -58,7 +58,7 @@ pub const REPOSITORIES: [(&str, &str); 4] = [
     ("tauri-apps/tauri", "https://github.com/tauri-apps/tauri"),
 ];
 
-/// The version line that follows the program name: `0.1.0 (KAPU format 1.1)`.
+/// The version line that follows the program name: `0.2.0 (KAPU format 1.2)`.
 #[must_use]
 pub fn version_line() -> String {
     format!("{VERSION} (KAPU format {FORMAT_VERSION})")

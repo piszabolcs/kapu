@@ -6,7 +6,7 @@ use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use crate::build::{
-    Built, RoomSource, TEMPLATE, Warning, build, new_room_id, normalize_newlines, parse_body,
+    Built, RoomSource, Warning, build, new_room_id, normalize_newlines, parse_body,
 };
 use crate::error::{Error, ErrorCode, Result};
 use crate::sections::{BodyLength, Limits, Sections};
@@ -30,9 +30,19 @@ pub fn rooms_of(file: &[u8]) -> Result<Vec<RoomSource>> {
 /// # Errors
 /// Only a builder error, which the template never triggers.
 pub fn new_file() -> Result<Built> {
+    new_file_of(None)
+}
+
+/// [`new_file`] whose room starts from the template of `kind` (FR-05, D144):
+/// the project card for `project`, the FR-05 template with the kind filled
+/// in otherwise.
+///
+/// # Errors
+/// As [`new_file`].
+pub fn new_file_of(kind: Option<&str>) -> Result<Built> {
     build(&[RoomSource {
         id: "szoba".to_owned(),
-        content: TEMPLATE.to_owned(),
+        content: crate::build::template_for(kind),
     }])
 }
 
@@ -188,7 +198,10 @@ mod tests {
     fn new_file_has_the_template_room() {
         let built = new_file().unwrap();
         crate::validate(&built.bytes, crate::Level::Full).unwrap();
-        assert_eq!(rooms_of(&built.bytes).unwrap()[0].content, TEMPLATE);
+        assert_eq!(
+            rooms_of(&built.bytes).unwrap()[0].content,
+            crate::build::TEMPLATE
+        );
     }
 
     #[test]

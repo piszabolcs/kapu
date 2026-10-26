@@ -34,7 +34,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "tests" / "vectors"
 
 HEADER_LEN = 512
-FORMAT_VERSION = "1.1"
+FORMAT_VERSION = "1.2"
 # D121: group names leave out the stop words of the YAKE list (same file as Rust).
 # D131: words of API parameter tables, never a group's topic (build.rs GROUP_NAME_SKIP)
 GROUP_NAME_SKIP = {"bool", "default", "false", "float", "int", "let", "none", "null", "optional", "required", "str", "true"}
@@ -53,6 +53,7 @@ TITLE_MAX = 200
 TAG_MAX = 64
 TAGS_MAX = 32
 SHORT_TAGS = 5
+KIND_MAX = 32  # FR-06/5 (D144)
 
 ENC = tiktoken.get_encoding("o200k_base")
 STEM_HU = snowballstemmer.stemmer("hungarian")
@@ -68,6 +69,9 @@ TEMPLATE = (
     "\n"
     "tags: \n"
     "<!-- Keresőszavak vesszővel. Ha üres marad, a szövegből lesznek. -->\n"
+    "\n"
+    "kind: \n"
+    "<!-- Fajta: skill, project, pattern vagy note. Üresen is maradhat. -->\n"
     "\n"
     "<!-- Innen jöhet a tartalom, sima Markdownban. -->\n"
 )
@@ -106,6 +110,7 @@ Az üvegszerű gomb elmosott hátteret kap, lásd még az [Electron preload](#el
     """# Electron leckék
 > Visszatérő Electron hibák és a helyes megoldásuk.
 tags: electron, preload, ipc, hiba
+kind: note
 
 ## Preload bridge
 Soha ne kapcsold ki a contextIsolation-t. A renderer csak a preloadban kiengedett függvényeket látja, a stílushoz lásd a [Frontend design alapok](#frontend-design-alapok) szobát.
@@ -202,18 +207,21 @@ def code_fence_mask(lines: list[str]) -> list[bool]:
 
 
 def paragraphs(text: str, first_only: bool) -> str:
-    """FR-06/2 source text: paragraphs outside headings, comments, code and `tags:`.
-    Line breaks become spaces."""
+    """FR-06/2 source text: paragraphs outside headings, comments, code, `tags:`
+    and a `kind:` line before the first `## ` line (D144). Line breaks become spaces."""
     lines = strip_comments(text).split("\n")
     mask = code_fence_mask(lines)
     paras, cur = [], []
+    in_head = True
     for line, in_code in zip(lines, mask):
+        in_head = in_head and (in_code or not line.startswith("## "))
         skip = (
             in_code
             or line.startswith("#")
             or line.startswith("> ")
             or line.strip() == ">"
             or line.startswith("tags:")
+            or (in_head and line.startswith("kind:"))
         )
         if not line.strip() or skip:
             if cur:
@@ -311,18 +319,19 @@ class Door:
     raw_terms: dict[str, int] = field(default_factory=dict)  # unstemmed -> tf
     gid: str = ""
     links: list[str] = field(default_factory=list)
+    kind: str = ""  # FR-06/5 (D144), rooms only
 
 
 def heading_title(text: str) -> str:
     """FR-06/1: the first `# ` line; if it is empty or missing, the first
-    non-empty line that is not a heading marker, `>` or `tags:` line (D87)."""
+    non-empty line that is not a heading marker, `>`, `tags:` or `kind:` line (D87, D144)."""
     lines = strip_comments(text).split("\n")
     first = next((line[2:].strip() for line in lines if line.startswith("# ")), "")
     if first:
         return first
     for line in lines:
         s = line.strip()
-        if s and s not in ("#", ">") and not s.startswith(("# ", "> ", "tags:")):
+        if s and s not in ("#", ">") and not s.startswith(("# ", "> ", "tags:", "kind:")):
             return s
     return ""
 
@@ -341,6 +350,20 @@ def manual_tags(text: str) -> list[str]:
     return []
 
 
+def manual_kind(text: str) -> str:
+    """FR-06/5 (D144): the first `kind:` line outside code before the first `## `
+    line, lower-cased, if it is one word of [a-z0-9][a-z0-9-] (at most 32); else ""."""
+    lines = strip_comments(text).split("\n")
+    for line, in_code in zip(lines, code_fence_mask(lines)):
+        if not in_code and line.startswith("## "):
+            return ""
+        if not in_code and line.startswith("kind:"):
+            v = line[5:].strip().lower()
+            ok = 0 < len(v) <= KIND_MAX and re.fullmatch(r"[a-z0-9][a-z0-9-]*", v) is not None
+            return v if ok else ""
+    return ""
+
+
 def unescape(stored: bytes) -> str:
     return "\n".join(
         line[1:] if re.match(r"^\\+@@@", line) else line
@@ -349,8 +372,16 @@ def unescape(stored: bytes) -> str:
 
 
 def indexed_text(text: str) -> str:
-    """D62: content for the index is the served text without the `tags:` line."""
-    return "\n".join(l for l in text.split("\n") if not l.startswith("tags:"))
+    """D62: content for the index is the served text without the `tags:` line, and
+    without a `kind:` line outside code before the first `## ` line (D144)."""
+    lines = text.split("\n")
+    out, in_head = [], True
+    for line, in_code in zip(lines, code_fence_mask(lines)):
+        in_head = in_head and (in_code or not line.startswith("## "))
+        if line.startswith("tags:") or (in_head and not in_code and line.startswith("kind:")):
+            continue
+        out.append(line)
+    return "\n".join(out)
 
 
 def count_terms(door: Door) -> None:
@@ -409,6 +440,7 @@ def build_doors(rooms: list[str], id_override: dict[int, str] | None = None) -> 
         # D88: a manual description is cut only at the 300-token hard limit
         room.description = cut_to_tokens(manual, 300) if manual else auto_description(raw, room.tokens, False)
         room.tags = manual_tags(raw)  # YAKE fallback is not exercised by the sample (D63)
+        room.kind = manual_kind(raw)
         doors.append(room)
 
         # FR-07 sub-doors over the stored bytes
@@ -590,6 +622,7 @@ def derive(doors: list[Door]) -> dict[str, bytes]:
                 continue
             map_lines.append(
                 f"R {r.id} | {esc_field(r.title)} | {r.tokens}t | {gid} | {esc_field(', '.join(r.tags[:SHORT_TAGS]))}"
+                + (f" | {r.kind}" if r.kind else "")  # D144
             )
             for s in doors:
                 if not s.is_room and s.id.split("/")[0] == r.id:
@@ -749,7 +782,7 @@ def main() -> None:
         return s
 
     # E001 bad magic
-    write("E001-magic.kapu", sample.replace(b"%KAPU 1.1", b"%KAPX 1.1", 1), "E001", "magic is %KAPX")
+    write("E001-magic.kapu", sample.replace(b"%KAPU 1.2", b"%KAPX 1.2", 1), "E001", "magic is %KAPX")
     # E002 header does not end with LF at byte 511
     e002 = bytearray(sample)
     e002[HEADER_LEN - 1] = ord(" ")

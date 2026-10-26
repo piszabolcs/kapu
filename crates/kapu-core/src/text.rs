@@ -16,6 +16,11 @@ pub const TITLE_MAX: usize = 200;
 pub const TAG_MAX: usize = 64;
 /// At most this many tags (FR-06/3).
 pub const TAGS_MAX: usize = 32;
+/// The kinds a room names on its `kind:` line without a warning (FR-06/5,
+/// D144); another well-formed value is kept with warning W006.
+pub const KINDS: [&str; 4] = ["skill", "project", "pattern", "note"];
+/// Longest kind in characters (FR-06/5).
+pub const KIND_MAX: usize = 32;
 
 /// NFC normalisation (FR-02/6).
 #[must_use]
@@ -104,7 +109,8 @@ pub fn code_fence_mask(lines: &[&str]) -> Vec<bool> {
 }
 
 /// FR-06/2 source text: paragraphs outside headings, comments, code, `>`
-/// lines and the `tags:` line, line breaks as spaces. With `first_only`
+/// lines, the `tags:` line and a `kind:` line before the first `## ` line
+/// (D144), line breaks as spaces. With `first_only`
 /// only the first paragraph (sub-doors, FR-07/4).
 #[must_use]
 pub fn paragraphs(text: &str, first_only: bool) -> String {
@@ -113,12 +119,15 @@ pub fn paragraphs(text: &str, first_only: bool) -> String {
     let mask = code_fence_mask(&lines);
     let mut paras: Vec<String> = Vec::new();
     let mut cur: Vec<&str> = Vec::new();
+    let mut in_head = true;
     for (line, in_code) in lines.iter().zip(mask) {
+        in_head &= in_code || !line.starts_with("## ");
         let skip = in_code
             || line.starts_with('#')
             || line.starts_with("> ")
             || line.trim() == ">"
-            || line.starts_with("tags:");
+            || line.starts_with("tags:")
+            || (in_head && line.starts_with("kind:"));
         if line.trim().is_empty() || skip {
             if !cur.is_empty() {
                 paras.push(cur.join(" "));
@@ -139,8 +148,8 @@ pub fn paragraphs(text: &str, first_only: bool) -> String {
 }
 
 /// Title (FR-06/1): the first `# ` line; if it is empty or missing, the
-/// first non-empty line that is not a heading marker, `>` line or `tags:`
-/// line (D87). Comments removed first.
+/// first non-empty line that is not a heading marker, `>` line, `tags:` or
+/// `kind:` line (D87, D144). Comments removed first.
 #[must_use]
 pub fn heading_title(text: &str) -> String {
     let stripped = strip_comments(text);
@@ -159,6 +168,7 @@ pub fn heading_title(text: &str) -> String {
             && !s.starts_with("# ")
             && !s.starts_with("> ")
             && !s.starts_with("tags:")
+            && !s.starts_with("kind:")
         {
             return s.to_owned();
         }
@@ -196,6 +206,34 @@ pub fn manual_tags(text: &str) -> Option<Vec<String>> {
             .take(TAGS_MAX)
             .collect(),
     )
+}
+
+/// FR-06/5 (D144): the value of the room's `kind:` line: the first line
+/// outside fenced code and before the first `## ` line that starts with
+/// `kind:`, lower-cased, if it is one word of `[a-z0-9][a-z0-9-]` of at most
+/// [`KIND_MAX`] characters. Otherwise `None`: a YAML `kind:` line in a
+/// document's code or sections stays content.
+#[must_use]
+pub fn manual_kind(text: &str) -> Option<String> {
+    let stripped = strip_comments(text);
+    let lines: Vec<&str> = stripped.split('\n').collect();
+    let mask = code_fence_mask(&lines);
+    let line = lines
+        .iter()
+        .zip(mask)
+        .take_while(|(l, in_code)| *in_code || !l.starts_with("## "))
+        .find(|(l, in_code)| !in_code && l.starts_with("kind:"))
+        .map(|(l, _)| *l)?;
+    let value = line.get(5..).unwrap_or("").trim().to_lowercase();
+    let well_formed = value.len() <= KIND_MAX
+        && value
+            .bytes()
+            .next()
+            .is_some_and(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
+    well_formed.then_some(value)
 }
 
 /// First `max` characters.
@@ -239,10 +277,31 @@ pub fn find_links(text: &str) -> Vec<String> {
     out
 }
 
-/// The indexed content (D62): the served text without the `tags:` line.
+/// D144: the text without its `kind:` line, a `kind:` line outside code
+/// before the first `## ` line (the kind is a filter, not a topic: a word
+/// every card shares would tie the rooms together with `term` edges).
+#[must_use]
+pub fn without_kind_line(text: &str) -> String {
+    let lines: Vec<&str> = text.split('\n').collect();
+    let mask = code_fence_mask(&lines);
+    let mut in_head = true;
+    lines
+        .iter()
+        .zip(mask)
+        .filter(|(line, in_code)| {
+            in_head &= *in_code || !line.starts_with("## ");
+            !(in_head && !*in_code && line.starts_with("kind:"))
+        })
+        .map(|(line, _)| *line)
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// The indexed content (D62, D144): the served text without the `tags:` line
+/// and without its `kind:` line.
 #[must_use]
 pub fn indexed_text(served: &str) -> String {
-    served
+    without_kind_line(served)
         .split('\n')
         .filter(|l| !l.starts_with("tags:"))
         .collect::<Vec<_>>()
@@ -252,6 +311,28 @@ pub fn indexed_text(served: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn kind_line_counts_only_in_the_head_outside_code() {
+        // D144: a YAML `kind:` in code or in a section stays content
+        assert_eq!(manual_kind("# A\nkind: Skill\n").as_deref(), Some("skill"));
+        assert_eq!(
+            manual_kind("# A\n<!-- c -->\nkind: project\n\n## S\n").as_deref(),
+            Some("project")
+        );
+        assert_eq!(manual_kind("# A\n```yaml\nkind: Pod\n```\n"), None);
+        assert_eq!(manual_kind("# A\n## S\nkind: note\n"), None);
+        assert_eq!(manual_kind("# A\nkind: two words\n"), None);
+        assert_eq!(manual_kind("# A\nkind: \n"), None);
+        assert_eq!(
+            indexed_text("# A\nkind: skill\ntext\n## S\nkind: x\n"),
+            "# A\ntext\n## S\nkind: x\n"
+        );
+        assert_eq!(
+            paragraphs("# A\nkind: skill\nfirst words\n", false),
+            "first words"
+        );
+    }
 
     #[test]
     fn slug_rules() {

@@ -328,17 +328,17 @@ fn search_times(
         let refs: Vec<&str> = ids.iter().map(String::as_str).collect();
         let map = time3(|| kapu_core::view::map_view(&bytes, None).map(|_| ()))?;
         let open = time3(|| kapu_core::open_bytes(&bytes, &refs).map(|_| ()))?;
-        let bm25 = time3(|| search(&bytes, query, SearchOptions::default(), None).map(|_| ()))?;
+        let bm25 = time3(|| search(&bytes, query, &SearchOptions::default(), None).map(|_| ()))?;
         let dir = std::env::temp_dir().join(format!("kapu-bench-cache-{}-{n}", std::process::id()));
         let cold = time3(|| {
             let _ = std::fs::remove_dir_all(&dir);
             let cache = VectorCache::in_dir(&model, &dir);
-            search(&bytes, query, SearchOptions::default(), Some(&cache)).map(|_| ())
+            search(&bytes, query, &SearchOptions::default(), Some(&cache)).map(|_| ())
         })?;
         let cache = VectorCache::in_dir(&model, &dir);
-        search(&bytes, query, SearchOptions::default(), Some(&cache))?;
+        search(&bytes, query, &SearchOptions::default(), Some(&cache))?;
         let warm =
-            time3(|| search(&bytes, query, SearchOptions::default(), Some(&cache)).map(|_| ()))?;
+            time3(|| search(&bytes, query, &SearchOptions::default(), Some(&cache)).map(|_| ()))?;
         let _ = std::fs::remove_dir_all(&dir);
         let _ = writeln!(
             out,

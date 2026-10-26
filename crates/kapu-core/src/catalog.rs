@@ -8,7 +8,8 @@
 use crate::error::{Error, ErrorCode, Result};
 use crate::header::parse_decimal;
 
-/// One door line of `#MAP`: `R <id> | <title> | <n>t | <gid> | <tags>` or
+/// One door line of `#MAP`: `R <id> | <title> | <n>t | <gid> | <tags>`,
+/// with ` | <kind>` for a room that names one (D144), or
 /// `S <id> | <title> | <n>t`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MapDoor<'a> {
@@ -20,6 +21,8 @@ pub struct MapDoor<'a> {
     pub tokens: u64,
     /// True for a room (`R`), false for a sub-door (`S`).
     pub is_room: bool,
+    /// The room's `kind:` (FR-06/5), empty for none and for a sub-door.
+    pub kind: &'a str,
 }
 
 /// The parsed `#MAP` section.
@@ -107,7 +110,7 @@ pub fn parse_map(text: &str) -> Result<Map<'_>> {
                 map.groups += 1;
                 continue;
             }
-            (Some("R "), 5) => true,
+            (Some("R "), 5 | 6) => true,
             (Some("S "), 3) => false,
             _ => {
                 return Err(e005(
@@ -129,6 +132,7 @@ pub fn parse_map(text: &str) -> Result<Map<'_>> {
             title,
             tokens,
             is_room,
+            kind: fields.get(5).copied().unwrap_or(""),
         });
     }
     Ok(map)

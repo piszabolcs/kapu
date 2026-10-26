@@ -4,7 +4,7 @@
 # its runtime DLL is put on PATH here. The seed corpus is the M1 test vectors.
 param(
     [int]$Seconds = 120,
-    [string[]]$Targets = @("header", "sections", "docs", "catalog", "validate", "reader")
+    [string[]]$Targets = @("header", "sections", "docs", "catalog", "validate", "reader", "vec")
 )
 $ErrorActionPreference = "Continue"
 $root = Split-Path -Parent $PSScriptRoot

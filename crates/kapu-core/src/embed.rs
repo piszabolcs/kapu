@@ -426,6 +426,304 @@ pub fn find_default_model_dir() -> Option<PathBuf> {
 }
 
 // ---------------------------------------------------------------------------
+// Vectors in the file (FR-10/6, D143)
+// ---------------------------------------------------------------------------
+
+/// The first line of `#VEC`: one sign bit per component (D143).
+#[must_use]
+pub fn vec_params(dim: usize) -> String {
+    format!("dim={dim} bits=1")
+}
+
+/// Base64 characters of one window: `dim` sign bits in whole bytes, without
+/// padding (43 for 256 components).
+#[must_use]
+pub const fn window_chars(dim: usize) -> usize {
+    (dim.div_ceil(8) * 4).div_ceil(3)
+}
+
+const BASE64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/// D143: one `#VEC` line, the windows of a door in order. A window is the
+/// sign bits of its vector (1 for a component above 0, the first component
+/// in the highest bit of the first byte) as unpadded base64. A window whose
+/// vector is all zeros (a text without known tokens) is left out, so such a
+/// door scores 0 as with the float vectors.
+#[must_use]
+pub fn sign_line(windows: &[Vec<f32>]) -> String {
+    let mut line = String::new();
+    for v in windows.iter().filter(|v| v.iter().any(|x| *x != 0.0)) {
+        let mut bytes = vec![0u8; v.len().div_ceil(8)];
+        for (i, x) in v.iter().enumerate() {
+            if let Some(b) = bytes.get_mut(i / 8).filter(|_| *x > 0.0) {
+                *b |= 0x80 >> (i % 8);
+            }
+        }
+        for chunk in bytes.chunks(3) {
+            let n = chunk
+                .iter()
+                .zip([16u32, 8, 0])
+                .fold(0u32, |n, (b, shift)| n | (u32::from(*b) << shift));
+            for k in 0..=chunk.len() {
+                let six = (n >> (18 - 6 * k)) & 63;
+                if let Some(c) = usize::try_from(six).ok().and_then(|i| BASE64.get(i)) {
+                    line.push(char::from(*c));
+                }
+            }
+        }
+    }
+    line
+}
+
+/// Unpadded base64 to bytes; `None` for a character outside the alphabet, a
+/// dangling single character, or bits set below the last byte (only one
+/// spelling of each byte string is accepted).
+fn unbase64(text: &[u8], out: &mut Vec<u8>) -> Option<()> {
+    let value = |c: u8| -> Option<u32> {
+        let v = match c {
+            b'A'..=b'Z' => c - b'A',
+            b'a'..=b'z' => c - b'a' + 26,
+            b'0'..=b'9' => c - b'0' + 52,
+            b'+' => 62,
+            b'/' => 63,
+            _ => return None,
+        };
+        Some(u32::from(v))
+    };
+    for chunk in text.chunks(4) {
+        let bytes = chunk.len().checked_sub(1).filter(|n| *n > 0)?;
+        let mut n = 0u32;
+        for (i, c) in chunk.iter().enumerate() {
+            n |= value(*c)? << (18 - 6 * i);
+        }
+        if n & ((1u32 << (24 - 8 * bytes)) - 1) != 0 {
+            return None;
+        }
+        out.extend(n.to_be_bytes().iter().skip(1).take(bytes));
+    }
+    Some(())
+}
+
+/// The window vectors of a file's `#VEC` section (D143): `dim` sign bits per
+/// window, door `i` owning windows `starts[i]..starts[i + 1]`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SignVectors {
+    dim: usize,
+    bytes: usize,
+    data: Vec<u8>,
+    starts: Vec<usize>,
+}
+
+impl SignVectors {
+    /// Reads the inner text of `#VEC` for a file of `doors` doors: the line
+    /// `dim=<n> bits=1`, then one line per door in `#DOCS` order, each a run
+    /// of [`window_chars`] base64 characters per window.
+    ///
+    /// # Errors
+    /// E005 for another first line, another number of door lines, or a line
+    /// that is not whole windows of canonical base64.
+    pub fn parse(text: &str, doors: usize) -> Result<Self> {
+        let bad = |what: String| Error::new(ErrorCode::E005, format!("#VEC {what}"));
+        let mut lines = text.lines();
+        let params = lines.next().unwrap_or("");
+        let dim = params
+            .strip_prefix("dim=")
+            .and_then(|r| r.strip_suffix(" bits=1"))
+            .and_then(crate::header::parse_decimal)
+            .and_then(|d| usize::try_from(d).ok())
+            .filter(|d| *d > 0)
+            .ok_or_else(|| bad(format!("line 1: `{params}`, expected `dim=<n> bits=1`")))?;
+        let (bytes, chars) = (dim.div_ceil(8), window_chars(dim));
+        let mut data = Vec::new();
+        let mut starts = vec![0usize];
+        for (n, line) in lines.enumerate() {
+            if line.len() % chars != 0 {
+                return Err(bad(format!(
+                    "line {}: {} characters, not whole windows of {chars}",
+                    n + 2,
+                    line.len()
+                )));
+            }
+            for window in line.as_bytes().chunks(chars) {
+                unbase64(window, &mut data)
+                    .ok_or_else(|| bad(format!("line {}: not canonical base64", n + 2)))?;
+            }
+            starts.push(data.len() / bytes);
+        }
+        if starts.len() != doors + 1 {
+            return Err(bad(format!(
+                "has {} door lines, #DOCS has {doors} doors",
+                starts.len() - 1
+            )));
+        }
+        Ok(Self {
+            dim,
+            bytes,
+            data,
+            starts,
+        })
+    }
+
+    /// Number of components per window.
+    #[must_use]
+    pub fn dim(&self) -> usize {
+        self.dim
+    }
+
+    /// Number of doors.
+    #[must_use]
+    pub fn doors(&self) -> usize {
+        self.starts.len().saturating_sub(1)
+    }
+
+    /// Per door, the best cosine of `query` with one of its windows read as
+    /// ±1 per component (0 for a door without windows). A table of 256 partial
+    /// sums per byte position makes a window `dim / 8` lookups; every sum runs
+    /// in f64 in component order, the same bits on every platform (D46).
+    #[must_use]
+    pub fn best_scores(&self, query: &[f32]) -> Vec<f64> {
+        let norm = query
+            .iter()
+            .map(|x| f64::from(*x) * f64::from(*x))
+            .sum::<f64>()
+            .sqrt();
+        #[allow(clippy::cast_precision_loss)]
+        let scale = norm * (self.dim as f64).sqrt();
+        let mut table = vec![0f64; self.bytes * 256];
+        for (j, row) in table.chunks_mut(256).enumerate() {
+            for (value, slot) in row.iter_mut().enumerate() {
+                let mut sum = 0f64;
+                for (k, x) in query.iter().skip(j * 8).take(8).enumerate() {
+                    if value & (0x80 >> k) == 0 {
+                        sum -= f64::from(*x);
+                    } else {
+                        sum += f64::from(*x);
+                    }
+                }
+                *slot = sum;
+            }
+        }
+        self.starts
+            .windows(2)
+            .map(|pair| {
+                let (first, end) = (pair.first().copied(), pair.get(1).copied());
+                let (Some(first), Some(end)) = (first, end) else {
+                    return 0.0;
+                };
+                let windows = self
+                    .data
+                    .get(first * self.bytes..end * self.bytes)
+                    .unwrap_or(&[]);
+                windows
+                    .chunks(self.bytes.max(1))
+                    .map(|w| {
+                        let dot: f64 = w
+                            .iter()
+                            .zip(table.chunks(256))
+                            .map(|(b, row)| row.get(usize::from(*b)).copied().unwrap_or(0.0))
+                            .sum();
+                        if scale == 0.0 { 0.0 } else { dot / scale }
+                    })
+                    .fold(None, |best: Option<f64>, c| {
+                        Some(best.map_or(c, |b| b.max(c)))
+                    })
+                    .unwrap_or(0.0)
+            })
+            .collect()
+    }
+}
+
+/// How many files' `#VEC` sections stay decoded in memory (as [`MEMO_BODIES`]).
+const MEMO_FILES: usize = 2;
+
+/// Decoded `#VEC` sections by the BLAKE3 of their text, the most recent last.
+static SIGN_MEMO: Mutex<Vec<(Hash, Arc<SignVectors>)>> = Mutex::new(Vec::new());
+
+/// [`SignVectors::parse`], decoded once per section text for the process (as
+/// the cache's memo, D137).
+///
+/// # Errors
+/// As [`SignVectors::parse`].
+pub fn file_vectors(text: &str, doors: usize) -> Result<Arc<SignVectors>> {
+    let key = crate::docs::blake3_of(text.as_bytes());
+    if let Ok(memo) = SIGN_MEMO.lock()
+        && let Some((_, hit)) = memo.iter().find(|(k, v)| *k == key && v.doors() == doors)
+    {
+        return Ok(Arc::clone(hit));
+    }
+    let vectors = Arc::new(SignVectors::parse(text, doors)?);
+    if let Ok(mut memo) = SIGN_MEMO.lock() {
+        memo.retain(|(k, _)| *k != key);
+        memo.push((key, Arc::clone(&vectors)));
+        if memo.len() > MEMO_FILES {
+            memo.remove(0);
+        }
+    }
+    Ok(vectors)
+}
+
+/// How many doors' rescoring windows stay in memory for the process (D143).
+const RESCORE_MEMO_DOORS: usize = 20_000;
+
+/// What a door's rescoring windows depend on: the model, the door's stored
+/// bytes (its text follows from them) and whether it is a sub-door.
+type RescoreKey = ([u8; 32], [u8; 32], bool);
+
+/// Rescoring windows by key, and the keys in the order they came.
+type RescoreMemo = (
+    BTreeMap<RescoreKey, Arc<Vec<Vec<f32>>>>,
+    std::collections::VecDeque<RescoreKey>,
+);
+
+static RESCORE_MEMO: Mutex<RescoreMemo> =
+    Mutex::new((BTreeMap::new(), std::collections::VecDeque::new()));
+
+/// D143: the float window vectors of `entries` for rescoring the candidates
+/// of the sign bits: from the process memo, or computed from `texts` (the
+/// vector texts of `entries`, in order), which runs only if a door is missing.
+///
+/// # Errors
+/// A tokenizer failure (E012), or an error of `texts`.
+pub fn rescore_windows(
+    model: &Model,
+    entries: &[crate::DocEntry<'_>],
+    texts: impl FnOnce() -> Result<Vec<String>>,
+) -> Result<Vec<Arc<Vec<Vec<f32>>>>> {
+    let keys: Vec<RescoreKey> = entries
+        .iter()
+        .map(|e| (model.hash().0, e.hash.0, e.id.contains('/')))
+        .collect();
+    let mut found: Vec<Option<Arc<Vec<Vec<f32>>>>> = match RESCORE_MEMO.lock() {
+        Ok(memo) => keys.iter().map(|k| memo.0.get(k).cloned()).collect(),
+        Err(_) => vec![None; keys.len()],
+    };
+    if found.iter().any(Option::is_none) {
+        let texts = texts()?;
+        let mut fresh = Vec::new();
+        for ((slot, key), text) in found.iter_mut().zip(&keys).zip(&texts) {
+            if slot.is_none() {
+                let windows = Arc::new(model.embed_windows(text)?);
+                fresh.push((*key, Arc::clone(&windows)));
+                *slot = Some(windows);
+            }
+        }
+        if let Ok(mut memo) = RESCORE_MEMO.lock() {
+            for (key, windows) in fresh {
+                if memo.0.insert(key, windows).is_none() {
+                    memo.1.push_back(key);
+                }
+            }
+            while memo.1.len() > RESCORE_MEMO_DOORS {
+                if let Some(old) = memo.1.pop_front() {
+                    memo.0.remove(&old);
+                }
+            }
+        }
+    }
+    Ok(found.into_iter().map(Option::unwrap_or_default).collect())
+}
+
+// ---------------------------------------------------------------------------
 // Vector cache (FR-10/3, D47)
 // ---------------------------------------------------------------------------
 
@@ -745,6 +1043,57 @@ mod tests {
         assert_eq!(w[2], &text[28..40]);
         let accented = "é".repeat(20);
         assert!(windows(&accented, 8).iter().all(|w| w.chars().count() <= 8));
+    }
+
+    #[test]
+    fn sign_lines_round_trip_and_score_like_plus_minus_one_vectors() {
+        // D143: 1 for a component above 0, the first component in the highest bit
+        let a: Vec<f32> = (0u16..256)
+            .map(|i| if i % 3 == 0 { 0.5 } else { -0.25 })
+            .collect();
+        let b: Vec<f32> = (0u16..256)
+            .map(|i| if i < 128 { 1.0 } else { -1.0 })
+            .collect();
+        let zero = vec![0f32; 256];
+        assert_eq!(window_chars(256), 43);
+        let line = sign_line(&[a.clone(), zero.clone(), b.clone()]);
+        assert_eq!(line.len(), 2 * 43, "the zero window is left out");
+        let text = format!("{}\n{line}\n{}\n", vec_params(256), sign_line(&[zero]));
+        let signs = SignVectors::parse(&text, 2).unwrap();
+        assert_eq!((signs.doors(), signs.dim()), (2, 256));
+        let q: Vec<f32> = (0u16..256).map(|i| f32::from((i * 7) % 11) - 5.0).collect();
+        let sign = |v: &[f32]| -> Vec<f32> {
+            v.iter()
+                .map(|x| if *x > 0.0 { 1.0 } else { -1.0 })
+                .collect()
+        };
+        let want = cosine(&q, &sign(&a)).max(cosine(&q, &sign(&b)));
+        let got = signs.best_scores(&q);
+        assert!((got[0] - want).abs() < 1e-12, "{got:?} {want}");
+        assert!(
+            got[1].abs() < f64::EPSILON,
+            "a door without windows scores 0"
+        );
+    }
+
+    #[test]
+    fn a_bad_vec_section_is_e005() {
+        let ones = sign_line(&[vec![1.0f32; 256]]);
+        assert_eq!(ones, format!("{}//8", "/".repeat(40)));
+        let ok = format!("dim=256 bits=1\n{ones}\n");
+        assert!(SignVectors::parse(&ok, 1).is_ok());
+        let not_canonical = format!("{}//9", "/".repeat(40));
+        let bad_char = format!("*{}", &ones[1..]);
+        for (text, doors) in [
+            (format!("dim=256 bits=8\n{ones}\n"), 1),
+            (format!("dim=256 bits=1\n{ones}x\n"), 1),
+            (format!("dim=256 bits=1\n{not_canonical}\n"), 1),
+            (format!("dim=256 bits=1\n{bad_char}\n"), 1),
+            (ok.clone(), 2),
+        ] {
+            let e = SignVectors::parse(&text, doors).unwrap_err();
+            assert_eq!(e.code, ErrorCode::E005, "{text:?}");
+        }
     }
 
     #[test]

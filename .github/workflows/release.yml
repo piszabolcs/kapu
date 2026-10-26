@@ -29,6 +29,9 @@ jobs:
             target: macos-arm64
             exe: ""
     runs-on: ${{ matrix.os }}
+    # D142: the release binaries come from the toolchain CI tests with.
+    env:
+      RUSTUP_TOOLCHAIN: "1.99.1"
     steps:
       - uses: actions/checkout@v4
       # The packages are cached: the runner's apt mirror can be very slow (D119).
@@ -48,6 +51,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends -o Dir::Cache::Archives="$HOME/apt-cache" libwebkit2gtk-4.1-dev libxdo-dev libssl-dev librsvg2-dev
           sudo chown -R "$USER" ~/apt-cache
+      - run: rustup toolchain install 1.99.1 --profile minimal
       - run: rustup show
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --release --locked -p kapu-cli -p kapu-mcp -p kapu-gui --bins

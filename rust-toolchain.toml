@@ -1,4 +1,7 @@
-# NFR-03/7: pinned toolchain. rustup installs this version automatically.
+# NFR-03/7 (D142): any stable Rust from the `rust-version` in Cargo.toml (1.90) on
+# builds KAPU. CI and the release workflow pin the exact version they test with
+# (RUSTUP_TOOLCHAIN in .github/workflows), so lints and builds stay reproducible
+# without making an occasional builder download a second toolchain.
 [toolchain]
-channel = "1.99.1"
+channel = "stable"
 components = ["clippy", "rustfmt"]

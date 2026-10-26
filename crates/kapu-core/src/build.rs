@@ -2,22 +2,24 @@
 //!
 //! The body is the only source of truth. [`build`] takes the rooms (id and
 //! unescaped Markdown, in body order) and derives every other section and the
-//! header, byte for byte like `tools/build_vectors.py` (D56). No model is used
-//! yet (D57), so there are no `sim` edges and the header says `emb=none`.
+//! header, byte for byte like `tools/build_vectors.py` (D56) when no model is
+//! used (D57: no `sim` edges, no `#VEC`, `emb=none`). With a model,
+//! [`build_with`] adds the `sim` edges and the `#VEC` section (D143).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 use std::path::Path;
 
 use crate::docs::{blake3_of, strip_comments, unescape};
-use crate::embed::{Model, cosine, door_text};
+use crate::embed::{Model, cosine, door_text, sign_line, vec_params};
 use crate::error::{Error, ErrorCode, Result};
 use crate::header::Hash;
 use crate::leiden::leiden;
 use crate::terms::{index_tokens, stems, tokens};
 use crate::text::{
-    TITLE_MAX, code_fence_mask, escape, find_links, heading_title, indexed_text,
-    manual_description, manual_tags, nfc, paragraphs, slug, take_chars,
+    KINDS, TITLE_MAX, code_fence_mask, escape, find_links, heading_title, indexed_text,
+    manual_description, manual_kind, manual_tags, nfc, paragraphs, slug, take_chars,
+    without_kind_line,
 };
 use crate::validate::is_valid_id;
 use crate::{FORMAT_VERSION, HEADER_LEN, yake};
@@ -43,7 +45,60 @@ pub const TEMPLATE: &str = "# \n\
 tags: \n\
 <!-- Keresőszavak vesszővel. Ha üres marad, a szövegből lesznek. -->\n\
 \n\
+kind: \n\
+<!-- Fajta: skill, project, pattern vagy note. Üresen is maradhat. -->\n\
+\n\
 <!-- Innen jöhet a tartalom, sima Markdownban. -->\n";
+
+/// FR-05/2 (D144): the project card of `kapu new --kind project` and
+/// `kapu template project`: the caption lines, `kind: project` and the seven
+/// sections of a card (each a sub-door).
+pub const PROJECT_TEMPLATE: &str = "# \n\
+<!-- A projekt neve. -->\n\
+\n\
+> \n\
+<!-- Egy mondat: mi ez a projekt, és mire jó. -->\n\
+\n\
+tags: \n\
+<!-- Nyelvek, keretrendszerek, téma, vesszővel. -->\n\
+\n\
+kind: project\n\
+\n\
+## Goal\n\
+<!-- Mit kellett megoldani, és kinek. -->\n\
+\n\
+## Period\n\
+<!-- Mikor készült, például 2026-03 – 2026-05. -->\n\
+\n\
+## Stack\n\
+<!-- Nyelvek, keretrendszerek, szolgáltatások, verziókkal. -->\n\
+\n\
+## Key decisions\n\
+<!-- A fontos döntések és az okuk, pontokban. -->\n\
+\n\
+## What worked\n\
+\n\
+## What did not\n\
+\n\
+## Where the code is\n\
+<!-- Repó, mappa vagy link. Egy kártya legfeljebb kb. 600 token. -->\n";
+
+/// The template of a kind for `kapu new --kind` (FR-05, D144): the project
+/// card for `project`, otherwise [`TEMPLATE`] with the kind filled in.
+#[must_use]
+pub fn template_for(kind: Option<&str>) -> String {
+    match kind {
+        None => TEMPLATE.to_owned(),
+        Some("project") => PROJECT_TEMPLATE.to_owned(),
+        Some(k) => TEMPLATE.replacen("kind: \n", &format!("kind: {k}\n"), 1),
+    }
+}
+
+/// A project card is meant to stay within this many tokens (K-04, W007).
+pub const PROJECT_CARD_TOKENS: u64 = 600;
+
+/// GitHub warns about files above 50 MiB; the build warns too (K-17, W008).
+pub const SIZE_WARNING_BYTES: usize = 50 * 1024 * 1024;
 
 /// One room as the builder sees it: its id and its unescaped Markdown.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -58,7 +113,8 @@ pub struct RoomSource {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Warning {
     /// `W002` invisible character, `W003` link to a missing door,
-    /// `W004` CRLF normalised (D83).
+    /// `W004` CRLF normalised (D83), `W006` unknown kind, `W007` project
+    /// card above 600 tokens (D144), `W008` file above 50 MiB (D148).
     pub code: &'static str,
     /// Where and what.
     pub message: String,
@@ -80,6 +136,8 @@ struct Door {
     title: String,
     description: String,
     tags: Vec<String>,
+    /// `kind:` of a room (FR-06/5), empty if none.
+    kind: String,
     stored: Vec<u8>,
     served: String,
     offset: usize,
@@ -234,6 +292,7 @@ impl Door {
             title: take_chars(title, TITLE_MAX),
             description: String::new(),
             tags: Vec::new(),
+            kind: String::new(),
             stored,
             served,
             offset,
@@ -271,8 +330,9 @@ fn room_door(room: &RoomSource, stored: Vec<u8>, offset: usize) -> Result<Door> 
     };
     door.tags = match manual_tags(raw) {
         Some(t) if !t.is_empty() => t,
-        _ => yake::keywords(&door.served),
+        _ => yake::keywords(&without_kind_line(&door.served)),
     };
+    door.kind = manual_kind(raw).unwrap_or_default();
     Ok(door)
 }
 
@@ -776,8 +836,14 @@ fn map_lines(doors: &[Door], groups: &[Group]) -> Vec<String> {
         ));
         for room in doors.iter().filter(|d| d.is_room && d.gid == group.gid) {
             let short: Vec<&str> = room.tags.iter().take(5).map(String::as_str).collect();
+            // D144: a room with a kind has it as a sixth field
+            let kind = if room.kind.is_empty() {
+                String::new()
+            } else {
+                format!(" | {}", room.kind)
+            };
             lines.push(format!(
-                "R {} | {} | {}t | {} | {}",
+                "R {} | {} | {}t | {} | {}{kind}",
                 room.id,
                 esc_field(&room.title),
                 room.tokens,
@@ -866,9 +932,19 @@ fn docs_lines(doors: &[Door]) -> Vec<String> {
         .collect()
 }
 
+/// FR-10/6 `#VEC` (D143): the parameter line, then per door in `#DOCS`
+/// order (id bytes) its window sign bits.
+fn vec_lines(doors: &[Door], windows: &[Vec<Vec<f32>>], dim: usize) -> Vec<String> {
+    let mut sorted: Vec<(&Door, &Vec<Vec<f32>>)> = doors.iter().zip(windows).collect();
+    sorted.sort_by(|a, b| a.0.id.as_bytes().cmp(b.0.id.as_bytes()));
+    std::iter::once(vec_params(dim))
+        .chain(sorted.iter().map(|(_, w)| sign_line(w)))
+        .collect()
+}
+
 /// FR-03 header plus sections plus body.
 fn assemble(
-    sections: [(&str, Vec<u8>); 5],
+    sections: Vec<(&str, Vec<u8>)>,
     body: &[u8],
     counts: (usize, usize, usize),
     model: (&str, Hash),
@@ -939,36 +1015,91 @@ pub fn build_with(rooms: &[RoomSource], model: Option<&Model>) -> Result<Built> 
         check_content(room, &mut warnings)?;
     }
     let (mut doors, body) = build_doors(rooms)?;
-    let vectors: Option<Vec<Vec<f32>>> = match model {
+    kind_warnings(&doors, &mut warnings);
+    // D141, D143: every door's window vectors; a room's first window is the
+    // vector of its whole text as `embed` sees it, for the `sim` edges
+    let windows: Option<Vec<Vec<Vec<f32>>>> = match model {
         Some(m) => Some(
             doors
                 .iter()
-                .filter(|d| d.is_room)
-                .map(|d| m.embed(&door_text(&d.title, &d.description, &d.served)))
+                .map(|d| m.embed_windows(&door_text(&d.title, &d.description, &d.served)))
                 .collect::<Result<_>>()?,
         ),
         None => None,
     };
+    let vectors: Option<Vec<Vec<f32>>> = windows.as_ref().map(|all| {
+        doors
+            .iter()
+            .zip(all)
+            .filter(|(d, _)| d.is_room)
+            .map(|(_, w)| w.first().cloned().unwrap_or_default())
+            .collect()
+    });
     let edges = build_graph(&doors, vectors.as_deref(), &mut warnings);
     let groups = build_groups(&mut doors, &edges);
     let graph: Vec<String> = edges
         .iter()
         .map(|(a, b, t, w)| format!("{a}\t{b}\t{t}\t{}", fmt_weight(*w)))
         .collect();
-    let sections = [
+    let mut sections = vec![
         ("map", section("MAP", &map_lines(&doors, &groups))),
         ("desc", section("DESC", &desc_lines(&doors))),
         ("graph", section("GRAPH", &graph)),
         ("index", section("INDEX", &index_lines(&doors))),
         ("docs", section("DOCS", &docs_lines(&doors))),
     ];
+    if let (Some(m), Some(windows)) = (model, &windows) {
+        sections.push(("vec", section("VEC", &vec_lines(&doors, windows, m.dim()))));
+    }
     let counts = (rooms.len(), doors.len(), groups.len());
     let model_id = model.map_or((NO_MODEL, blake3_of(b"")), |m| (m.name(), m.hash()));
     let bytes = assemble(sections, &body, counts, model_id)?;
+    if bytes.len() > SIZE_WARNING_BYTES {
+        warnings.push(Warning {
+            code: "W008",
+            message: format!(
+                "the file is {:.1} MiB; GitHub warns above 50 MiB (see the README on git)",
+                mib(bytes.len())
+            ),
+        });
+    }
     Ok(Built { bytes, warnings })
 }
 
-// Rebuilds an existing file from its body (FR-18/1, `kapu build`). The body
+/// Size in MiB, for messages.
+#[allow(clippy::cast_precision_loss)]
+fn mib(bytes: usize) -> f64 {
+    bytes as f64 / (1024.0 * 1024.0)
+}
+
+/// W006 for a kind outside [`KINDS`], W007 for a project card above
+/// [`PROJECT_CARD_TOKENS`] (FR-06/5, D144).
+fn kind_warnings(doors: &[Door], warnings: &mut Vec<Warning>) {
+    for room in doors.iter().filter(|d| d.is_room && !d.kind.is_empty()) {
+        if !KINDS.contains(&room.kind.as_str()) {
+            warnings.push(Warning {
+                code: "W006",
+                message: format!(
+                    "room `{}` has kind `{}`, not one of {}",
+                    room.id,
+                    room.kind,
+                    KINDS.join(", ")
+                ),
+            });
+        }
+        if room.kind == "project" && room.tokens > PROJECT_CARD_TOKENS {
+            warnings.push(Warning {
+                code: "W007",
+                message: format!(
+                    "project card `{}` is {} tokens; a card is meant to stay within {PROJECT_CARD_TOKENS}",
+                    room.id, room.tokens
+                ),
+            });
+        }
+    }
+}
+
+/// Rebuilds an existing file from its body (FR-18/1, `kapu build`). The body
 /// is read tolerantly, so a hand-edited file whose derived sections are stale
 /// rebuilds fine.
 ///
@@ -1091,6 +1222,46 @@ pixel sprite image
         crate::validate(&built.bytes, crate::Level::Full).unwrap();
         let view = crate::view::map_view(&built.bytes, None).unwrap();
         assert_eq!(view.doors[0].title, "Zerowidth title");
+    }
+
+    #[test]
+    fn kind_goes_to_the_map_and_an_unknown_one_warns() {
+        // D144: the sixth field of an `R` line; W006 for an unknown kind
+        let card = template_for(Some("project")).replacen("# \n", "# Card\n", 1);
+        let built = build(&[
+            room("a", "# A\nkind: skill\n\ntext\n"),
+            room("b", "# B\nkind: recipe\n\ntext\n"),
+            room("c", &card),
+        ])
+        .unwrap();
+        let s = crate::Sections::parse(&built.bytes).unwrap();
+        let map = crate::catalog::parse_map(s.map).unwrap();
+        let kind = |id: &str| map.door(id).map(|d| d.kind);
+        assert_eq!(
+            (kind("a"), kind("b"), kind("c")),
+            (Some("skill"), Some("recipe"), Some("project"))
+        );
+        assert!(
+            map.door("c/goal").is_some(),
+            "a card's sections are sub-doors"
+        );
+        let codes: Vec<&str> = built.warnings.iter().map(|w| w.code).collect();
+        assert_eq!(codes, ["W006"], "{:?}", built.warnings);
+        let report = crate::validate(&built.bytes, crate::Level::Full).unwrap();
+        assert_eq!(report.warnings.len(), 1, "{:?}", report.warnings);
+        assert!(template_for(Some("note")).contains("kind: note\n"));
+    }
+
+    #[test]
+    fn a_long_project_card_warns() {
+        // K-04 (D144): a card is meant to stay within 600 tokens
+        let long = format!("# P\nkind: project\n\n{}\n", "word ".repeat(700));
+        let built = build(&[room("p", &long)]).unwrap();
+        assert!(
+            built.warnings.iter().any(|w| w.code == "W007"),
+            "{:?}",
+            built.warnings
+        );
     }
 
     #[test]

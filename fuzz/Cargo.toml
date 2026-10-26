@@ -60,3 +60,10 @@ path = "fuzz_targets/reader.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "vec"
+path = "fuzz_targets/vec.rs"
+test = false
+doc = false
+bench = false

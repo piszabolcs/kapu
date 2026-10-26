@@ -33,7 +33,8 @@ DOCS = [
 def overview(readme: str) -> str:
     """The README as a room: its English part, without the HTML image blocks."""
     english = readme.split("\n---\n\n## Magyar", 1)[0]
-    body = english[english.index("> "):]
+    # from the end of the demo block: the opening paragraphs and everything after
+    body = english.split("</p>\n", 1)[1] if "</p>\n" in english else english[english.index("> "):]
     body = re.sub(r"<p align=\"center\">.*?</p>\n*", "", body, flags=re.S)
     body = re.sub(r"<table>.*?</table>\n*", "", body, flags=re.S)
     return "# KAPU overview\n\n" + body.strip() + "\n"

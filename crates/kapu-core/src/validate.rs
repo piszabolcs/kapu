@@ -46,6 +46,9 @@ pub struct Report {
     /// Whether the rebuild comparison ran. It is skipped, with warning W001,
     /// when the file was built with a model this reader does not have (D50).
     pub rebuild_checked: bool,
+    /// Findings that do not make the file invalid: `W006` for a kind outside
+    /// the known ones (FR-06/5, D144).
+    pub warnings: Vec<crate::build::Warning>,
 }
 
 /// FR-04/3: `[a-z0-9][a-z0-9-]{0,63}`, and for a sub-door `<room>/<sub>` with
@@ -114,6 +117,17 @@ pub fn validate_with(
 
     check_captions(&map, &desc)?;
     check_counts_and_order(&s, &entries, &terms, &map, &desc, rooms.len(), ids.len())?;
+    let warnings = check_kinds(&map)?;
+    // D143: #VEC only with a model, one line per door of whole windows
+    if let Some(text) = s.vec {
+        if s.header.emb == crate::build::NO_MODEL {
+            return Err(err(
+                ErrorCode::E005,
+                "#VEC in a file built without a model (emb=none)",
+            ));
+        }
+        crate::embed::SignVectors::parse(text, entries.len())?;
+    }
 
     if level == Level::Full {
         s.check_bodyhash()?;
@@ -140,7 +154,43 @@ pub fn validate_with(
         doors: ids.len(),
         full: level == Level::Full,
         rebuild_checked,
+        warnings,
     })
+}
+
+/// FR-06/5 (D144): a room's kind in `#MAP` is one word of `[a-z0-9-]` of at
+/// most 32 characters (E005); one outside [`crate::text::KINDS`] is a W006
+/// warning, not an error.
+fn check_kinds(map: &Map<'_>) -> Result<Vec<crate::build::Warning>> {
+    let mut warnings = Vec::new();
+    for d in map.doors.iter().filter(|d| !d.kind.is_empty()) {
+        let well_formed = d.kind.len() <= crate::text::KIND_MAX
+            && d.kind
+                .bytes()
+                .next()
+                .is_some_and(|b| b.is_ascii_lowercase() || b.is_ascii_digit())
+            && d.kind
+                .bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-');
+        if !well_formed {
+            return Err(err(
+                ErrorCode::E005,
+                format!("#MAP: room `{}` has a malformed kind `{}`", d.id, d.kind),
+            ));
+        }
+        if !crate::text::KINDS.contains(&d.kind) {
+            warnings.push(crate::build::Warning {
+                code: "W006",
+                message: format!(
+                    "room `{}` has kind `{}`, not one of {}",
+                    d.id,
+                    d.kind,
+                    crate::text::KINDS.join(", ")
+                ),
+            });
+        }
+    }
+    Ok(warnings)
 }
 
 /// E008: grammar and uniqueness of the ids in `#DOCS`.
