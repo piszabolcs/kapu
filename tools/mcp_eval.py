@@ -22,10 +22,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 READ_TOOLS = ["kapu_map", "kapu_search", "kapu_describe", "kapu_open"]
-# The npm shim is a .cmd file; run its script with node directly so the prompt
-# (sent on stdin) never passes through cmd.exe quoting.
-_CLI = Path(os.environ.get("APPDATA", "")) / "npm" / "node_modules" / "@anthropic-ai" / "claude-code" / "cli.js"
-CLAUDE = ["node", str(_CLI)] if _CLI.is_file() else ["claude"]
+# The npm shim is a .cmd file; run the package's own executable (older
+# versions: its script with node) so the prompt, sent on stdin, never passes
+# through cmd.exe quoting.
+_PKG = Path(os.environ.get("APPDATA", "")) / "npm" / "node_modules" / "@anthropic-ai" / "claude-code"
+CLAUDE = ([str(_PKG / "bin" / "claude.exe")] if (_PKG / "bin" / "claude.exe").is_file()
+          else ["node", str(_PKG / "cli.js")] if (_PKG / "cli.js").is_file() else ["claude"])
 
 PROMPT = """Answer the question below using only the KAPU tools. The knowledge file is:
 {file}

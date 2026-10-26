@@ -1,0 +1,77 @@
+{
+  "about": "Skill-finding tasks (protocol v2, chapter 4, J1). Each task names a realistic piece of work; `gold` lists the skills that clearly apply, one group per skill (a group with two names: either one counts); `ok` lists skills that are reasonable but not required, so loading them is not counted as wrong. Fixed before any run.",
+  "tasks": [
+    {
+      "id": "t01-landing",
+      "task": "Build a responsive landing page with a pricing section and a dark mode for my React web app, and finish it with my usual author footer.",
+      "gold": [["frontend-design"], ["frontend-design-2026"], ["frontend-expert"], ["signature", "app-signature"]],
+      "ok": ["brainstorming", "smarter", "best-option-advisor", "verification-before-completion", "test-driven-development", "code-reviewer", "requesting-code-review", "playground"]
+    },
+    {
+      "id": "t02-figma-to-code",
+      "task": "Implement this Figma screen as a Vue component that matches our design, including its hover and entrance animations.",
+      "gold": [["figma-design-to-code"], ["figma-implement-motion"], ["frontend-expert"]],
+      "ok": ["frontend-design", "frontend-design-2026", "figma-code-connect", "figma-use", "figma-use-motion", "smarter", "verification-before-completion"]
+    },
+    {
+      "id": "t03-mcp-server",
+      "task": "Build an MCP server in TypeScript that wraps our REST API, and package it so my colleagues can install it in Claude Desktop with one click.",
+      "gold": [["mcp-builder"], ["build-mcp-server"], ["build-mcpb"]],
+      "ok": ["backend-expert", "mcp-integration", "build-mcp-app", "test-driven-development", "best-option-advisor", "smarter", "verification-before-completion"]
+    },
+    {
+      "id": "t04-cc-plugin",
+      "task": "Create a Claude Code plugin with a /deploy slash command, a PreToolUse hook that blocks force pushes, and a settings file the user can configure.",
+      "gold": [["plugin-structure"], ["command-development"], ["hook-development"], ["plugin-settings"]],
+      "ok": ["skill-development", "writing-hookify-rules", "mcp-integration", "agent-development", "smarter", "test-driven-development"]
+    },
+    {
+      "id": "t05-flaky-500",
+      "task": "Our checkout API sometimes returns 500 under load and one of its tests is flaky. Find the cause, fix it, and prove that it is fixed.",
+      "gold": [["systematic-debugging"], ["test-driven-development"], ["verification-before-completion"], ["backend-expert"]],
+      "ok": ["code-reviewer", "requesting-code-review", "smarter", "best-option-advisor", "dispatching-parallel-agents"]
+    },
+    {
+      "id": "t06-publish",
+      "task": "My desktop app is finished. After a final code review, publish it to GitHub as a private portfolio repository with a proper README, screenshots and my namecard in the app.",
+      "gold": [["github-portfolio-publisher"], ["github-guardian"], ["signature", "app-signature"], ["code-reviewer", "requesting-code-review"]],
+      "ok": ["finishing-a-development-branch", "verification-before-completion", "claude-security"]
+    },
+    {
+      "id": "t07-office",
+      "task": "Turn last quarter's sales CSV into an Excel workbook with charts, then a 10-slide PowerPoint summary of it and a PDF version for the board.",
+      "gold": [["xlsx"], ["pptx"], ["pdf"]],
+      "ok": ["docx", "docs", "google-workspace"]
+    },
+    {
+      "id": "t08-billing-plan",
+      "task": "We need a new multi-tenant billing module. Brainstorm the design with me, write an implementation plan, then implement it with subagents in an isolated git worktree.",
+      "gold": [["brainstorming"], ["writing-plans"], ["subagent-driven-development"], ["using-git-worktrees"]],
+      "ok": ["executing-plans", "best-option-advisor", "backend-expert", "dispatching-parallel-agents", "smarter", "test-driven-development", "finishing-a-development-branch", "requesting-code-review", "verification-before-completion"]
+    },
+    {
+      "id": "t09-new-skill",
+      "task": "Write a new skill that teaches Claude our team's code review checklist, test whether it triggers on the right prompts, and tune its description.",
+      "gold": [["skill-creator"], ["writing-skills"], ["skill-development"]],
+      "ok": ["code-reviewer", "example-skill", "example-command"]
+    },
+    {
+      "id": "t10-design-system",
+      "task": "Take our React component library and build a matching design system in Figma, with variables for the tokens and Code Connect mappings back to the code.",
+      "gold": [["figma-generate-library"], ["figma-use"], ["figma-code-connect"]],
+      "ok": ["figma-generate-design", "figma-create-new-file", "frontend-design-2026", "frontend-expert"]
+    },
+    {
+      "id": "t11-cardputer",
+      "task": "I just plugged in a new M5Stack Cardputer over USB. Set it up, then help me iterate on the Snake game app on it.",
+      "gold": [["m5-onboard"], ["cardputer-buddy"]],
+      "ok": ["systematic-debugging", "tanulo-mod"]
+    },
+    {
+      "id": "t12-learning-api",
+      "task": "For my learning project, build a REST API with authentication and a database, and explain each step and decision as you go so that I understand it.",
+      "gold": [["tanulo-mod"], ["backend-expert"]],
+      "ok": ["best-option-advisor", "smarter", "test-driven-development", "brainstorming", "writing-plans", "code-reviewer"]
+    }
+  ]
+}

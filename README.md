@@ -47,6 +47,16 @@ On public documentation with real Stack Overflow questions (format 1.2 with the 
 
 Retrieval is room-level recall@10: the page the accepted answer links to is among the first 10 hits. On a corpus of 244 skills and frontend notes with 77 English questions it is 0.96, and `kapu_ask` opens the right room in its single reply for 83% of the questions. Full results with charts, method and limits: **[results page](https://piszabolcs.github.io/kapu/results/)** ([source](docs/results/index.html)) and [bench/RESULTS.md](bench/RESULTS.md); raw numbers in [bench/results/](bench/results/).
 
+**Finding skills.** 12 development tasks with 39 relevant skills fixed in advance, Claude Opus, a prompt that asks for the skills ([chapter 11](bench/RESULTS.md#11-finding-skills-native-skills-one-kapu-file-a-markdown-folder)):
+
+| 91 skills as | Relevant skills found | Wrong loaded | Tokens per task | Fixed cost per session |
+|---|---:|---:|---:|---:|
+| Native Claude Code skills | 39/39 | 0 | 44,953 | 14,081 |
+| One KAPU file | 38/39 | 0 | 88,418 | 4,774 |
+| A folder of Markdown files | 39/39 | 12 | 107,726 | 5,430 |
+
+With 91 skills the native skills are the better choice for a task that needs them; KAPU costs about twice as much there, but about 9,300 tokens less in every session that needs none, and its cost does not grow with the number of skills.
+
 What one session costs, whatever the size of the file: the six tools' descriptions and input schemas are 797 tokens, a map reply at most 1,000, ten search hits with an excerpt each at most 600 (format 1.2, measured on a 3,000-room file and the corpora above).
 
 ## Why
@@ -281,9 +291,10 @@ kapu/
 
 KAPU is a working pre-release: the format, the command line, the MCP server and the Windows window are in daily use; the measurements above are a pilot, not a benchmark.
 
-- [ ] Prebuilt binaries for Windows, Linux and macOS from the release workflow
+- [x] Prebuilt binaries for Windows, Linux and macOS from the release workflow (v0.2.0)
 - [ ] A local model tried end to end, with measurements (the Codex CLI and VS Code configurations above stay untried)
-- [ ] The comparison with native skills, a Markdown folder and PDF at 30 and 250 skills
+- [x] Finding skills: native skills, a KAPU file and a Markdown folder at 45 and 91 skills
+- [ ] The same at 250 skills, and with a prompt that does not mention skills
 - [ ] The specification in English
 - [ ] Better search when the question and the text are in different languages without translation (a Hungarian question on English text: 0.55 recall@10; translated by the agent: 0.78)
 - [ ] The desktop window tested by hand on Linux and macOS

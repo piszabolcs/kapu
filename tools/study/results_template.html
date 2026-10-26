@@ -117,6 +117,17 @@ a{color:var(--accent)}
     </div>
   </section>
 
+  <section id="skills" hidden>
+    <h2 data-t="sk_h"></h2>
+    <p class="note" id="sk-note"></p>
+    <div class="card">
+      <h3 data-t="sk_card"></h3>
+      <p data-t="sk_card_note"></p>
+      <div class="tablewrap"><table id="tb-skills"></table></div>
+    </div>
+    <ul id="sk-findings"></ul>
+  </section>
+
   <section>
     <h2 data-t="v11_h"></h2>
     <p class="note" data-t="v11_note"></p>
@@ -214,6 +225,19 @@ const I18N = {
     title_rest: "measurements",
     lead: "On a knowledge file the model had not seen (PixelLab documentation, {kt} tokens), an agent using KAPU read {k} tokens per request, an agent searching one Markdown file {md}, and one searching the same text as a PDF {pdf} (median, the same prompt for all three). Correct answers: KAPU {ck}, Markdown {cmd}, PDF {cpdf} of 12, by three blind judges.",
     meta: "Latest measurements {date} · {spec} · Windows 11, release build · every number comes from bench/results/ in the repository",
+    sk_h: "Finding skills: native Claude Code skills, one KAPU file, a Markdown folder",
+    sk_note: "{tasks} realistic development tasks (a landing page, an MCP server, a Claude Code plugin, a flaky API, Office files and others), each with 2 to 4 skills fixed in advance as clearly relevant, {gold} in all. The same skills in three forms, 45 and 91 of them (91 is every real skill on the test machine). Every task ran once per form and size with {model} through claude -p (Claude Code {cc}), on {date}. The prompt points at the skills, as a user would: load every relevant skill with the Skill tool; find and open every relevant skill in the KAPU file; find and read every relevant skill in this folder. A skill counts as found when the Skill tool loaded it, one of its files was read, or one of its rooms was opened.",
+    sk_card: "Results per form",
+    sk_card_note: "Wrong: loaded although the task neither needs it nor could reasonably use it. Tokens per task: every input token of the run, each turn counted (median). Fixed cost: the first turn of a session that needs no skill; the native skill list is in every session's system prompt.",
+    sk_skills: "Skills", sk_form: "Form", sk_found: "Relevant skills found", sk_all: "Tasks with all found", sk_wrong: "Wrong skills loaded",
+    sk_tokens: "Tokens per task", sk_calls: "Calls per task", sk_secs: "Seconds per task", sk_fixed: "Fixed cost per session (tokens)",
+    sk_form_native: "Native skills", sk_form_kapu: "KAPU file", sk_form_md: "Markdown folder",
+    sk_findings: [
+      "With this many skills and a prompt that asks for them, the native skills are the best choice for the task itself: {nat} of {gold} found with 91 skills, nothing wrong loaded, and the fewest tokens ({nat_tok} per task, {nat_calls} calls).",
+      "The KAPU file found almost as many ({kapu} of {gold} with 91 skills) and loaded nothing wrong either, but used about {ratio} times the native tokens per task, in {kapu_calls} calls instead of {nat_calls}. Its one miss with 91 skills is a skill written in Hungarian for an English task: the cross-language weakness of the search.",
+      "The Markdown folder found every skill, but also read {md_wrong} skills the tasks did not need (with 91 skills) and used the most tokens ({md_tok} per task).",
+      "The KAPU file's advantage is the fixed cost: {kapu_fixed} tokens in every session whatever the number of skills, against {nat_fixed_s} with 45 and {nat_fixed_l} with 91 native skills. A session that needs no skill saves {save} tokens with KAPU, one that needs skills costs about {extra} more. 250 skills were not measured: the test machine has only 91."
+    ],
     v12_h: "File format 1.2: vectors in the file, replies within a budget",
     v12_note: "Measured {date} with {version}, on the same corpora, questions and machine as format 1.1, and on a fourth corpus: agent skills and frontend notes with {en} English and {hu} Hungarian questions. The search vectors are now in the file, one sign bit per component of every window vector. The sign bits pick the {rescore} best candidates and the model's float vectors order them, so the first search on another machine needs no cache. Every MCP reply starts with its own price and stays within a max_tokens budget, and kapu_ask searches and opens in one call.",
     req_card: "Requirements of the second protocol", req_card_note: "The measurable requirements of the 2026-10-26 protocol and their acceptance limits. Tokens: o200k_base.",
@@ -237,7 +261,7 @@ const I18N = {
     set_skills_en: "Skills, English questions", set_skills_hu_questions: "Skills, Hungarian questions", set_skills_hu_translated: "Skills, the Hungarian questions translated",
     open_card: "Not measured yet",
     open_items: [
-      "Whether an agent finds the right skills: native Claude Code skills, the same skills in one KAPU file, and a folder of Markdown files, at 30 and 250 skills, on tasks that do not name the skill. Main number: was the right skill loaded, read from the call log.",
+      "Skill finding with 250 skills (the test machine has 91), and with a prompt that does not mention skills, where the agent has to decide on its own.",
       "A local model (Ollama) as the agent.",
       "Clients other than Claude Code: the configurations for the Codex CLI and VS Code are in the README, but they were not tried, and no measurement with them is planned."
     ],
@@ -292,6 +316,19 @@ const I18N = {
     title_rest: "mérések",
     lead: "Egy, a modell számára ismeretlen tudásfájlon (PixelLab-dokumentáció, {kt} token) a KAPU-t használó ügynök kérésenként {k} tokent olvasott, az egy Markdown-fájlban kereső {md}, az ugyanezt PDF-ként kereső {pdf} tokent (medián, mindháromnál ugyanaz a feladatszöveg). Helyes válasz: KAPU {ck}, Markdown {cmd}, PDF {cpdf} a 12-ből, három vak bíráló szerint.",
     meta: "Legutóbbi mérés: {date} · {spec} · Windows 11, release build · minden szám a repó bench/results/ mappájából jön",
+    sk_h: "Skillek megtalálása: natív Claude Code skillek, egy KAPU fájl, egy Markdown-mappa",
+    sk_note: "{tasks} valós fejlesztési feladat (landing oldal, MCP-szerver, Claude Code plugin, akadozó API, Office-fájlok és mások), mindegyikhez előre rögzítve 2–4 egyértelműen releváns skill, összesen {gold}. Ugyanazok a skillek háromféle formában, 45 és 91 darab (a 91 a tesztgép összes valódi skillje). Minden feladat formánként és méretenként egyszer futott, {model} modellel, claude -p-vel (Claude Code {cc}), {date}. A feladatszöveg rámutat a skillekre, ahogy egy felhasználó tenné: töltsd be a Skill eszközzel az összes releváns skillt; keresd meg és nyisd ki a KAPU fájlban az összes releváns skillt; keresd meg és olvasd el ebben a mappában az összes releváns skillt. Egy skill akkor számít megtaláltnak, ha a Skill eszköz betöltötte, valamelyik fájlját elolvasta, vagy valamelyik szobáját kinyitotta.",
+    sk_card: "Eredmények formánként",
+    sk_card_note: "Téves: betöltötte, pedig a feladathoz nem kell, és észszerűen sem használható. Token/feladat: a futás összes bemeneti tokenje, minden kör beszámítva (medián). Fix költség: egy skillt nem igénylő munkamenet első köre; a natív skill-lista minden munkamenet rendszerpromptjában benne van.",
+    sk_skills: "Skill", sk_form: "Forma", sk_found: "Megtalált releváns skill", sk_all: "Feladat, ahol mind meglett", sk_wrong: "Tévesen betöltött skill",
+    sk_tokens: "Token/feladat", sk_calls: "Hívás/feladat", sk_secs: "Másodperc/feladat", sk_fixed: "Fix költség munkamenetenként (token)",
+    sk_form_native: "Natív skillek", sk_form_kapu: "KAPU fájl", sk_form_md: "Markdown-mappa",
+    sk_findings: [
+      "Ennyi skillnél és rákérdező feladatszövegnél magára a feladatra a natív skillek a legjobbak: 91 skillnél {gold}-ből {nat} megvan, semmi téves, és ez a legkevesebb token ({nat_tok} feladatonként, {nat_calls} hívás).",
+      "A KAPU fájl majdnem ugyanannyit talált meg (91 skillnél {gold}-ből {kapu}), és ez sem töltött be tévesen semmit, de feladatonként a natív tokenek kb. {ratio}-szeresét használta, {nat_calls} helyett {kapu_calls} hívásban. Az egyetlen hiánya 91 skillnél egy magyarul írt skill angol feladathoz: a keresés nyelvek közötti gyengesége.",
+      "A Markdown-mappa minden skillt megtalált, de 91 skillnél {md_wrong} olyat is elolvasott, ami a feladatokhoz nem kellett, és ez használta a legtöbb tokent ({md_tok} feladatonként).",
+      "A KAPU előnye a fix költség: minden munkamenetben {kapu_fixed} token, akárhány skill van, szemben a natív lista {nat_fixed_s} (45 skill) és {nat_fixed_l} (91 skill) tokenjével. Egy skillt nem igénylő munkamenet KAPU-val {save} tokent spórol, egy skilleket igénylő kb. {extra} tokennel többe kerül. 250 skillt nem mértünk: a tesztgépen csak 91 van."
+    ],
     v12_h: "1.2-es fájlformátum: vektorok a fájlban, válaszok kereten belül",
     v12_note: "Mérve: {date}, {version}, ugyanazokon a korpuszokon, kérdéseken és gépen, mint az 1.1-es formátumot, és egy negyedik korpuszon: ügynöki skillek és frontend-jegyzetek, {en} angol és {hu} magyar kérdéssel. A keresővektorok most a fájlban vannak, minden ablakvektor minden komponenséből egy előjelbit. Az előjelbitek kiválasztják a {rescore} legjobb jelöltet, ezeket a modell lebegőpontos vektorai rendezik, így másik gépen az első keresés is gyorsítótár nélkül megy. Minden MCP-válasz a saját árával kezdődik és a max_tokens kereten belül marad, a kapu_ask pedig egy hívásban keres és kinyit.",
     req_card: "A második jegyzőkönyv követelményei", req_card_note: "A 2026-10-26-i jegyzőkönyv mérhető követelményei és elfogadási határaik. Token: o200k_base.",
@@ -315,7 +352,7 @@ const I18N = {
     set_skills_en: "Skillek, angol kérdések", set_skills_hu_questions: "Skillek, magyar kérdések", set_skills_hu_translated: "Skillek, a magyar kérdések lefordítva",
     open_card: "Még nincs mérve",
     open_items: [
-      "Megtalálja-e az ügynök a megfelelő skilleket: natív Claude Code skillek, ugyanezek egy KAPU fájlban, és egy Markdown-mappa, 30 és 250 skillel, olyan feladatokon, amelyek nem nevezik meg a skillt. Fő mérőszám: betöltődött-e a helyes skill, a hívásnaplóból.",
+      "Skillek megtalálása 250 skillel (a tesztgépen 91 van), és olyan feladatszöveggel, amely nem említi a skilleket, így az ügynöknek magától kell rájuk gondolnia.",
       "Helyi modell (Ollama) mint ügynök.",
       "Más kliens, mint a Claude Code: a Codex CLI és a VS Code konfigurációja benne van a README-ben, de nincs kipróbálva, és velük mérés nem is tervezett."
     ],
@@ -598,6 +635,7 @@ function render() {
   ], DATA.agents);
 
   renderV12(L, int);
+  renderSkills(L, int);
 
   table("tb-v104", [
     { label: "col_metric", get: r => t("r_" + r.metric), raw: true },
@@ -607,6 +645,38 @@ function render() {
   const ul = document.getElementById("method");
   ul.innerHTML = "";
   for (const line of t("method")) { const li = document.createElement("li"); li.textContent = line; ul.appendChild(li); }
+}
+
+function renderSkills(L, int) {
+  const v = DATA.skills;
+  document.getElementById("skills").hidden = !v;
+  if (!v) return;
+  const pick = (n, form) => v.rows.find(r => r.skills === n && r.form === form);
+  const sizes = [...new Set(v.rows.map(r => r.skills))].sort((a, b) => a - b);
+  const [small, large] = [sizes[0], sizes[sizes.length - 1]];
+  const nat = pick(large, "native"), kap = pick(large, "kapu"), md = pick(large, "md");
+  document.getElementById("sk-note").textContent = fill(t("sk_note"), {
+    tasks: v.tasks, gold: nat.gold, model: v.model, cc: v.claude_code, date: v.date
+  });
+  table("tb-skills", [
+    { label: "sk_skills", key: "skills" },
+    { label: "sk_form", get: r => t("sk_form_" + r.form), raw: true },
+    { label: "sk_found", get: r => `${r.loaded} / ${r.gold} (${L.format(".0%")(r.recall)})`, raw: true },
+    { label: "sk_all", get: r => `${r.all_gold} / ${r.runs}`, raw: true },
+    { label: "sk_wrong", key: "wrong", worse: r => r.wrong > 0 },
+    { label: "sk_tokens", key: "tokens" }, { label: "sk_calls", key: "calls" }, { label: "sk_secs", key: "seconds" },
+    { label: "sk_fixed", key: "fixed" }
+  ], v.rows);
+  const fixedNat = pick(large, "native").fixed, fixedKapu = kap.fixed;
+  const vars = {
+    gold: nat.gold, nat: nat.loaded, kapu: kap.loaded, nat_tok: int(nat.tokens), nat_calls: L.format(",.1~f")(nat.calls),
+    kapu_calls: L.format(",.1~f")(kap.calls), ratio: L.format(",.1f")(kap.tokens / nat.tokens), md_wrong: md.wrong,
+    md_tok: int(md.tokens), kapu_fixed: int(fixedKapu), nat_fixed_s: int(pick(small, "native").fixed),
+    nat_fixed_l: int(fixedNat), save: int(fixedNat - fixedKapu), extra: int(kap.tokens - nat.tokens)
+  };
+  const ul = document.getElementById("sk-findings");
+  ul.innerHTML = "";
+  for (const line of t("sk_findings")) { const li = document.createElement("li"); li.textContent = fill(line, vars); ul.appendChild(li); }
 }
 
 const SYMBOL = { le: "≤", ge: "≥", lt: "<" };

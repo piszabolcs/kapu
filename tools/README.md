@@ -13,8 +13,9 @@
   and `examples/kapu-spec.kapu` (the specification, via `split_spec.py`).
 - `make_demo_svg.py`: writes `docs/assets/demo.svg`, the animated terminal in
   the README, from real `kapu map`, `search` and `open` output.
-- `study/`: the measurement scripts of `bench/RESULTS.md` chapters 8 to 10;
-  `study/results_page.py` writes `docs/results/index.html` from the results JSON files (the pilot and format 1.2).
+- `study/`: the measurement scripts of `bench/RESULTS.md` chapters 8 to 11;
+  `study/skill_pool.py` and `study/skill_eval.py` (with the tasks in `study/skill_tasks.json`) measure skill finding;
+  `study/results_page.py` writes `docs/results/index.html` from the results JSON files (the pilot, format 1.2, skill finding).
 - `mcp_probe.py`, `mcp_eval.py`, `kapu_mcp_call.py`: MCP latency, isolated
   agent runs and a logged one-call client for agents.
 

@@ -1,6 +1,6 @@
 # KAPU measurements
 
-English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file; chapter 9 measures it again with file format 1.1, chapter 10 with format 1.2 ([results/2026-10-26-format-1.2.json](results/2026-10-26-format-1.2.json)). The [results page](../docs/results/index.html) shows the pilot and formats 1.1 and 1.2 with charts and tables.
+English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file; chapter 9 measures it again with file format 1.1, chapter 10 with format 1.2 ([results/2026-10-26-format-1.2.json](results/2026-10-26-format-1.2.json)), and chapter 11 compares native skills, a KAPU file and a Markdown folder at finding skills ([results/2026-10-26-skill-finding.json](results/2026-10-26-skill-finding.json)). The [results page](../docs/results/index.html) shows the pilot, formats 1.1 and 1.2 and the skill finding with charts and tables.
 
 - **Date:** 2026-10-23
 - **Version:** tools 0.1.0 with specification v1.0.2 (chapters 1-8); chapters 9 and 10 name their own
@@ -306,7 +306,32 @@ Retrieval, room-level recall@10 of the hybrid ranking (MRR@10 in brackets):
 - `kapu_ask` answers in one call where retrieval is good (the skills corpus, 83%); on the Stack Overflow questions, where even recall@10 is 0.28-0.49, one call is rarely enough.
 - The file grows by more than 3% only on MDN, with its 84,910 mostly short doors.
 
-## 11. Reproduce
+## 11. Finding skills: native skills, one KAPU file, a Markdown folder
+
+Does an agent find the skills a task needs? Measured on 2026-10-26 with Claude Opus through `claude -p` (Claude Code 2.1.310), tools 0.2.0 ([results/2026-10-26-skill-finding.json](results/2026-10-26-skill-finding.json); the user's design, D153).
+
+- **Skills:** every real skill on the test machine, 91 (Claude desktop skills, Claude Code plugins, skills synced from claude.ai and the user's own), and a set of 45: the 38 skills some task needs and 7 random others.
+- **Tasks:** 12 realistic development tasks, for example a landing page with a pricing section and the author footer, an MCP server packaged for Claude Desktop, a Claude Code plugin with a command, a hook and settings, a flaky API, Excel, PowerPoint and PDF from a CSV, a Figma design system. Each task has 2 to 4 skills that clearly apply (39 in all), fixed before any run, and a list of skills that are reasonable but not required.
+- **Forms:** the skills as native Claude Code skills in `.claude/skills/` (only the Skill tool allowed), as one `.kapu` file made with `kapu import --skills` (only the kapu MCP tools), and as a folder of skill folders (only Read, Glob and Grep). Every run is isolated: no user settings, no other MCP servers.
+- **Prompt:** it points at the skills, as a user would: "load every relevant skill with the Skill tool", "find and open every relevant skill in the KAPU file", "find and read every relevant skill in this folder", then list them and stop without doing the task.
+- **Found:** the Skill tool loaded it, one of its files was read, or one of its rooms was opened. **Wrong:** loaded although neither required nor reasonable. **Tokens per task:** every input token of the run, each turn counted. **Fixed cost:** the first turn of a session that needs no skill.
+
+| Skills | Form | Relevant skills found | Tasks with all found | Wrong loaded | Tokens per task (median) | Calls per task | Fixed cost per session |
+|---:|---|---:|---:|---:|---:|---:|---:|
+| 45 | native skills | 38/39 | 11/12 | 0 | 42,574 | 4 | 12,652 |
+| 45 | KAPU file | 37/39 | 10/12 | 0 | 77,215 | 7.5 | 4,774 |
+| 45 | Markdown folder | 39/39 | 12/12 | 14 | 93,176 | 10.5 | 5,430 |
+| 91 | native skills | 39/39 | 12/12 | 0 | 44,953 | 4 | 14,081 |
+| 91 | KAPU file | 38/39 | 11/12 | 0 | 88,418 | 9 | 4,774 |
+| 91 | Markdown folder | 39/39 | 12/12 | 12 | 107,726 | 10.5 | 5,430 |
+
+- **At this size the native skills win the task itself:** all relevant skills with 91 skills, nothing wrong, the fewest tokens and calls. Claude Code lists every skill with its description in the system prompt, so the model picks from the list and loads each skill with one call.
+- **The KAPU file found almost as many and loaded nothing wrong, at about twice the tokens per task.** The agents looked at the map more than once, searched, and opened whole skills over 7 to 9 calls. Its misses: `frontend-expert` for the Figma task (the native skills missed it too), `skill-development` once, and with 91 skills `tanulo-mod`, a skill written in Hungarian, for an English task (the cross-language weakness of chapter 10).
+- **The Markdown folder found everything but read 12 to 14 skills that the tasks did not need**, and used the most tokens.
+- **KAPU's advantage is the fixed cost:** 4,774 tokens per session whatever the number of skills, against 12,652 and 14,081 for the native list. A session that needs no skill saves about 9,300 tokens with KAPU; a task that needs skills costs about 43,000 more. KAPU pays off when skills are needed in fewer than about one session in five, or when there are many more skills than here.
+- **Not measured:** 250 skills (the machine has 91), and a prompt that does not mention skills, where the agent has to think of them itself. Every task ran once per form and size.
+
+## 12. Reproduce
 
 ```bash
 python tools/collect_skills.py bench/korpusz/rooms           # the installed skills as rooms (local only)
@@ -317,4 +342,4 @@ python tools/mcp_probe.py corpus.kapu questions.jsonl        # MCP latency and r
 python tools/kapu_mcp_call.py call kapu_search '{"file": "...", "query": "..."}'
 ```
 
-Chapter 10: `tools/study/measure_v12.py` (reply prices, `kapu_ask`, open times over MCP), `tools/study/measure_scale.py` (a file of a given size), `tools/study/translate_hu.py` (the translated questions) and `tools/study/collect_v12.py` (the results file). Chapters 8 and 9 (public documentation): `tools/study/prepare_corpus.py` and `so_questions.py` prepare the corpora and questions, `scale_probe.py` measures a size, `chunk_baseline.py` the chunk baselines, `collect_results.py` writes `results/2026-10-23-study-pilot.json`, and `results_page.py` turns that and the format 1.2 results file into the results page.
+Chapter 11: `tools/study/skill_pool.py` collects the skills of the machine, `tools/study/skill_eval.py` prepares the three forms (`prepare`), runs the tasks of `tools/study/skill_tasks.json` (`run`), measures the fixed cost (`baseline`) and writes the results file (`report`); it needs a logged-in `claude` CLI. Chapter 10: `tools/study/measure_v12.py` (reply prices, `kapu_ask`, open times over MCP), `tools/study/measure_scale.py` (a file of a given size), `tools/study/translate_hu.py` (the translated questions) and `tools/study/collect_v12.py` (the results file). Chapters 8 and 9 (public documentation): `tools/study/prepare_corpus.py` and `so_questions.py` prepare the corpora and questions, `scale_probe.py` measures a size, `chunk_baseline.py` the chunk baselines, `collect_results.py` writes `results/2026-10-23-study-pilot.json`, and `results_page.py` turns that and the format 1.2 results file into the results page.

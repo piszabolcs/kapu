@@ -1,12 +1,12 @@
 """Writes the measurement results page from the committed results files.
 
     python tools/study/results_page.py bench/results/2026-10-23-study-pilot.json docs/results/index.html \
-        bench/results/2026-10-26-format-1.2.json
+        bench/results/2026-10-26-format-1.2.json bench/results/2026-10-26-skill-finding.json
 
 The page is one self-contained HTML file (English and Hungarian, d3 from
 cdnjs). Every number on it comes from the results files; the template is
-`results_template.html` next to this script. The third argument, the format
-1.2 results, is optional; without it the page ends at format 1.1.
+`results_template.html` next to this script. The third and fourth arguments,
+the format 1.2 and the skill-finding results, are optional.
 """
 
 import json
@@ -125,9 +125,24 @@ def v12_block(r):
             "requirements": requirements, "corpora": corpora, "retrieval": retrieval}
 
 
-def main(results: Path, out: Path, v12_results: Path | None = None):
+def skills_block(r):
+    """Skill finding (J1, D153): native skills, one KAPU file, a Markdown folder."""
+    rows = []
+    for key in ("s", "l"):
+        for form in ("native", "kapu", "md"):
+            s = r["summary"][f"{key}/{form}"]
+            rows.append({"skills": s["set_size"], "form": form, "loaded": s["gold_loaded"], "gold": s["gold"],
+                         "recall": s["recall_loaded"], "all_gold": s["tasks_all_gold_loaded"], "runs": s["runs"],
+                         "wrong": s["wrong_loaded"], "tokens": round(s["input_tokens_median"]),
+                         "calls": s["tool_calls_median"], "seconds": round(s["seconds_median"]), "fixed": s["session_fixed_tokens"]})
+    return {"date": r["date"], "model": ", ".join(r["model"]), "claude_code": ", ".join(r["claude_code"]),
+            "tasks": len(r["tasks"]), "rows": rows}
+
+
+def main(results: Path, out: Path, v12_results: Path | None = None, skills_results: Path | None = None):
     r = json.loads(results.read_text(encoding="utf-8"))
     v12 = v12_block(json.loads(v12_results.read_text(encoding="utf-8"))) if v12_results else None
+    skills = skills_block(json.loads(skills_results.read_text(encoding="utf-8"))) if skills_results else None
     px = r["format_comparison_pixellab"]
     v104 = r["remeasure_v104"]
     v11 = r["remeasure_v11"]
@@ -183,6 +198,7 @@ def main(results: Path, out: Path, v12_results: Path | None = None):
         "date": v12["date"] if v12 else v11.get("date"),
         "spec": v12["version"] if v12 else "specification " + v11.get("specification"),
         "v12": v12,
+        "skills": skills,
         "knowledge_tokens": px["full_file_in_context_tokens_per_request"],
         "pixellab1": [form_row(f, px["result"][f]) for f in ("kapu", "md", "pdf")],
         "pixellab2": [form_row("kapu", v104["pixellab_same_prompt"]["k104"]), form_row("md", v104["pixellab_same_prompt"]["md"]),
@@ -202,4 +218,4 @@ def main(results: Path, out: Path, v12_results: Path | None = None):
 
 
 if __name__ == "__main__":
-    main(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]) if len(sys.argv) > 3 else None)
+    main(Path(sys.argv[1]), Path(sys.argv[2]), *(Path(a) for a in sys.argv[3:5]))
