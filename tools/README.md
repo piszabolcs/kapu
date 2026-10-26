@@ -16,6 +16,7 @@
 - `study/`: the measurement scripts of `bench/RESULTS.md` chapters 8 to 11;
   `study/skill_pool.py` and `study/skill_eval.py` (with the tasks in `study/skill_tasks.json`) measure skill finding;
   `study/results_page.py` writes `docs/results/index.html` from the results JSON files (the pilot, format 1.2, skill finding).
+  `study/results_pdf.py` prints that page to `docs/results/kapu-measurements-{en,hu}.pdf` with a headless Edge or Chrome.
 - `mcp_probe.py`, `mcp_eval.py`, `kapu_mcp_call.py`: MCP latency, isolated
   agent runs and a logged one-call client for agents.
 

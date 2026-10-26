@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>KAPU measurements</title>
+<link rel="icon" href="__LOGO__" type="image/svg+xml">
 <meta name="description" content="Measurements of the KAPU knowledge-file format: tokens read by AI agents, retrieval quality and scale on public documentation.">
 <style>
 :root{
@@ -31,6 +32,8 @@ header{display:flex;flex-direction:column;gap:12px}
 .top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
 h1{font-family:var(--serif);font-weight:400;font-size:2.2rem;margin:0;line-height:1.15}
 h1 span{color:var(--accent)}
+.brand{display:flex;align-items:center;gap:14px}
+.brand img{width:44px;height:44px;flex:none}
 h2{font-size:1.3rem;font-weight:600;margin:0}
 h3{font-size:1.02rem;font-weight:600;margin:0}
 .lead{font-size:1.06rem;max-width:72ch;margin:0}
@@ -71,13 +74,28 @@ ul{margin:0;padding-left:1.2rem;color:var(--muted);max-width:80ch}
 li{margin:4px 0}
 footer{font-size:.85rem;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:16px}
 a{color:var(--accent)}
+@media print{
+  @page{size:A4 landscape;margin:12mm}
+  :root{color-scheme:light}
+  body{font-size:11px;background:#fff}
+  .wrap{max-width:none;padding:0;gap:18px}
+  .lang,.tip{display:none}
+  .tablewrap{overflow:visible}
+  table{font-size:9px}
+  th{white-space:normal}
+  th,td{padding:3px 5px}
+  .card,.tile,section>h2{break-inside:avoid}
+  section{break-inside:auto}
+  h2{break-after:avoid}
+  .chart{min-height:0}
+}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="top">
-      <h1><span>KAPU</span> <span data-t="title_rest" style="color:inherit"></span></h1>
+      <div class="brand"><img src="__LOGO__" alt=""><h1><span>KAPU</span> <span data-t="title_rest" style="color:inherit"></span></h1></div>
       <div class="lang" role="group" aria-label="Language">
         <button type="button" data-lang="en" aria-pressed="true">EN</button>
         <button type="button" data-lang="hu" aria-pressed="false">HU</button>
@@ -732,7 +750,8 @@ document.querySelectorAll(".lang button").forEach(b => b.addEventListener("click
 let resizeTimer;
 window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 150); });
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
-setLang(saved || ((navigator.language || "").toLowerCase().startsWith("hu") ? "hu" : "en"));
+const asked = new URLSearchParams(location.search).get("lang");
+setLang(asked || saved || ((navigator.language || "").toLowerCase().startsWith("hu") ? "hu" : "en"));
 </script>
 </body>
 </html>

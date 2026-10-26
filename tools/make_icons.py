@@ -1,5 +1,7 @@
-"""Draw the KAPU app icon (an arched gate with the map lines behind it) and write every size
-the desktop window needs, plus the SVG used by the README and the interface.
+"""Draw the KAPU app icon (an arched gate in a framed tile, with the map lines inside) and
+write every size the desktop window needs, plus the SVG used by the README and the interface.
+The geometry follows the icon artwork of 2026-10-26 (`kapuicon.jpg`, 2048 px, measured
+and halved to the 1024 grid).
 
     python tools/make_icons.py            (needs Pillow)
 
@@ -18,11 +20,14 @@ ICONS = ROOT / "crates" / "kapu-gui" / "icons"
 UI = ROOT / "crates" / "kapu-gui" / "ui"
 DOCS = ROOT / "docs" / "assets"
 
-# Geometry on a 1024 grid: an arched gate (centre line of the stroke) and three
-# map lines of different length behind it, the doors with their prices.
+# Geometry on a 1024 grid: a dark tile, a light frame inside it, an arched gate
+# (centre line of the stroke) and three centred map lines of different length
+# under the arch, the doors with their prices.
 TILE_RADIUS = 224
-ARCH_CX, ARCH_CY, ARCH_R, ARCH_BOTTOM, ARCH_W = 512, 452, 202, 812, 76
-BARS = ((404, 556, 620, 600), (404, 628, 552, 672), (404, 700, 588, 744))
+FRAME = (129, 128, 895, 895)  # centre line of the frame's stroke
+FRAME_RADIUS, FRAME_W = 131, 15
+ARCH_CX, ARCH_CY, ARCH_R, ARCH_BOTTOM, ARCH_W = 512, 465, 189, 748, 39
+BARS = ((440, 410, 584, 450), (394, 492, 630, 532), (451, 574, 573, 614))
 
 
 def oklch_to_hex(l, c, h):
@@ -61,6 +66,9 @@ def draw(size):
         return tuple(round(v * k) for v in r)
 
     d.rounded_rectangle((0, 0, big - 1, big - 1), radius=round(TILE_RADIUS * k), fill=TILE)
+    fh = FRAME_W / 2
+    frame = (FRAME[0] - fh, FRAME[1] - fh, FRAME[2] + fh, FRAME[3] + fh)
+    d.rounded_rectangle(box(frame), radius=round((FRAME_RADIUS + fh) * k), outline=ROOMC, width=round(FRAME_W * k))
     half = ARCH_W / 2
     outer = (ARCH_CX - ARCH_R - half, ARCH_CY - ARCH_R - half, ARCH_CX + ARCH_R + half, ARCH_CY + ARCH_R + half)
     d.arc(box(outer), start=180, end=360, fill=GATE, width=round(ARCH_W * k))
@@ -82,7 +90,12 @@ def svg():
         f'<rect x="{x0}" y="{y0}" width="{x1 - x0}" height="{y1 - y0}" rx="{(y1 - y0) // 2}" fill="{ROOMC}"/>'
         for x0, y0, x1, y1 in BARS
     ]
-    parts = [f'<rect width="1024" height="1024" rx="{TILE_RADIUS}" fill="{TILE}"/>', arch, *bars]
+    x0, y0, x1, y1 = FRAME
+    frame = (
+        f'<rect x="{x0}" y="{y0}" width="{x1 - x0}" height="{y1 - y0}" rx="{FRAME_RADIUS}" '
+        f'fill="none" stroke="{ROOMC}" stroke-width="{FRAME_W}"/>'
+    )
+    parts = [f'<rect width="1024" height="1024" rx="{TILE_RADIUS}" fill="{TILE}"/>', frame, arch, *bars]
     body = "\n  ".join(parts)
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="KAPU">\n'

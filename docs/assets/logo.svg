@@ -1,7 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="KAPU">
   <rect width="1024" height="1024" rx="224" fill="#10141a"/>
-  <path d="M310 812 V452 A202 202 0 0 1 714 452 V812" fill="none" stroke="#f0764f" stroke-width="76" stroke-linecap="round"/>
-  <rect x="404" y="556" width="216" height="44" rx="22" fill="#eff2f5"/>
-  <rect x="404" y="628" width="148" height="44" rx="22" fill="#eff2f5"/>
-  <rect x="404" y="700" width="184" height="44" rx="22" fill="#eff2f5"/>
+  <rect x="129" y="128" width="766" height="767" rx="131" fill="none" stroke="#eff2f5" stroke-width="15"/>
+  <path d="M323 748 V465 A189 189 0 0 1 701 465 V748" fill="none" stroke="#f0764f" stroke-width="39" stroke-linecap="round"/>
+  <rect x="440" y="410" width="144" height="40" rx="20" fill="#eff2f5"/>
+  <rect x="394" y="492" width="236" height="40" rx="20" fill="#eff2f5"/>
+  <rect x="451" y="574" width="122" height="40" rx="20" fill="#eff2f5"/>
 </svg>

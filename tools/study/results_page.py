@@ -14,6 +14,7 @@ results before the catalog (D154), are optional.
 import json
 import sys
 from pathlib import Path
+from urllib.parse import quote
 
 TOPICS = [
     ("How do I use it", "Hogyan használható"),
@@ -222,6 +223,9 @@ def main(results: Path, out: Path, v12_results: Path | None = None, skills_resul
     }
     template = (Path(__file__).parent / "results_template.html").read_text(encoding="utf-8")
     page = template.replace("/*__DATA__*/null", json.dumps(data, ensure_ascii=False, separators=(",", ":")))
+    # the app icon (tools/make_icons.py), inline so the page stays one file
+    logo = (Path(__file__).resolve().parents[2] / "docs" / "assets" / "logo.svg").read_text(encoding="utf-8")
+    page = page.replace("__LOGO__", "data:image/svg+xml," + quote(" ".join(logo.split())))
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(page, encoding="utf-8", newline="\n")
     print("written", out, len(page.encode("utf-8")), "bytes")

@@ -12,6 +12,8 @@ Specification v1.2.1; the file format stays 1.2.
 - `kapu_open` with several ids shares the budget evenly (D155), so one call shows the start of every door; without `max_tokens` each door gets 2000 tokens, for up to five doors.
 
 ### Added
+- A new app icon from the artwork of 2026-10-26: the arched gate and centred map lines in a framed dark tile (`tools/make_icons.py`): the window's icons, the interface, the README logo and the results page.
+- The results page as PDF, in English and Hungarian (`docs/results/kapu-measurements-{en,hu}.pdf`, `tools/study/results_pdf.py`).
 - The skill-finding measurement (D153): `tools/study/skill_pool.py`, `skill_eval.py` and `skill_tasks.json`, results in `bench/RESULTS.md` chapter 11 and on the results page.
 
 ## [0.2.0] - 2026-10-26

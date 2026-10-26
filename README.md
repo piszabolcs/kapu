@@ -45,7 +45,7 @@ On public documentation with real Stack Overflow questions (format 1.2 with the 
 | Kubernetes docs | 3.9 M tokens | 28 MB | 50 ms | 8 ms | 0.46 / 0.45 |
 | MDN Web Docs | 13.0 M tokens | 139 MB | 282 ms | 48 ms | 0.28 / 0.30 |
 
-Retrieval is room-level recall@10: the page the accepted answer links to is among the first 10 hits. On a corpus of 244 skills and frontend notes with 77 English questions it is 0.96, and `kapu_ask` opens the right room in its single reply for 83% of the questions. Full results with charts, method and limits: **[results page](https://piszabolcs.github.io/kapu/results/)** ([source](docs/results/index.html)) and [bench/RESULTS.md](bench/RESULTS.md); raw numbers in [bench/results/](bench/results/).
+Retrieval is room-level recall@10: the page the accepted answer links to is among the first 10 hits. On a corpus of 244 skills and frontend notes with 77 English questions it is 0.96, and `kapu_ask` opens the right room in its single reply for 83% of the questions. Full results with charts, method and limits: **[results page](https://piszabolcs.github.io/kapu/results/)** ([source](docs/results/index.html); as PDF in [English](docs/results/kapu-measurements-en.pdf) and [Hungarian](docs/results/kapu-measurements-hu.pdf)) and [bench/RESULTS.md](bench/RESULTS.md); raw numbers in [bench/results/](bench/results/).
 
 **Finding skills.** 12 development tasks with 39 relevant skills fixed in advance, Claude Opus, a prompt that asks for the skills ([chapter 11](bench/RESULTS.md#11-finding-skills-native-skills-one-kapu-file-a-markdown-folder)):
 
@@ -321,7 +321,7 @@ Egy 207 ezer tokenes, a modell számára ismeretlen kézikönyvön a KAPU-t hasz
 | Ugyanez PDF-ként, keresés és oldalolvasás | 8 207 | 11 |
 | Az egész fájl bemásolva | 206 899 | – |
 
-A nyilvános dokumentációkon (Rust Book, Kubernetes, MDN) a keresés 32–282 ms, egy fejezet kinyitása 4–48 ms; a visszakeresés a két kisebb korpuszon a darabolós BM25 szintjén vagy fölötte van, a legnagyobbon kicsit alatta. Egy munkamenet fix ára a fájl méretétől függetlenül 797 token (a hat eszköz leírása), egy térképválasz legfeljebb 1000, tíz találat kivonattal legfeljebb 600 token. A teljes eredmény diagramokkal, angolul és magyarul: **[eredményoldal](https://piszabolcs.github.io/kapu/results/)**.
+A nyilvános dokumentációkon (Rust Book, Kubernetes, MDN) a keresés 32–282 ms, egy fejezet kinyitása 4–48 ms; a visszakeresés a két kisebb korpuszon a darabolós BM25 szintjén vagy fölötte van, a legnagyobbon kicsit alatta. Egy munkamenet fix ára a fájl méretétől függetlenül 798 token (a hat eszköz leírása), egy térképválasz legfeljebb 1000, tíz találat kivonattal legfeljebb 600 token. A skillek megtalálásában a 0.2.1-es katalógussal (`kapu_map kind=skill`) a KAPU 91 skillből a 39 releváns közül 38-at talál meg, feladatonként 5 hívásban és 0,099 dollárból; a natív Claude Code skillek 39-et, 4 hívásban, 0,236 dollárból. A teljes eredmény diagramokkal, angolul és magyarul: **[eredményoldal](https://piszabolcs.github.io/kapu/results/)**, PDF-ben: [magyar](docs/results/kapu-measurements-hu.pdf), [angol](docs/results/kapu-measurements-en.pdf).
 
 **Amire nem való:** kicsi, jól szétszedett Markdown-mappára (ott a grep is olcsó), naponta változó csapatos dokumentációra (a git diff zajos, ilyenkor a Markdown a forrás), és futtatandó skillekre (a KAPU a tudást adja, a szkriptet nem futtatja).
 
