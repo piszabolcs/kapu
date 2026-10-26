@@ -5,13 +5,14 @@ skill name, for the skill-finding measurement (never committed).
 
 Sources, first one wins for a name: the Claude desktop skills, the newest
 installed version of every Claude Code plugin, the plugin marketplaces, the
-skills synced from claude.ai, and F:/AI/A_and_I_Coding/claude-skills (the
-user's own). A skill whose text holds a sensitive term of the portfolio
-configuration is left out. Writes `<out-dir>/pool.json`: name, description,
-source and size of every skill.
+skills synced from claude.ai, and the folder named by KAPU_OWN_SKILLS (the
+user's own skills, if set). A skill whose text holds a sensitive term of the
+portfolio configuration is left out. Writes `<out-dir>/pool.json`: name,
+description, source and size of every skill.
 """
 
 import json
+import os
 import re
 import shutil
 import sys
@@ -23,7 +24,7 @@ from collect_skills import DESKTOP_SKILLS, PLUGIN_CACHE, newest, sensitive_terms
 HOME = Path.home()
 MARKETPLACES = HOME / ".claude/plugins/marketplaces"
 SYNCED = HOME / ".claude/skills/synced"
-OWN = Path("F:/AI/A_and_I_Coding/claude-skills")
+OWN = os.environ.get("KAPU_OWN_SKILLS")
 SKIP = shutil.ignore_patterns("node_modules", ".git", "evals", "__pycache__", "*.pyc")
 
 
@@ -37,7 +38,8 @@ def candidates():
             yield from (("plugin:" + plugin.name, p.parent) for p in newest(versions).rglob("SKILL.md"))
     yield from (("marketplace", p.parent) for p in MARKETPLACES.rglob("SKILL.md"))
     yield from (("synced", p.parent) for p in SYNCED.rglob("SKILL.md"))
-    yield from (("own", p.parent) for p in OWN.rglob("SKILL.md"))
+    if OWN:
+        yield from (("own", p.parent) for p in Path(OWN).rglob("SKILL.md"))
 
 
 def main(out: Path):
