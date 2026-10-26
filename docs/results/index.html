@@ -54,6 +54,9 @@ th,td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:right;whit
 th:first-child,td:first-child{text-align:left}
 th{color:var(--muted);font-weight:600}
 td.better{color:var(--c3);font-weight:600}
+td.worse{color:var(--c1);font-weight:600}
+td.long{white-space:normal;min-width:16rem;text-align:left}
+th.long{text-align:left}
 .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.82rem;color:var(--muted)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
@@ -89,6 +92,30 @@ a{color:var(--accent)}
       <div class="tile dim"><span class="lbl" data-t="tile_full"></span><span class="big" id="t-full"></span><span class="sub" data-t="tile_full_sub"></span></div>
     </div>
   </header>
+
+  <section id="v12" hidden>
+    <h2 data-t="v12_h"></h2>
+    <p class="note" id="v12-note"></p>
+    <div class="card">
+      <h3 data-t="req_card"></h3>
+      <p data-t="req_card_note"></p>
+      <div class="tablewrap"><table id="tb-req"></table></div>
+    </div>
+    <div class="card">
+      <h3 data-t="v12_card"></h3>
+      <p data-t="v12_card_note"></p>
+      <div class="tablewrap"><table id="tb-v12"></table></div>
+    </div>
+    <div class="card">
+      <h3 data-t="v12r_card"></h3>
+      <p data-t="v12r_card_note"></p>
+      <div class="tablewrap"><table id="tb-v12r"></table></div>
+    </div>
+    <div class="card">
+      <h3 data-t="open_card"></h3>
+      <ul id="open-list"></ul>
+    </div>
+  </section>
 
   <section>
     <h2 data-t="v11_h"></h2>
@@ -180,20 +207,47 @@ a{color:var(--accent)}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script>
-const DATA = {"date":"2026-10-24","spec":"v1.1, file format 1.1 (D139-D141)","knowledge_tokens":206899,"pixellab1":[{"form":"kapu","correct":12,"partly":0,"claims_supported":122,"claims_total":123,"helpfulness":4.08,"read_tokens_median":2624,"read_tokens_total":34953,"calls_median":3.0},{"form":"md","correct":12,"partly":0,"claims_supported":134,"claims_total":138,"helpfulness":4.25,"read_tokens_median":8280,"read_tokens_total":101452,"calls_median":8.0},{"form":"pdf","correct":11,"partly":1,"claims_supported":146,"claims_total":151,"helpfulness":4.33,"read_tokens_median":8207,"read_tokens_total":109675,"calls_median":6.0}],"pixellab2":[{"form":"kapu","correct":12,"partly":0,"claims_supported":153,"claims_total":157,"helpfulness":4.17,"read_tokens_median":4104,"read_tokens_total":48557,"calls_median":4.0},{"form":"md","correct":12,"partly":0,"claims_supported":140,"claims_total":145,"helpfulness":4,"read_tokens_median":8280,"read_tokens_total":101452,"calls_median":8.0},{"form":"pdf","correct":11,"partly":1,"claims_supported":147,"claims_total":151,"helpfulness":3.83,"read_tokens_median":8207,"read_tokens_total":109675,"calls_median":6.0}],"requests":[{"request":"p1","topic_en":"How do I use it","topic_hu":"Hogyan használható","kapu":2167,"md":4136,"pdf":6035,"kapu_map":293,"kapu_search":415,"kapu_open":1459},{"request":"p2","topic_en":"8-direction dog","topic_hu":"8 irányú kutya","kapu":3323,"md":15285,"pdf":13915,"kapu_map":0,"kapu_search":1003,"kapu_open":2320},{"request":"p3","topic_en":"Walk animation","topic_hu":"Séta animáció","kapu":5355,"md":11844,"pdf":12626,"kapu_map":0,"kapu_search":1009,"kapu_open":4346},{"request":"p4","topic_en":"Tiles","topic_hu":"Csempék","kapu":3984,"md":9362,"pdf":10733,"kapu_map":571,"kapu_search":383,"kapu_open":3030},{"request":"p5","topic_en":"Consistent style","topic_hu":"Egységes stílus","kapu":2580,"md":10897,"pdf":13266,"kapu_map":0,"kapu_search":526,"kapu_open":2054},{"request":"p6","topic_en":"Aseprite extension","topic_hu":"Aseprite-bővítmény","kapu":1092,"md":2676,"pdf":3633,"kapu_map":0,"kapu_search":271,"kapu_open":821},{"request":"p7","topic_en":"Claude Code + Godot","topic_hu":"Claude Code + Godot","kapu":2667,"md":7197,"pdf":6734,"kapu_map":293,"kapu_search":340,"kapu_open":2034},{"request":"p8","topic_en":"Attack animation","topic_hu":"Ütés animáció","kapu":6662,"md":9903,"pdf":15264,"kapu_map":0,"kapu_search":1310,"kapu_open":5352},{"request":"p9","topic_en":"Pixel art from a photo","topic_hu":"Fotóból pixel art","kapu":1557,"md":6254,"pdf":7983,"kapu_map":0,"kapu_search":484,"kapu_open":1073},{"request":"p10","topic_en":"Transparent background","topic_hu":"Átlátszó háttér","kapu":1120,"md":4161,"pdf":5421,"kapu_map":0,"kapu_search":227,"kapu_open":893},{"request":"p11","topic_en":"UI elements","topic_hu":"UI-elemek","kapu":1721,"md":6999,"pdf":5634,"kapu_map":0,"kapu_search":319,"kapu_open":1402},{"request":"p12","topic_en":"50 items from the API","topic_hu":"50 tárgy API-ból","kapu":2725,"md":12738,"pdf":8431,"kapu_map":0,"kapu_search":628,"kapu_open":2097}],"changes":[{"metric":"file_mb","size":"s","before":7.6,"after":2.2},{"metric":"file_mb","size":"m","before":117.4,"after":26.2},{"metric":"file_mb","size":"l","before":542.2,"after":128.3},{"metric":"l_builds","size":"l","before":"no","after":"yes"},{"metric":"search_ms","size":"s","before":56,"after":12.8},{"metric":"search_ms","size":"m","before":657,"after":19.2},{"metric":"search_ms","size":"l","before":3172,"after":158.2},{"metric":"open_ms","size":"s","before":17,"after":2.4},{"metric":"open_ms","size":"m","before":216,"after":4.9},{"metric":"open_ms","size":"l","before":1040,"after":44.1},{"metric":"r10_hybrid","size":"s","before":0.456,"after":0.485},{"metric":"r10_hybrid","size":"m","before":0.438,"after":0.458},{"metric":"r10_hybrid","size":"l","before":0.281,"after":0.271},{"metric":"r10_vector","size":"s","before":0.324,"after":0.426},{"metric":"r10_vector","size":"m","before":0.279,"after":0.318},{"metric":"r10_vector","size":"l","before":0.154,"after":0.142},{"metric":"bench_s","size":"m","before":187,"after":8},{"metric":"bench_s","size":"l","before":1774,"after":127}],"scale":[{"size":"S","corpus":"Rust book","experimental":false,"knowledge_tokens":321618,"rooms":111,"doors":231,"groups":7,"build_s":4.6,"peak_gb":0.69,"file_mb":2.2,"map_tokens":153,"map_ms":3,"first_map_tokens":322,"group_list_max":804,"search_tokens":246,"search_ms":12.8,"first_search_s":1.1,"open_tokens":1689,"open_ms":2.4},{"size":"M","corpus":"Kubernetes","experimental":false,"knowledge_tokens":3873333,"rooms":1722,"doors":6370,"groups":104,"build_s":38.0,"peak_gb":1.03,"file_mb":26.2,"map_tokens":1950,"map_ms":47,"first_map_tokens":2318,"group_list_max":6957,"search_tokens":260,"search_ms":19.2,"first_search_s":1.0,"open_tokens":240,"open_ms":4.9},{"size":"L","corpus":"MDN","experimental":false,"knowledge_tokens":12995136,"rooms":14719,"doors":84910,"groups":99,"build_s":240.3,"peak_gb":2.68,"file_mb":128.3,"map_tokens":1921,"map_ms":391,"first_map_tokens":2303,"group_list_max":30118,"search_tokens":212,"search_ms":158.2,"first_search_s":1.3,"open_tokens":366,"open_ms":44.1}],"retrieval":[{"size":"S","n":68,"method":"kapu_hybrid","r5":0.397,"r10":0.485,"mrr":0.281},{"size":"S","n":68,"method":"kapu_bm25","r5":0.338,"r10":0.441,"mrr":0.259},{"size":"S","n":68,"method":"kapu_vector","r5":0.353,"r10":0.426,"mrr":0.184},{"size":"S","n":68,"method":"chunk_bm25","r5":0.426,"r10":0.485,"mrr":0.282},{"size":"S","n":68,"method":"chunk_vector","r5":0.368,"r10":0.426,"mrr":0.23},{"size":"M","n":201,"method":"kapu_hybrid","r5":0.373,"r10":0.458,"mrr":0.245},{"size":"M","n":201,"method":"kapu_bm25","r5":0.348,"r10":0.448,"mrr":0.218},{"size":"M","n":201,"method":"kapu_vector","r5":0.219,"r10":0.318,"mrr":0.147},{"size":"M","n":201,"method":"chunk_bm25","r5":0.338,"r10":0.448,"mrr":0.218},{"size":"M","n":201,"method":"chunk_vector","r5":0.249,"r10":0.318,"mrr":0.145},{"size":"L","n":395,"method":"kapu_hybrid","r5":0.172,"r10":0.271,"mrr":0.128},{"size":"L","n":395,"method":"kapu_bm25","r5":0.22,"r10":0.284,"mrr":0.135},{"size":"L","n":395,"method":"kapu_vector","r5":0.086,"r10":0.142,"mrr":0.055},{"size":"L","n":395,"method":"chunk_bm25","r5":0.23,"r10":0.299,"mrr":0.159},{"size":"L","n":395,"method":"chunk_vector","r5":0.124,"r10":0.19,"mrr":0.081}],"agents":[{"system":"c0","correct_sonnet":30,"correct_haiku":28,"questions":30,"read_tokens_median":0,"calls_median":0,"agent_tokens_per_q":2706},{"system":"c2b","correct_sonnet":30,"correct_haiku":27,"questions":30,"read_tokens_median":4150,"calls_median":1.0,"agent_tokens_per_q":12648},{"system":"c3","correct_sonnet":29,"correct_haiku":28,"questions":30,"read_tokens_median":1290,"calls_median":2.0,"agent_tokens_per_q":9343},{"system":"c4","correct_sonnet":30,"correct_haiku":29,"questions":30,"read_tokens_median":8738,"calls_median":2.0,"agent_tokens_per_q":11615},{"system":"c5","correct_sonnet":30,"correct_haiku":29,"questions":30,"read_tokens_median":3982,"calls_median":2.0,"agent_tokens_per_q":10118}],"v104":[{"metric":"rust_tokens_median","before":3982,"after":2331},{"metric":"rust_correct","before":30,"after":30},{"metric":"first_map_m","before":4989,"after":2318},{"metric":"first_map_l","before":4139,"after":2303}]};
+const DATA = {"date":"2026-10-26","spec":"tools 0.2.0, specification v1.2, file format 1.2","v12":{"date":"2026-10-26","version":"tools 0.2.0, specification v1.2, file format 1.2","rescore":200,"tools_v11":1174,"tools_v12":797,"en_questions":77,"hu_questions":60,"requirements":[{"id":"K-01","op":"le","limit":800,"value":797,"kind":"tokens","met":true},{"id":"K-02","op":"le","limit":1000,"value":306,"kind":"tokens","met":true},{"id":"K-05","op":"le","limit":600,"value":586,"kind":"tokens","met":true},{"id":"K-07","op":"ge","limit":0.7,"value":0.831,"kind":"pct","met":true},{"id":"K-11","op":"le","limit":0.03,"value":0.0325,"kind":"pct","met":false},{"id":"K-12","op":"ge","limit":0.75,"value":0.783,"kind":"r","met":true},{"id":"K-13","op":"ge","limit":0.6,"value":0.55,"kind":"r","met":false},{"id":"K-22","op":"lt","limit":20,"value":7.6,"kind":"ms","met":true}],"corpora":[{"corpus":"rust_book","mb_v11":2.21,"mb_v12":2.24,"growth":0.0174,"search_ms":32,"open_ms":3.6,"map_first":328,"map_next":159,"search_tokens":527,"search_max":580,"ask_tokens":1657,"answered":0.206},{"corpus":"kubernetes","mb_v11":26.22,"mb_v12":26.78,"growth":0.0216,"search_ms":50,"open_ms":7.9,"map_first":967,"map_next":983,"search_tokens":528,"search_max":586,"ask_tokens":1795,"answered":0.199},{"corpus":"mdn","mb_v11":128.34,"mb_v12":132.52,"growth":0.0325,"search_ms":282,"open_ms":48.0,"map_first":969,"map_next":980,"search_tokens":500,"search_max":583,"ask_tokens":1664,"answered":0.116},{"corpus":"skills_en","mb_v11":5.56,"mb_v12":5.67,"growth":0.0202,"search_ms":26,"open_ms":2.9,"map_first":600,"map_next":224,"search_tokens":547,"search_max":585,"ask_tokens":1786,"answered":0.831}],"retrieval":[{"set":"rust_book","n":68,"v11":0.485,"signs":0.5,"v12":0.485},{"set":"kubernetes","n":201,"v11":0.458,"signs":0.458,"v12":0.458},{"set":"mdn","n":395,"v11":0.271,"signs":0.246,"v12":0.278},{"set":"skills_en","n":77,"v11":0.948,"signs":0.922,"v12":0.961},{"set":"skills_hu_questions","n":60,"v11":0.633,"signs":0.583,"v12":0.633},{"set":"skills_hu_translated","n":60,"v11":null,"signs":0.833,"v12":0.833}]},"knowledge_tokens":206899,"pixellab1":[{"form":"kapu","correct":12,"partly":0,"claims_supported":122,"claims_total":123,"helpfulness":4.08,"read_tokens_median":2624,"read_tokens_total":34953,"calls_median":3.0},{"form":"md","correct":12,"partly":0,"claims_supported":134,"claims_total":138,"helpfulness":4.25,"read_tokens_median":8280,"read_tokens_total":101452,"calls_median":8.0},{"form":"pdf","correct":11,"partly":1,"claims_supported":146,"claims_total":151,"helpfulness":4.33,"read_tokens_median":8207,"read_tokens_total":109675,"calls_median":6.0}],"pixellab2":[{"form":"kapu","correct":12,"partly":0,"claims_supported":153,"claims_total":157,"helpfulness":4.17,"read_tokens_median":4104,"read_tokens_total":48557,"calls_median":4.0},{"form":"md","correct":12,"partly":0,"claims_supported":140,"claims_total":145,"helpfulness":4,"read_tokens_median":8280,"read_tokens_total":101452,"calls_median":8.0},{"form":"pdf","correct":11,"partly":1,"claims_supported":147,"claims_total":151,"helpfulness":3.83,"read_tokens_median":8207,"read_tokens_total":109675,"calls_median":6.0}],"requests":[{"request":"p1","topic_en":"How do I use it","topic_hu":"Hogyan használható","kapu":2167,"md":4136,"pdf":6035,"kapu_map":293,"kapu_search":415,"kapu_open":1459},{"request":"p2","topic_en":"8-direction dog","topic_hu":"8 irányú kutya","kapu":3323,"md":15285,"pdf":13915,"kapu_map":0,"kapu_search":1003,"kapu_open":2320},{"request":"p3","topic_en":"Walk animation","topic_hu":"Séta animáció","kapu":5355,"md":11844,"pdf":12626,"kapu_map":0,"kapu_search":1009,"kapu_open":4346},{"request":"p4","topic_en":"Tiles","topic_hu":"Csempék","kapu":3984,"md":9362,"pdf":10733,"kapu_map":571,"kapu_search":383,"kapu_open":3030},{"request":"p5","topic_en":"Consistent style","topic_hu":"Egységes stílus","kapu":2580,"md":10897,"pdf":13266,"kapu_map":0,"kapu_search":526,"kapu_open":2054},{"request":"p6","topic_en":"Aseprite extension","topic_hu":"Aseprite-bővítmény","kapu":1092,"md":2676,"pdf":3633,"kapu_map":0,"kapu_search":271,"kapu_open":821},{"request":"p7","topic_en":"Claude Code + Godot","topic_hu":"Claude Code + Godot","kapu":2667,"md":7197,"pdf":6734,"kapu_map":293,"kapu_search":340,"kapu_open":2034},{"request":"p8","topic_en":"Attack animation","topic_hu":"Ütés animáció","kapu":6662,"md":9903,"pdf":15264,"kapu_map":0,"kapu_search":1310,"kapu_open":5352},{"request":"p9","topic_en":"Pixel art from a photo","topic_hu":"Fotóból pixel art","kapu":1557,"md":6254,"pdf":7983,"kapu_map":0,"kapu_search":484,"kapu_open":1073},{"request":"p10","topic_en":"Transparent background","topic_hu":"Átlátszó háttér","kapu":1120,"md":4161,"pdf":5421,"kapu_map":0,"kapu_search":227,"kapu_open":893},{"request":"p11","topic_en":"UI elements","topic_hu":"UI-elemek","kapu":1721,"md":6999,"pdf":5634,"kapu_map":0,"kapu_search":319,"kapu_open":1402},{"request":"p12","topic_en":"50 items from the API","topic_hu":"50 tárgy API-ból","kapu":2725,"md":12738,"pdf":8431,"kapu_map":0,"kapu_search":628,"kapu_open":2097}],"changes":[{"metric":"file_mb","size":"s","before":7.6,"after":2.2},{"metric":"file_mb","size":"m","before":117.4,"after":26.2},{"metric":"file_mb","size":"l","before":542.2,"after":128.3},{"metric":"l_builds","size":"l","before":"no","after":"yes"},{"metric":"search_ms","size":"s","before":56,"after":12.8},{"metric":"search_ms","size":"m","before":657,"after":19.2},{"metric":"search_ms","size":"l","before":3172,"after":158.2},{"metric":"open_ms","size":"s","before":17,"after":2.4},{"metric":"open_ms","size":"m","before":216,"after":4.9},{"metric":"open_ms","size":"l","before":1040,"after":44.1},{"metric":"r10_hybrid","size":"s","before":0.456,"after":0.485},{"metric":"r10_hybrid","size":"m","before":0.438,"after":0.458},{"metric":"r10_hybrid","size":"l","before":0.281,"after":0.271},{"metric":"r10_vector","size":"s","before":0.324,"after":0.426},{"metric":"r10_vector","size":"m","before":0.279,"after":0.318},{"metric":"r10_vector","size":"l","before":0.154,"after":0.142},{"metric":"bench_s","size":"m","before":187,"after":8},{"metric":"bench_s","size":"l","before":1774,"after":127}],"scale":[{"size":"S","corpus":"Rust book","experimental":false,"knowledge_tokens":321618,"rooms":111,"doors":231,"groups":7,"build_s":4.6,"peak_gb":0.69,"file_mb":2.2,"map_tokens":153,"map_ms":3,"first_map_tokens":322,"group_list_max":804,"search_tokens":246,"search_ms":12.8,"first_search_s":1.1,"open_tokens":1689,"open_ms":2.4},{"size":"M","corpus":"Kubernetes","experimental":false,"knowledge_tokens":3873333,"rooms":1722,"doors":6370,"groups":104,"build_s":38.0,"peak_gb":1.03,"file_mb":26.2,"map_tokens":1950,"map_ms":47,"first_map_tokens":2318,"group_list_max":6957,"search_tokens":260,"search_ms":19.2,"first_search_s":1.0,"open_tokens":240,"open_ms":4.9},{"size":"L","corpus":"MDN","experimental":false,"knowledge_tokens":12995136,"rooms":14719,"doors":84910,"groups":99,"build_s":240.3,"peak_gb":2.68,"file_mb":128.3,"map_tokens":1921,"map_ms":391,"first_map_tokens":2303,"group_list_max":30118,"search_tokens":212,"search_ms":158.2,"first_search_s":1.3,"open_tokens":366,"open_ms":44.1}],"retrieval":[{"size":"S","n":68,"method":"kapu_hybrid","r5":0.397,"r10":0.485,"mrr":0.281},{"size":"S","n":68,"method":"kapu_bm25","r5":0.338,"r10":0.441,"mrr":0.259},{"size":"S","n":68,"method":"kapu_vector","r5":0.353,"r10":0.426,"mrr":0.184},{"size":"S","n":68,"method":"chunk_bm25","r5":0.426,"r10":0.485,"mrr":0.282},{"size":"S","n":68,"method":"chunk_vector","r5":0.368,"r10":0.426,"mrr":0.23},{"size":"M","n":201,"method":"kapu_hybrid","r5":0.373,"r10":0.458,"mrr":0.245},{"size":"M","n":201,"method":"kapu_bm25","r5":0.348,"r10":0.448,"mrr":0.218},{"size":"M","n":201,"method":"kapu_vector","r5":0.219,"r10":0.318,"mrr":0.147},{"size":"M","n":201,"method":"chunk_bm25","r5":0.338,"r10":0.448,"mrr":0.218},{"size":"M","n":201,"method":"chunk_vector","r5":0.249,"r10":0.318,"mrr":0.145},{"size":"L","n":395,"method":"kapu_hybrid","r5":0.172,"r10":0.271,"mrr":0.128},{"size":"L","n":395,"method":"kapu_bm25","r5":0.22,"r10":0.284,"mrr":0.135},{"size":"L","n":395,"method":"kapu_vector","r5":0.086,"r10":0.142,"mrr":0.055},{"size":"L","n":395,"method":"chunk_bm25","r5":0.23,"r10":0.299,"mrr":0.159},{"size":"L","n":395,"method":"chunk_vector","r5":0.124,"r10":0.19,"mrr":0.081}],"agents":[{"system":"c0","correct_sonnet":30,"correct_haiku":28,"questions":30,"read_tokens_median":0,"calls_median":0,"agent_tokens_per_q":2706},{"system":"c2b","correct_sonnet":30,"correct_haiku":27,"questions":30,"read_tokens_median":4150,"calls_median":1.0,"agent_tokens_per_q":12648},{"system":"c3","correct_sonnet":29,"correct_haiku":28,"questions":30,"read_tokens_median":1290,"calls_median":2.0,"agent_tokens_per_q":9343},{"system":"c4","correct_sonnet":30,"correct_haiku":29,"questions":30,"read_tokens_median":8738,"calls_median":2.0,"agent_tokens_per_q":11615},{"system":"c5","correct_sonnet":30,"correct_haiku":29,"questions":30,"read_tokens_median":3982,"calls_median":2.0,"agent_tokens_per_q":10118}],"v104":[{"metric":"rust_tokens_median","before":3982,"after":2331},{"metric":"rust_correct","before":30,"after":30},{"metric":"first_map_m","before":4989,"after":2318},{"metric":"first_map_l","before":4139,"after":2303}]};
 
 const I18N = {
   en: {
     title_rest: "measurements",
     lead: "On a knowledge file the model had not seen (PixelLab documentation, {kt} tokens), an agent using KAPU read {k} tokens per request, an agent searching one Markdown file {md}, and one searching the same text as a PDF {pdf} (median, the same prompt for all three). Correct answers: KAPU {ck}, Markdown {cmd}, PDF {cpdf} of 12, by three blind judges.",
-    meta: "Measured {date} · specification {spec} · Windows 11, release build · every number comes from bench/results/ in the repository",
+    meta: "Latest measurements {date} · {spec} · Windows 11, release build · every number comes from bench/results/ in the repository",
+    v12_h: "File format 1.2: vectors in the file, replies within a budget",
+    v12_note: "Measured {date} with {version}, on the same corpora, questions and machine as format 1.1, and on a fourth corpus: agent skills and frontend notes with {en} English and {hu} Hungarian questions. The search vectors are now in the file, one sign bit per component of every window vector. The sign bits pick the {rescore} best candidates and the model's float vectors order them, so the first search on another machine needs no cache. Every MCP reply starts with its own price and stays within a max_tokens budget, and kapu_ask searches and opens in one call.",
+    req_card: "Requirements of the second protocol", req_card_note: "The measurable requirements of the 2026-10-26 protocol and their acceptance limits. Tokens: o200k_base.",
+    col_id: "ID", col_req: "Requirement", col_target: "Target", col_measured: "Measured", col_met: "Met", met_yes: "yes", met_no: "no",
+    "req_K-01": "Tool descriptions and input schemas, all six tools",
+    "req_K-02": "First map reply on a file of 3,000 rooms",
+    "req_K-05": "Search reply, 10 hits with excerpts (largest on any corpus)",
+    "req_K-07": "Questions answered by one kapu_ask call (skills corpus)",
+    "req_K-11": "File growth from the #VEC section (largest corpus, MDN)",
+    "req_K-12": "Hungarian questions on English skills, translated: hybrid recall@10",
+    "req_K-13": "The same without translation (needs another embedding model)",
+    "req_K-22": "Opening a door on a file of 3,000 rooms (median)",
+    v12_card: "Four corpora in format 1.2", v12_card_note: "File size before and after the vector section. Times and reply sizes are medians over MCP, except the largest search reply; tokens are what the agent receives.",
+    c_mb11: "File, v1.1 (MiB)", c_mb12: "File, v1.2 (MiB)", c_growth: "Growth", c_nmap: "Next map (tokens)", c_smax: "Largest search (tokens)",
+    c_ask: "kapu_ask (tokens)", c_answered: "Answered by one kapu_ask",
+    corp_rust_book: "Rust book", corp_kubernetes: "Kubernetes", corp_mdn: "MDN", corp_skills_en: "Skills and notes",
+    v12r_card: "Retrieval: room-level recall@10, hybrid ranking",
+    v12r_card_note: "Sign bits alone lost on MDN, on the skills and most of all with Hungarian questions on English text. With the float rescoring of the best candidates they are at the float level or above everywhere; the price is search time.",
+    col_set: "Question set", col_v11f: "v1.1, float vectors", col_signs: "v1.2, sign bits alone", col_v12r: "v1.2, sign bits + rescoring",
+    set_rust_book: "Rust book (Stack Overflow)", set_kubernetes: "Kubernetes (Stack Overflow)", set_mdn: "MDN (Stack Overflow)",
+    set_skills_en: "Skills, English questions", set_skills_hu_questions: "Skills, Hungarian questions", set_skills_hu_translated: "Skills, the Hungarian questions translated",
+    open_card: "Not measured yet",
+    open_items: [
+      "Whether an agent finds the right skills: native Claude Code skills, the same skills in one KAPU file, and a folder of Markdown files, at 30 and 250 skills, on tasks that do not name the skill. Main number: was the right skill loaded, read from the call log.",
+      "A local model (Ollama) as the agent.",
+      "Clients other than Claude Code: the configurations for the Codex CLI and VS Code are in the README, but they were not tried, and no measurement with them is planned."
+    ],
     tile_kapu: "KAPU", tile_sub: "tokens per request (median)", tile_full: "Whole file in the context", tile_full_sub: "tokens on every request",
     form_kapu: "KAPU", form_md: "One .md file + search", form_pdf: "PDF + search",
     v11_h: "File format 1.1: smaller files, faster calls, better search by meaning",
     v11_note: "Three changes after the pilot, measured again on the same corpora and questions. The index stores a door's position instead of its id, so files are about 4.5 times smaller and the 13-million-token MDN corpus now builds with the released tool. One call parses and checks the file once and finds index lines by binary search. Search by meaning uses one vector per 512-token window of a door, and the best window counts.",
     v11_card: "Before and after", v11_card_note: "Room recall@10: any part of the expected page among the first 10 hits. MDN with v1.0.4 was an experimental build with a 64 MiB line limit.",
     col_metric: "Metric", col_corpus: "Corpus", col_before: "v1.0.4", col_after: "v1.1",
-    m_file_mb: "File size (MB)", m_l_builds: "Builds with the released tool", m_search_ms: "Search over MCP (ms, median)", m_open_ms: "Opening a door over MCP (ms, median)",
+    m_file_mb: "File size (MiB)", m_l_builds: "Builds with the released tool", m_search_ms: "Search over MCP (ms, median)", m_open_ms: "Opening a door over MCP (ms, median)",
     m_r10_hybrid: "Room recall@10, hybrid search", m_r10_vector: "Room recall@10, vectors only", m_bench_s: "kapu bench run time (s)",
     yes: "yes", no: "no (E005)",
     px_h: "Same content in three formats: KAPU, one Markdown file, a PDF",
@@ -210,7 +264,7 @@ const I18N = {
     scale_note: "S: the Rust book, M: the Kubernetes documentation, L: MDN Web Docs, all in format 1.1. Over one MCP session: the map, every group list, 20 searches with room titles as queries and an open of each top hit.",
     scale_card: "Build, size and responses",
     c_size: "Size", c_corpus: "Corpus", c_know: "Knowledge (tokens)", c_rooms: "Rooms", c_doors: "Doors", c_groups: "Groups", c_build: "Build (s)", c_mem: "Memory (GB)",
-    c_file: "File (MB)", c_map: "Map (tokens)", c_fmap: "First map (tokens)", c_glist: "Largest group list (tokens)", c_stok: "Search (tokens)", c_sms: "Search (ms)",
+    c_file: "File (MiB)", c_map: "Map (tokens)", c_fmap: "First map (tokens)", c_glist: "Largest group list (tokens)", c_stok: "Search (tokens)", c_sms: "Search (ms)",
     c_fs: "First search (s)", c_otok: "Open (tokens)", c_oms: "Open (ms)",
     ret_h: "Retrieval without an agent: KAPU against chunked RAG",
     ret_note: "Real Stack Overflow questions whose accepted answer links exactly one page of the documentation: 68, 201 and 395 questions. A hit is any part of that page among the first results. The chunk baselines use 512-token chunks with 64 tokens of overlap and the same embedding model.",
@@ -237,14 +291,41 @@ const I18N = {
   hu: {
     title_rest: "mérések",
     lead: "Egy, a modell számára ismeretlen tudásfájlon (PixelLab-dokumentáció, {kt} token) a KAPU-t használó ügynök kérésenként {k} tokent olvasott, az egy Markdown-fájlban kereső {md}, az ugyanezt PDF-ként kereső {pdf} tokent (medián, mindháromnál ugyanaz a feladatszöveg). Helyes válasz: KAPU {ck}, Markdown {cmd}, PDF {cpdf} a 12-ből, három vak bíráló szerint.",
-    meta: "Mérve: {date} · specifikáció {spec} · Windows 11, release build · minden szám a repó bench/results/ mappájából jön",
+    meta: "Legutóbbi mérés: {date} · {spec} · Windows 11, release build · minden szám a repó bench/results/ mappájából jön",
+    v12_h: "1.2-es fájlformátum: vektorok a fájlban, válaszok kereten belül",
+    v12_note: "Mérve: {date}, {version}, ugyanazokon a korpuszokon, kérdéseken és gépen, mint az 1.1-es formátumot, és egy negyedik korpuszon: ügynöki skillek és frontend-jegyzetek, {en} angol és {hu} magyar kérdéssel. A keresővektorok most a fájlban vannak, minden ablakvektor minden komponenséből egy előjelbit. Az előjelbitek kiválasztják a {rescore} legjobb jelöltet, ezeket a modell lebegőpontos vektorai rendezik, így másik gépen az első keresés is gyorsítótár nélkül megy. Minden MCP-válasz a saját árával kezdődik és a max_tokens kereten belül marad, a kapu_ask pedig egy hívásban keres és kinyit.",
+    req_card: "A második jegyzőkönyv követelményei", req_card_note: "A 2026-10-26-i jegyzőkönyv mérhető követelményei és elfogadási határaik. Token: o200k_base.",
+    col_id: "Azonosító", col_req: "Követelmény", col_target: "Cél", col_measured: "Mért", col_met: "Teljesül", met_yes: "igen", met_no: "nem",
+    "req_K-01": "Eszközleírások és bemeneti sémák, mind a hat eszköz",
+    "req_K-02": "Első térképválasz 3000 szobás fájlon",
+    "req_K-05": "Keresési válasz, 10 találat kivonattal (a legnagyobb bármelyik korpuszon)",
+    "req_K-07": "Egyetlen kapu_ask hívásból megválaszolt kérdések (skill-korpusz)",
+    "req_K-11": "A #VEC szakasz miatti fájlnövekedés (a legnagyobb korpusz, MDN)",
+    "req_K-12": "Magyar kérdés angol skillekre, lefordítva: hibrid recall@10",
+    "req_K-13": "Ugyanez fordítás nélkül (ehhez másik beágyazómodell kell)",
+    "req_K-22": "Ajtó kinyitása 3000 szobás fájlon (medián)",
+    v12_card: "Négy korpusz 1.2-es formátumban", v12_card_note: "Fájlméret a vektorszakasz előtt és után. Az idők és a válaszméretek MCP-n mért mediánok, kivéve a legnagyobb keresési választ; token: amit az ügynök kap.",
+    c_mb11: "Fájl, v1.1 (MiB)", c_mb12: "Fájl, v1.2 (MiB)", c_growth: "Növekedés", c_nmap: "Következő térkép (token)", c_smax: "Legnagyobb keresés (token)",
+    c_ask: "kapu_ask (token)", c_answered: "Egy kapu_ask hívásból megválaszolva",
+    corp_rust_book: "Rust Book", corp_kubernetes: "Kubernetes", corp_mdn: "MDN", corp_skills_en: "Skillek és jegyzetek",
+    v12r_card: "Visszakeresés: szobaszintű recall@10, hibrid rangsor",
+    v12r_card_note: "Az előjelbitek önmagukban rontottak az MDN-en, a skilleken, és leginkább magyar kérdésnél angol szövegre. A legjobb jelöltek lebegőpontos újrapontozásával mindenhol a lebegőpontos szinten vagy fölötte vannak; az ára a keresési idő.",
+    col_set: "Kérdéskészlet", col_v11f: "v1.1, lebegőpontos vektorok", col_signs: "v1.2, csak előjelbitek", col_v12r: "v1.2, előjelbitek + újrapontozás",
+    set_rust_book: "Rust Book (Stack Overflow)", set_kubernetes: "Kubernetes (Stack Overflow)", set_mdn: "MDN (Stack Overflow)",
+    set_skills_en: "Skillek, angol kérdések", set_skills_hu_questions: "Skillek, magyar kérdések", set_skills_hu_translated: "Skillek, a magyar kérdések lefordítva",
+    open_card: "Még nincs mérve",
+    open_items: [
+      "Megtalálja-e az ügynök a megfelelő skilleket: natív Claude Code skillek, ugyanezek egy KAPU fájlban, és egy Markdown-mappa, 30 és 250 skillel, olyan feladatokon, amelyek nem nevezik meg a skillt. Fő mérőszám: betöltődött-e a helyes skill, a hívásnaplóból.",
+      "Helyi modell (Ollama) mint ügynök.",
+      "Más kliens, mint a Claude Code: a Codex CLI és a VS Code konfigurációja benne van a README-ben, de nincs kipróbálva, és velük mérés nem is tervezett."
+    ],
     tile_kapu: "KAPU", tile_sub: "token/kérés (medián)", tile_full: "Az egész fájl a kontextusban", tile_full_sub: "token minden kérésnél",
     form_kapu: "KAPU", form_md: "Egy .md fájl kereséssel", form_pdf: "PDF kereséssel",
     v11_h: "1.1-es fájlformátum: kisebb fájl, gyorsabb hívás, jobb jelentés szerinti keresés",
     v11_note: "Három változás a pilot után, ugyanazokon a korpuszokon és kérdéseken újramérve. Az index az ajtó azonosítója helyett a sorszámát tárolja, így a fájl kb. 4,5-ször kisebb, és a 13 millió tokenes MDN-korpusz már a kiadott eszközzel is megépül. Egy hívás a fájlt egyszer dolgozza fel és ellenőrzi, az indexsort bináris kereséssel találja meg. A jelentés szerinti keresés ajtónként 512 tokenes ablakonként egy vektort használ, és a legjobb ablak számít.",
     v11_card: "Előtte és utána", v11_card_note: "Szobaszintű recall@10: a várt oldal bármely része az első 10 találat között. Az MDN a v1.0.4-gyel kísérleti, 64 MiB-os sorhatárú buildből.",
     col_metric: "Mérőszám", col_corpus: "Korpusz", col_before: "v1.0.4", col_after: "v1.1",
-    m_file_mb: "Fájlméret (MB)", m_l_builds: "Megépül a kiadott eszközzel", m_search_ms: "Keresés MCP-n (ms, medián)", m_open_ms: "Ajtó kinyitása MCP-n (ms, medián)",
+    m_file_mb: "Fájlméret (MiB)", m_l_builds: "Megépül a kiadott eszközzel", m_search_ms: "Keresés MCP-n (ms, medián)", m_open_ms: "Ajtó kinyitása MCP-n (ms, medián)",
     m_r10_hybrid: "Szobaszintű recall@10, hibrid", m_r10_vector: "Szobaszintű recall@10, csak vektor", m_bench_s: "kapu bench futásideje (s)",
     yes: "igen", no: "nem (E005)",
     px_h: "Ugyanaz a tartalom háromféle formában: KAPU, egy Markdown-fájl, PDF",
@@ -261,7 +342,7 @@ const I18N = {
     scale_note: "S: a Rust Book, M: a Kubernetes-dokumentáció, L: az MDN Web Docs, mind 1.1-es formátumban. Egy MCP-munkamenetben: a térkép, minden csoportlista, 20 keresés a szobacímekkel mint lekérdezéssel, és minden első találat kinyitása.",
     scale_card: "Build, méret és válaszok",
     c_size: "Méret", c_corpus: "Korpusz", c_know: "Tudás (token)", c_rooms: "Szoba", c_doors: "Ajtó", c_groups: "Csoport", c_build: "Build (s)", c_mem: "Memória (GB)",
-    c_file: "Fájl (MB)", c_map: "Térkép (token)", c_fmap: "Első térkép (token)", c_glist: "Legnagyobb csoportlista (token)", c_stok: "Keresés (token)", c_sms: "Keresés (ms)",
+    c_file: "Fájl (MiB)", c_map: "Térkép (token)", c_fmap: "Első térkép (token)", c_glist: "Legnagyobb csoportlista (token)", c_stok: "Keresés (token)", c_sms: "Keresés (ms)",
     c_fs: "Első keresés (s)", c_otok: "Kinyitás (token)", c_oms: "Kinyitás (ms)",
     ret_h: "Visszakeresés ügynök nélkül: KAPU kontra darabolós RAG",
     ret_note: "Valódi Stack Overflow-kérdések, ahol az elfogadott válasz pontosan egy dokumentációoldalra hivatkozik: 68, 201 és 395 kérdés. Találat: az oldal bármely része az első találatok között. A darabolós alapvonal 512 tokenes darabokkal, 64 token átfedéssel és ugyanazzal a beágyazómodellel dolgozik.",
@@ -305,7 +386,9 @@ function fmt(field, v) {
   if (typeof v === "string") return t(v) || v;
   if (["helpfulness"].includes(field)) return L.format(",.2f")(v);
   if (["r5", "r10", "mrr"].includes(field) || (typeof v === "number" && v < 1 && v > 0 && field === "value")) return L.format(".3f")(v);
-  if (["peak_gb"].includes(field)) return L.format(",.2f")(v);
+  if (["peak_gb", "mb"].includes(field)) return L.format(",.2f")(v);
+  if (field === "pct1") return L.format(".1%")(v);
+  if (field === "pct0") return L.format(".0%")(v);
   if (Number.isInteger(v)) return L.format(",d")(v);
   return L.format(",.1f")(v);
 }
@@ -314,7 +397,7 @@ function table(id, cols, rows) {
   const el = document.getElementById(id);
   el.innerHTML = "";
   const head = el.createTHead().insertRow();
-  for (const c of cols) { const th = document.createElement("th"); th.textContent = t(c.label); head.appendChild(th); }
+  for (const c of cols) { const th = document.createElement("th"); th.textContent = t(c.label); if (c.long) th.className = "long"; head.appendChild(th); }
   const body = el.createTBody();
   for (const r of rows) {
     const tr = body.insertRow();
@@ -322,7 +405,9 @@ function table(id, cols, rows) {
       const td = tr.insertCell();
       const v = c.get ? c.get(r) : r[c.key];
       td.textContent = c.raw ? v : fmt(c.fmt || c.key, v);
-      if (c.better && c.better(r)) td.className = "better";
+      if (c.better && c.better(r)) td.classList.add("better");
+      if (c.worse && c.worse(r)) td.classList.add("worse");
+      if (c.long) td.classList.add("long");
     }
   }
 }
@@ -512,6 +597,8 @@ function render() {
     { label: "col_read", key: "read_tokens_median" }, { label: "col_cq", key: "calls_median" }, { label: "col_all", key: "agent_tokens_per_q" }
   ], DATA.agents);
 
+  renderV12(L, int);
+
   table("tb-v104", [
     { label: "col_metric", get: r => t("r_" + r.metric), raw: true },
     { label: "col_v103", key: "before" }, { label: "col_v104", key: "after" }
@@ -520,6 +607,42 @@ function render() {
   const ul = document.getElementById("method");
   ul.innerHTML = "";
   for (const line of t("method")) { const li = document.createElement("li"); li.textContent = line; ul.appendChild(li); }
+}
+
+const SYMBOL = { le: "≤", ge: "≥", lt: "<" };
+function renderV12(L, int) {
+  const v = DATA.v12;
+  document.getElementById("v12").hidden = !v;
+  if (!v) return;
+  document.getElementById("v12-note").textContent = fill(t("v12_note"), {
+    date: v.date, version: v.version, rescore: int(v.rescore), en: v.en_questions, hu: v.hu_questions
+  });
+  const value = (kind, x) => kind === "tokens" ? int(x) : kind === "pct" ? L.format(".1~%")(x)
+    : kind === "ms" ? L.format(",.1~f")(x) + " ms" : L.format(".2f")(x);
+  table("tb-req", [
+    { label: "col_id", key: "id", raw: true },
+    { label: "col_req", get: r => t("req_" + r.id), raw: true, long: true },
+    { label: "col_target", get: r => SYMBOL[r.op] + " " + value(r.kind, r.limit), raw: true },
+    { label: "col_measured", get: r => value(r.kind, r.value), raw: true },
+    { label: "col_met", get: r => t(r.met ? "met_yes" : "met_no"), raw: true, better: r => r.met, worse: r => !r.met }
+  ], v.requirements);
+  table("tb-v12", [
+    { label: "c_corpus", get: r => t("corp_" + r.corpus), raw: true },
+    { label: "c_mb11", key: "mb_v11", fmt: "mb" }, { label: "c_mb12", key: "mb_v12", fmt: "mb" },
+    { label: "c_growth", key: "growth", fmt: "pct1", worse: r => r.growth > 0.03 },
+    { label: "c_sms", key: "search_ms" }, { label: "c_oms", key: "open_ms" },
+    { label: "c_fmap", key: "map_first" }, { label: "c_nmap", key: "map_next" },
+    { label: "c_stok", key: "search_tokens" }, { label: "c_smax", key: "search_max" },
+    { label: "c_ask", key: "ask_tokens" }, { label: "c_answered", key: "answered", fmt: "pct0" }
+  ], v.corpora);
+  table("tb-v12r", [
+    { label: "col_set", get: r => t("set_" + r.set), raw: true }, { label: "col_n", key: "n" },
+    { label: "col_v11f", key: "v11", fmt: "r10" }, { label: "col_signs", key: "signs", fmt: "r10" },
+    { label: "col_v12r", key: "v12", fmt: "r10", better: r => r.v11 != null && r.v12 > r.v11 }
+  ], v.retrieval);
+  const ul = document.getElementById("open-list");
+  ul.innerHTML = "";
+  for (const line of t("open_items")) { const li = document.createElement("li"); li.textContent = line; ul.appendChild(li); }
 }
 
 function setLang(lang) {

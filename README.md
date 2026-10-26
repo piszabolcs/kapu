@@ -110,14 +110,14 @@ The server speaks MCP over stdio; `KAPU_MODEL_DIR` points it at the model folder
 claude mcp add kapu -- /path/to/kapu-mcp
 ```
 
-**Codex CLI**, in `~/.codex/config.toml` (not tried yet):
+**Codex CLI**, in `~/.codex/config.toml` (not tried):
 
 ```toml
 [mcp_servers.kapu]
 command = "/path/to/kapu-mcp"
 ```
 
-**VS Code, Copilot agent mode**, in `.vscode/mcp.json` (not tried yet):
+**VS Code, Copilot agent mode**, in `.vscode/mcp.json` (not tried):
 
 ```json
 { "servers": { "kapu": { "type": "stdio", "command": "/path/to/kapu-mcp" } } }
@@ -282,7 +282,7 @@ kapu/
 KAPU is a working pre-release: the format, the command line, the MCP server and the Windows window are in daily use; the measurements above are a pilot, not a benchmark.
 
 - [ ] Prebuilt binaries for Windows, Linux and macOS from the release workflow
-- [ ] Codex CLI, VS Code and a local model tried end to end, with measurements
+- [ ] A local model tried end to end, with measurements (the Codex CLI and VS Code configurations above stay untried)
 - [ ] The comparison with native skills, a Markdown folder and PDF at 30 and 250 skills
 - [ ] The specification in English
 - [ ] Better search when the question and the text are in different languages without translation (a Hungarian question on English text: 0.55 recall@10; translated by the agent: 0.78)

@@ -1,10 +1,12 @@
-"""Writes the measurement results page from the committed results file.
+"""Writes the measurement results page from the committed results files.
 
-    python tools/study/results_page.py bench/results/2026-10-23-study-pilot.json docs/results/index.html
+    python tools/study/results_page.py bench/results/2026-10-23-study-pilot.json docs/results/index.html \
+        bench/results/2026-10-26-format-1.2.json
 
 The page is one self-contained HTML file (English and Hungarian, d3 from
-cdnjs). Every number on it comes from the results file; the template is
-`results_template.html` next to this script.
+cdnjs). Every number on it comes from the results files; the template is
+`results_template.html` next to this script. The third argument, the format
+1.2 results, is optional; without it the page ends at format 1.1.
 """
 
 import json
@@ -79,8 +81,53 @@ def retrieval_rows(size, n, bench, chunks):
     return rows
 
 
-def main(results: Path, out: Path):
+V12_CORPORA = ["rust_book", "kubernetes", "mdn", "skills_en"]
+V12_RETRIEVAL = ["rust_book", "kubernetes", "mdn", "skills_en", "skills_hu_questions", "skills_hu_translated"]
+
+
+def requirement(rid, op, limit, value, kind):
+    met = {"le": value <= limit, "ge": value >= limit, "lt": value < limit}[op]
+    return {"id": rid, "op": op, "limit": limit, "value": value, "kind": kind, "met": met}
+
+
+def v12_block(r):
+    """Format 1.2 (D142-D150): the requirements of the second protocol, the corpora, retrieval."""
+    c = r["corpora"]
+    gen = next(s for s in r["scale"] if s["rooms"] == 3000)
+    mcp = {k: c[k]["mcp"] for k in V12_CORPORA}
+    growth = {k: c[k]["bytes"]["growth"] for k in V12_CORPORA}
+    hybrid = lambda key, form: c[key][form]["hybrid"]
+    requirements = [
+        requirement("K-01", "le", 800, r["tool_list_tokens"]["v1.2_six_tools"], "tokens"),
+        requirement("K-02", "le", 1000, gen["map_first_tokens"], "tokens"),
+        requirement("K-05", "le", 600, max(m["search_tokens"]["max"] for m in mcp.values()), "tokens"),
+        requirement("K-07", "ge", 0.70, round(mcp["skills_en"]["ask_answered"], 3), "pct"),
+        requirement("K-11", "le", 0.03, max(growth.values()), "pct"),
+        requirement("K-12", "ge", 0.75, hybrid("skills_hu_translated", "v1.2")["recall@10"], "r"),
+        requirement("K-13", "ge", 0.60, hybrid("skills_hu_questions", "v1.2")["recall@10"], "r"),
+        requirement("K-22", "lt", 20, round(gen["open_ms_median"], 1), "ms"),
+    ]
+    corpora = [{
+        "corpus": k,
+        "mb_v11": round(c[k]["bytes"]["v1.1"] / 2**20, 2), "mb_v12": round(c[k]["bytes"]["v1.2"] / 2**20, 2),
+        "growth": growth[k],
+        "search_ms": round(mcp[k]["search_ms"]["median"]), "open_ms": round(mcp[k]["open_ms"]["median"], 1),
+        "map_first": mcp[k]["map_first"]["tokens"], "map_next": mcp[k]["map_next"]["tokens"],
+        "search_tokens": round(mcp[k]["search_tokens"]["median"]), "search_max": mcp[k]["search_tokens"]["max"],
+        "ask_tokens": round(mcp[k]["ask_tokens"]["median"]), "answered": round(mcp[k]["ask_answered"], 3),
+    } for k in V12_CORPORA]
+    room = lambda key, form: c[key][form]["hybrid"]["room_recall@10"] if form in c[key] else None
+    retrieval = [{"set": k, "n": c[k]["questions"], "v11": room(k, "v1.1_float"),
+                  "signs": room(k, "v1.2_sign_bits_only"), "v12": room(k, "v1.2")} for k in V12_RETRIEVAL]
+    return {"date": r["date"], "version": r["version"], "rescore": r["rescore_candidates"],
+            "tools_v11": r["tool_list_tokens"]["v1.1_five_tools"], "tools_v12": r["tool_list_tokens"]["v1.2_six_tools"],
+            "en_questions": c["skills_en"]["questions"], "hu_questions": c["skills_hu_questions"]["questions"],
+            "requirements": requirements, "corpora": corpora, "retrieval": retrieval}
+
+
+def main(results: Path, out: Path, v12_results: Path | None = None):
     r = json.loads(results.read_text(encoding="utf-8"))
+    v12 = v12_block(json.loads(v12_results.read_text(encoding="utf-8"))) if v12_results else None
     px = r["format_comparison_pixellab"]
     v104 = r["remeasure_v104"]
     v11 = r["remeasure_v11"]
@@ -133,8 +180,9 @@ def main(results: Path, out: Path):
     ]
 
     data = {
-        "date": v11.get("date"),
-        "spec": v11.get("specification"),
+        "date": v12["date"] if v12 else v11.get("date"),
+        "spec": v12["version"] if v12 else "specification " + v11.get("specification"),
+        "v12": v12,
         "knowledge_tokens": px["full_file_in_context_tokens_per_request"],
         "pixellab1": [form_row(f, px["result"][f]) for f in ("kapu", "md", "pdf")],
         "pixellab2": [form_row("kapu", v104["pixellab_same_prompt"]["k104"]), form_row("md", v104["pixellab_same_prompt"]["md"]),
@@ -154,4 +202,4 @@ def main(results: Path, out: Path):
 
 
 if __name__ == "__main__":
-    main(Path(sys.argv[1]), Path(sys.argv[2]))
+    main(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]) if len(sys.argv) > 3 else None)
