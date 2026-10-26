@@ -504,6 +504,10 @@ fn unbase64(text: &[u8], out: &mut Vec<u8>) -> Option<()> {
     Some(())
 }
 
+/// The largest `dim` a `#VEC` section may give (D151): the scoring table is
+/// `dim / 8 * 256` sums, so a hostile file must not choose its size.
+pub const MAX_VEC_DIM: usize = 4096;
+
 /// The window vectors of a file's `#VEC` section (D143): `dim` sign bits per
 /// window, door `i` owning windows `starts[i]..starts[i + 1]`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -531,8 +535,12 @@ impl SignVectors {
             .and_then(|r| r.strip_suffix(" bits=1"))
             .and_then(crate::header::parse_decimal)
             .and_then(|d| usize::try_from(d).ok())
-            .filter(|d| *d > 0)
-            .ok_or_else(|| bad(format!("line 1: `{params}`, expected `dim=<n> bits=1`")))?;
+            .filter(|d| (1..=MAX_VEC_DIM).contains(d))
+            .ok_or_else(|| {
+                bad(format!(
+                    "line 1: `{params}`, expected `dim=<n> bits=1` with n from 1 to {MAX_VEC_DIM}"
+                ))
+            })?;
         let (bytes, chars) = (dim.div_ceil(8), window_chars(dim));
         let mut data = Vec::new();
         let mut starts = vec![0usize];
@@ -1082,6 +1090,7 @@ mod tests {
         assert_eq!(ones, format!("{}//8", "/".repeat(40)));
         let ok = format!("dim=256 bits=1\n{ones}\n");
         assert!(SignVectors::parse(&ok, 1).is_ok());
+        assert!(SignVectors::parse(&format!("dim={MAX_VEC_DIM} bits=1\n"), 0).is_ok());
         let not_canonical = format!("{}//9", "/".repeat(40));
         let bad_char = format!("*{}", &ones[1..]);
         for (text, doors) in [
@@ -1090,6 +1099,9 @@ mod tests {
             (format!("dim=256 bits=1\n{not_canonical}\n"), 1),
             (format!("dim=256 bits=1\n{bad_char}\n"), 1),
             (ok.clone(), 2),
+            // D151: found by the `vec` fuzz target, a 236 GB scoring table
+            ("dim=922222223 bits=1".to_owned(), 0),
+            (format!("dim={} bits=1\n", MAX_VEC_DIM + 1), 0),
         ] {
             let e = SignVectors::parse(&text, doors).unwrap_err();
             assert_eq!(e.code, ErrorCode::E005, "{text:?}");
