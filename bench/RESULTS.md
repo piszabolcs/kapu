@@ -1,6 +1,6 @@
 # KAPU measurements
 
-English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file; chapter 9 measures it again with file format 1.1, chapter 10 with format 1.2 ([results/2026-10-26-format-1.2.json](results/2026-10-26-format-1.2.json)), and chapter 11 compares native skills, a KAPU file and a Markdown folder at finding skills ([results/2026-10-26-skill-finding.json](results/2026-10-26-skill-finding.json)). The [results page](../docs/results/index.html) shows the pilot, formats 1.1 and 1.2 and the skill finding with charts and tables.
+English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file; chapter 9 measures it again with file format 1.1, chapter 10 with format 1.2 ([results/2026-10-26-format-1.2.json](results/2026-10-26-format-1.2.json)), and chapter 11 compares native skills, a KAPU file and a Markdown folder at finding skills ([results/2026-10-26-skill-finding.json](results/2026-10-26-skill-finding.json), and after the catalog of tools 0.2.1 [results/2026-10-26-skill-finding-0.2.1.json](results/2026-10-26-skill-finding-0.2.1.json)). The [results page](../docs/results/index.html) shows the pilot, formats 1.1 and 1.2 and the skill finding with charts and tables.
 
 - **Date:** 2026-10-23
 - **Version:** tools 0.1.0 with specification v1.0.2 (chapters 1-8); chapters 9 and 10 name their own
@@ -330,6 +330,24 @@ Does an agent find the skills a task needs? Measured on 2026-10-26 with Claude O
 - **The Markdown folder found everything but read 12 to 14 skills that the tasks did not need**, and used the most tokens.
 - **KAPU's advantage is the fixed cost:** 4,774 tokens per session whatever the number of skills, against 12,652 and 14,081 for the native list. A session that needs no skill saves about 9,300 tokens with KAPU; a task that needs skills costs about 43,000 more. KAPU pays off when skills are needed in fewer than about one session in five, or when there are many more skills than here.
 - **Not measured:** 250 skills (the machine has 91), and a prompt that does not mention skills, where the agent has to think of them itself. Every task ran once per form and size.
+
+### After the catalog: tools 0.2.1 (D154, D155)
+
+The KAPU agents above looked at the map two to four times and opened the skills one by one. Two changes: `kapu_map kind=skill` lists every skill with its price and the start of its description in one reply (91 skills: 3,282 tokens; a skill's reference rooms are folded into it), and several doors in one `kapu_open` share the budget. Only the KAPU runs were repeated, with the same tasks, model and skill sets ([results/2026-10-26-skill-finding-0.2.1.json](results/2026-10-26-skill-finding-0.2.1.json)).
+
+| Skills | Form | Relevant skills found | Wrong loaded | Tokens per task | $ per task | Calls per task |
+|---:|---|---:|---:|---:|---:|---:|
+| 45 | native skills | 38/39 | 0 | 42,574 | 0.224 | 4 |
+| 45 | KAPU file, 0.2.0 | 37/39 | 0 | 77,215 | 0.229 | 7.5 |
+| 45 | KAPU file, 0.2.1 | 38/39 | 3 | 58,266 | 0.131 | 5.5 |
+| 91 | native skills | 39/39 | 0 | 44,953 | 0.236 | 4 |
+| 91 | KAPU file, 0.2.0 | 38/39 | 0 | 88,418 | 0.255 | 9 |
+| 91 | KAPU file, 0.2.1 | 38/39 | 3 | 48,973 | 0.099 | 5 |
+| 91 | Markdown folder | 39/39 | 12 | 107,726 | 0.336 | 10.5 |
+
+- **The same finding rate in fewer calls:** with 91 skills 5 calls instead of 9 and 45% fewer input tokens, close to the native skills. The skill written in Hungarian (`tanulo-mod`) is now found from the catalog; `frontend-expert` is still missed in the Figma task (the native skills missed it too with 45 skills); in the learning-API task the agent opened three skills the task did not need (`signature`, `app-signature`, `verification-before-completion`).
+- **Cost per task**, as Claude Code reports it at API list prices: the KAPU file now costs less than the native skills. The usage of one task (t03, 91 skills) shows why: the native run wrote 24,280 tokens to the prompt cache and read 15,767, the KAPU run wrote 6,465 and read 66,022; a cache write costs twice the input price, a read a tenth. The Skill tool loads a whole skill (`mcp-builder`: 6,901 tokens), `kapu_open` the first part of each, up to 2,000 tokens, with the rest on request.
+- The six tools' descriptions and schemas are 798 tokens (K-01: at most 800).
 
 ## 12. Reproduce
 

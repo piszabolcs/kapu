@@ -182,15 +182,16 @@ def run_one(task, form, key, work: Path, model, mcp_config):
     }
 
 
-def run(work: Path, model: str, jobs: int, kapu_mcp: Path, model_dir: Path, only=None):
-    out = work / "runs.jsonl"
+def run(work: Path, model: str, jobs: int, kapu_mcp: Path, model_dir: Path, only=None,
+        forms=FORMS, runs_name="runs.jsonl"):
+    out = work / runs_name
     done = set()
     if out.exists():
         for line in out.read_text(encoding="utf-8").splitlines():
             r = json.loads(line)
             if not r.get("error"):
                 done.add((r["task"], r["form"], r["set"], r["model"]))
-    todo = [(t, f, k) for k in ("s", "l") for t in tasks() for f in FORMS
+    todo = [(t, f, k) for k in ("s", "l") for t in tasks() for f in forms
             if (t["id"], f, k, model) not in done and (not only or t["id"] in only)]
     # Absolute paths: every run starts in its own folder.
     config = {"mcpServers": {"kapu": {"command": str(kapu_mcp.resolve()), "env": {"KAPU_MODEL_DIR": str(model_dir.resolve())}}}}
@@ -219,7 +220,7 @@ def run(work: Path, model: str, jobs: int, kapu_mcp: Path, model_dir: Path, only
     os.unlink(mcp_config)
 
 
-def baseline(work: Path, model: str, kapu_mcp: Path, model_dir: Path):
+def baseline(work: Path, model: str, kapu_mcp: Path, model_dir: Path, forms=FORMS, name="baseline.json"):
     """The fixed cost of a session in each form and set: one turn of a prompt that needs no skill."""
     config = {"mcpServers": {"kapu": {"command": str(kapu_mcp.resolve()), "env": {"KAPU_MODEL_DIR": str(model_dir.resolve())}}}}
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
@@ -227,7 +228,7 @@ def baseline(work: Path, model: str, kapu_mcp: Path, model_dir: Path):
         mcp_config = f.name
     rows = {}
     for key in ("s", "l"):
-        for form in FORMS:
+        for form in forms:
             proc = subprocess.run([*command(form, model, mcp_config), "--max-turns", "1"], cwd=work / key / form,
                                   input="Reply with the single word OK.", capture_output=True, text=True,
                                   encoding="utf-8", timeout=300, env=clean_env())
@@ -236,7 +237,8 @@ def baseline(work: Path, model: str, kapu_mcp: Path, model_dir: Path):
             rows[f"{key}/{form}"] = sum(usage.get(k) or 0 for k in ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"))
             print(key, form, rows[f"{key}/{form}"], flush=True)
     os.unlink(mcp_config)
-    (work / "baseline.json").write_text(json.dumps(rows, indent=1), encoding="utf-8")
+    old = json.loads((work / name).read_text(encoding="utf-8")) if (work / name).exists() else {}
+    (work / name).write_text(json.dumps({**old, **rows}, indent=1), encoding="utf-8")
 
 
 def median(values):
@@ -247,9 +249,10 @@ def median(values):
     return values[mid] if len(values) % 2 else (values[mid - 1] + values[mid]) / 2
 
 
-def report(work: Path, out: Path):
+def report(work: Path, out: Path, runs_names=("runs.jsonl",), baselines=("baseline.json",)):
     by_task = {t["id"]: t for t in tasks()}
-    runs = [json.loads(line) for line in (work / "runs.jsonl").read_text(encoding="utf-8").splitlines()]
+    # a later file's run of the same task, form, set and model replaces an earlier one
+    runs = [json.loads(line) for name in runs_names for line in (work / name).read_text(encoding="utf-8").splitlines()]
     latest = {}
     for r in runs:
         if not r.get("error"):
@@ -263,8 +266,10 @@ def report(work: Path, out: Path):
         r["gold_named"] = sum(any(n in r["named"] for n in g) for g in task["gold"])
         r["wrong_loaded"] = sorted(set(r["loaded"]) - allowed)
         rows.append(r)
-    fixed_file = work / "baseline.json"
-    fixed = json.loads(fixed_file.read_text(encoding="utf-8")) if fixed_file.exists() else {}
+    fixed = {}
+    for name in baselines:
+        if (work / name).exists():
+            fixed.update(json.loads((work / name).read_text(encoding="utf-8")))
     summary = {}
     for key in ("s", "l"):
         for form in FORMS:
@@ -282,6 +287,8 @@ def report(work: Path, out: Path):
                 "outside_pool_loaded": sum(len(r.get("outside_pool", [])) for r in sel),
                 "input_tokens_median": median(r["input_tokens"] for r in sel),
                 "output_tokens_median": median(r["output_tokens"] for r in sel),
+                # what the CLI charges, cache reads at their lower price
+                "cost_usd_median": round(median(r["cost_usd"] for r in sel), 4),
                 "tool_calls_median": median(r["tool_calls"] for r in sel),
                 "seconds_median": median(r["seconds"] for r in sel),
                 "native_skills_listed": sel[0].get("native_skills_listed"),
@@ -297,7 +304,8 @@ def report(work: Path, out: Path):
     for name, s in summary.items():
         print(f"{name:9} n={s['set_size']:3} loaded {s['gold_loaded']}/{s['gold']} ({s['recall_loaded']:.0%}) "
               f"named {s['recall_named']:.0%} all-gold {s['tasks_all_gold_loaded']}/{s['runs']} wrong {s['wrong_loaded']} "
-              f"outside {s['outside_pool_loaded']} in-tokens {s['input_tokens_median']} calls {s['tool_calls_median']} {s['seconds_median']}s")
+              f"outside {s['outside_pool_loaded']} in-tokens {s['input_tokens_median']} ${s['cost_usd_median']} "
+              f"calls {s['tool_calls_median']} {s['seconds_median']}s")
 
 
 def main():
@@ -315,23 +323,29 @@ def main():
     p.add_argument("--kapu-mcp", type=Path, default=ROOT / "target" / "release" / "kapu-mcp.exe")
     p.add_argument("--model-dir", type=Path, default=ROOT / "models" / "potion-multilingual-128M-i8")
     p.add_argument("--only", nargs="*")
+    p.add_argument("--forms", nargs="*", default=FORMS, choices=FORMS)
+    p.add_argument("--runs", default="runs.jsonl", help="file in the work dir the runs are appended to")
     p = sub.add_parser("baseline")
     p.add_argument("work", type=Path)
     p.add_argument("--model", default="opus")
     p.add_argument("--kapu-mcp", type=Path, default=ROOT / "target" / "release" / "kapu-mcp.exe")
     p.add_argument("--model-dir", type=Path, default=ROOT / "models" / "potion-multilingual-128M-i8")
+    p.add_argument("--forms", nargs="*", default=FORMS, choices=FORMS)
+    p.add_argument("--out", default="baseline.json", help="file in the work dir")
     p = sub.add_parser("report")
     p.add_argument("work", type=Path)
     p.add_argument("out", type=Path)
+    p.add_argument("--runs", nargs="*", default=["runs.jsonl"], help="run files, later ones replace earlier runs")
+    p.add_argument("--baselines", nargs="*", default=["baseline.json"])
     a = ap.parse_args()
     if a.cmd == "prepare":
         prepare(a.pool, a.work.resolve(), a.small, a.kapu)
     elif a.cmd == "run":
-        run(a.work.resolve(), a.model, a.jobs, a.kapu_mcp, a.model_dir, a.only)
+        run(a.work.resolve(), a.model, a.jobs, a.kapu_mcp, a.model_dir, a.only, a.forms, a.runs)
     elif a.cmd == "baseline":
-        baseline(a.work.resolve(), a.model, a.kapu_mcp, a.model_dir)
+        baseline(a.work.resolve(), a.model, a.kapu_mcp, a.model_dir, a.forms, a.out)
     else:
-        report(a.work.resolve(), a.out)
+        report(a.work.resolve(), a.out, a.runs, a.baselines)
 
 
 if __name__ == "__main__":

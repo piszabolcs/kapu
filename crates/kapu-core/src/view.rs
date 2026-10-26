@@ -324,28 +324,122 @@ pub fn totals(file: &[u8]) -> Result<Totals> {
     })
 }
 
-/// The `R` lines of every room of `kind`, in map order (`kapu_map kind=`,
-/// D144); empty when no room has that kind.
+/// A catalog description is cut to this many characters (D154).
+pub const CATALOG_DESC_CHARS: usize = 120;
+
+/// One line of a kind's catalog (`kapu_map kind=`, D144, D154): a room, its
+/// own price, the start of its description, and the rooms folded into it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KindEntry {
+    /// Room id.
+    pub id: String,
+    /// The room's own price in tokens (FR-08).
+    pub tokens: u64,
+    /// The `>` description, at most [`CATALOG_DESC_CHARS`] characters.
+    pub description: String,
+    /// Rooms of the same kind folded into this one (a skill's references), in
+    /// map order.
+    pub folded: Vec<String>,
+}
+
+impl KindEntry {
+    /// `mcp-builder | 6901t | Guide for creating … | +5 rooms`.
+    #[must_use]
+    pub fn line(&self) -> String {
+        use std::fmt::Write as _;
+        let mut line = format!("{} | {}t | {}", self.id, self.tokens, self.description);
+        if !self.folded.is_empty() {
+            let n = self.folded.len();
+            let _ = write!(line, " | +{n} room{}", if n == 1 { "" } else { "s" });
+        }
+        line
+    }
+}
+
+/// The catalog of `kind`, in map order (D154): every room of that kind with
+/// its description, so that an agent can choose from one reply. A room is
+/// folded into another room of the kind when its id extends that room's id
+/// with `-` and that room or one of its sub-doors links to it, as a skill's
+/// references from `kapu import --skills` do; it is listed under the outermost
+/// such room. Empty when no room has that kind.
 ///
 /// # Errors
-/// A broken `#MAP`.
-pub fn kind_lines_in(s: &Sections<'_>, kind: &str) -> Result<Vec<String>> {
+/// A broken `#MAP`, `#DESC` or `#GRAPH`.
+pub fn kind_catalog_in(s: &Sections<'_>, kind: &str) -> Result<Vec<KindEntry>> {
+    use std::collections::{BTreeMap, BTreeSet};
     let map = parse_map(s.map)?;
-    let rooms: std::collections::BTreeSet<&str> = map
+    let rooms: Vec<_> = map
         .doors
         .iter()
         .filter(|d| d.is_room && d.kind == kind)
-        .map(|d| d.id)
         .collect();
-    Ok(s.map
-        .lines()
-        .filter(|l| {
-            l.strip_prefix("R ")
-                .and_then(|r| r.split(" | ").next())
-                .is_some_and(|id| rooms.contains(id))
-        })
-        .map(str::to_owned)
-        .collect())
+    let ids: BTreeSet<&str> = rooms.iter().map(|d| d.id).collect();
+    let descriptions: BTreeMap<&str, &str> = parse_desc(s.desc)?
+        .into_iter()
+        .map(|d| (d.id, d.description))
+        .collect();
+    let mut links: BTreeSet<(&str, &str)> = BTreeSet::new();
+    for edge in crate::catalog::parse_graph(s.graph)? {
+        if edge.kind == "link" && ids.contains(edge.to) {
+            let from = edge
+                .from
+                .split_once('/')
+                .map_or(edge.from, |(room, _)| room);
+            links.insert((from, edge.to));
+        }
+    }
+    let parent = |id: &str| -> Option<&str> {
+        ids.iter()
+            .copied()
+            .filter(|p| {
+                id.strip_prefix(*p)
+                    .is_some_and(|rest| rest.len() > 1 && rest.starts_with('-'))
+                    && links.contains(&(*p, id))
+            })
+            .max_by_key(|p| p.len())
+    };
+    let outermost = |id: &str| -> String {
+        // ids only get shorter along the chain, so it ends
+        let mut top = id;
+        while let Some(p) = parent(top) {
+            top = p;
+        }
+        top.to_owned()
+    };
+    let mut entries: Vec<KindEntry> = Vec::new();
+    let mut at: BTreeMap<String, usize> = BTreeMap::new();
+    for room in rooms.iter().filter(|d| parent(d.id).is_none()) {
+        at.insert(room.id.to_owned(), entries.len());
+        entries.push(KindEntry {
+            id: room.id.to_owned(),
+            tokens: room.tokens,
+            description: catalog_description(descriptions.get(room.id).copied().unwrap_or("")),
+            folded: Vec::new(),
+        });
+    }
+    for room in rooms.iter().filter(|d| parent(d.id).is_some()) {
+        if let Some(entry) = at
+            .get(&outermost(room.id))
+            .and_then(|&i| entries.get_mut(i))
+        {
+            entry.folded.push(room.id.to_owned());
+        }
+    }
+    Ok(entries)
+}
+
+/// A description on one line, cut at a word to [`CATALOG_DESC_CHARS`].
+fn catalog_description(stored: &str) -> String {
+    let text = unescape_field(stored)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    if text.chars().count() <= CATALOG_DESC_CHARS {
+        return text;
+    }
+    let cut: String = text.chars().take(CATALOG_DESC_CHARS - 1).collect();
+    let cut = cut.rsplit_once(' ').map_or(cut.as_str(), |(head, _)| head);
+    format!("{}…", cut.trim_end_matches([',', ';', ':', '.']))
 }
 
 /// One room's map lines as stored: its `R` line, then its `S` lines
@@ -411,6 +505,34 @@ mod tests {
                 .code,
             ErrorCode::E009
         );
+    }
+
+    #[test]
+    fn kind_catalog_lists_rooms_with_descriptions() {
+        // D154: one line per room of the kind, its description cut at a word
+        let data = std::fs::read(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../tests/vectors/minta.kapu"
+        ))
+        .unwrap();
+        let s = Sections::parse(&data).unwrap();
+        let notes = kind_catalog_in(&s, "note").unwrap();
+        assert_eq!(notes.len(), 1);
+        assert_eq!(notes[0].id, "electron-leckek");
+        assert_eq!(notes[0].folded, Vec::<String>::new());
+        assert!(
+            notes[0].line().starts_with("electron-leckek | "),
+            "{}",
+            notes[0].line()
+        );
+        assert_eq!(kind_catalog_in(&s, "recipe").unwrap(), Vec::new());
+        let long = "word ".repeat(40);
+        let cut = catalog_description(&long);
+        assert!(
+            cut.ends_with("word…") && cut.chars().count() <= CATALOG_DESC_CHARS,
+            "{cut}"
+        );
+        assert_eq!(catalog_description("a\\|b  c"), "a|b c");
     }
 
     #[test]

@@ -1,0 +1,3276 @@
+{
+ "date": "2026-10-26",
+ "model": [
+  "opus"
+ ],
+ "claude_code": [
+  "2.1.310"
+ ],
+ "tasks": [
+  {
+   "id": "t01-landing",
+   "task": "Build a responsive landing page with a pricing section and a dark mode for my React web app, and finish it with my usual author footer.",
+   "gold": [
+    [
+     "frontend-design"
+    ],
+    [
+     "frontend-design-2026"
+    ],
+    [
+     "frontend-expert"
+    ],
+    [
+     "signature",
+     "app-signature"
+    ]
+   ],
+   "ok": [
+    "brainstorming",
+    "smarter",
+    "best-option-advisor",
+    "verification-before-completion",
+    "test-driven-development",
+    "code-reviewer",
+    "requesting-code-review",
+    "playground"
+   ]
+  },
+  {
+   "id": "t02-figma-to-code",
+   "task": "Implement this Figma screen as a Vue component that matches our design, including its hover and entrance animations.",
+   "gold": [
+    [
+     "figma-design-to-code"
+    ],
+    [
+     "figma-implement-motion"
+    ],
+    [
+     "frontend-expert"
+    ]
+   ],
+   "ok": [
+    "frontend-design",
+    "frontend-design-2026",
+    "figma-code-connect",
+    "figma-use",
+    "figma-use-motion",
+    "smarter",
+    "verification-before-completion"
+   ]
+  },
+  {
+   "id": "t03-mcp-server",
+   "task": "Build an MCP server in TypeScript that wraps our REST API, and package it so my colleagues can install it in Claude Desktop with one click.",
+   "gold": [
+    [
+     "mcp-builder"
+    ],
+    [
+     "build-mcp-server"
+    ],
+    [
+     "build-mcpb"
+    ]
+   ],
+   "ok": [
+    "backend-expert",
+    "mcp-integration",
+    "build-mcp-app",
+    "test-driven-development",
+    "best-option-advisor",
+    "smarter",
+    "verification-before-completion"
+   ]
+  },
+  {
+   "id": "t04-cc-plugin",
+   "task": "Create a Claude Code plugin with a /deploy slash command, a PreToolUse hook that blocks force pushes, and a settings file the user can configure.",
+   "gold": [
+    [
+     "plugin-structure"
+    ],
+    [
+     "command-development"
+    ],
+    [
+     "hook-development"
+    ],
+    [
+     "plugin-settings"
+    ]
+   ],
+   "ok": [
+    "skill-development",
+    "writing-hookify-rules",
+    "mcp-integration",
+    "agent-development",
+    "smarter",
+    "test-driven-development"
+   ]
+  },
+  {
+   "id": "t05-flaky-500",
+   "task": "Our checkout API sometimes returns 500 under load and one of its tests is flaky. Find the cause, fix it, and prove that it is fixed.",
+   "gold": [
+    [
+     "systematic-debugging"
+    ],
+    [
+     "test-driven-development"
+    ],
+    [
+     "verification-before-completion"
+    ],
+    [
+     "backend-expert"
+    ]
+   ],
+   "ok": [
+    "code-reviewer",
+    "requesting-code-review",
+    "smarter",
+    "best-option-advisor",
+    "dispatching-parallel-agents"
+   ]
+  },
+  {
+   "id": "t06-publish",
+   "task": "My desktop app is finished. After a final code review, publish it to GitHub as a private portfolio repository with a proper README, screenshots and my namecard in the app.",
+   "gold": [
+    [
+     "github-portfolio-publisher"
+    ],
+    [
+     "github-guardian"
+    ],
+    [
+     "signature",
+     "app-signature"
+    ],
+    [
+     "code-reviewer",
+     "requesting-code-review"
+    ]
+   ],
+   "ok": [
+    "finishing-a-development-branch",
+    "verification-before-completion",
+    "claude-security"
+   ]
+  },
+  {
+   "id": "t07-office",
+   "task": "Turn last quarter's sales CSV into an Excel workbook with charts, then a 10-slide PowerPoint summary of it and a PDF version for the board.",
+   "gold": [
+    [
+     "xlsx"
+    ],
+    [
+     "pptx"
+    ],
+    [
+     "pdf"
+    ]
+   ],
+   "ok": [
+    "docx",
+    "docs",
+    "google-workspace"
+   ]
+  },
+  {
+   "id": "t08-billing-plan",
+   "task": "We need a new multi-tenant billing module. Brainstorm the design with me, write an implementation plan, then implement it with subagents in an isolated git worktree.",
+   "gold": [
+    [
+     "brainstorming"
+    ],
+    [
+     "writing-plans"
+    ],
+    [
+     "subagent-driven-development"
+    ],
+    [
+     "using-git-worktrees"
+    ]
+   ],
+   "ok": [
+    "executing-plans",
+    "best-option-advisor",
+    "backend-expert",
+    "dispatching-parallel-agents",
+    "smarter",
+    "test-driven-development",
+    "finishing-a-development-branch",
+    "requesting-code-review",
+    "verification-before-completion"
+   ]
+  },
+  {
+   "id": "t09-new-skill",
+   "task": "Write a new skill that teaches Claude our team's code review checklist, test whether it triggers on the right prompts, and tune its description.",
+   "gold": [
+    [
+     "skill-creator"
+    ],
+    [
+     "writing-skills"
+    ],
+    [
+     "skill-development"
+    ]
+   ],
+   "ok": [
+    "code-reviewer",
+    "example-skill",
+    "example-command"
+   ]
+  },
+  {
+   "id": "t10-design-system",
+   "task": "Take our React component library and build a matching design system in Figma, with variables for the tokens and Code Connect mappings back to the code.",
+   "gold": [
+    [
+     "figma-generate-library"
+    ],
+    [
+     "figma-use"
+    ],
+    [
+     "figma-code-connect"
+    ]
+   ],
+   "ok": [
+    "figma-generate-design",
+    "figma-create-new-file",
+    "frontend-design-2026",
+    "frontend-expert"
+   ]
+  },
+  {
+   "id": "t11-cardputer",
+   "task": "I just plugged in a new M5Stack Cardputer over USB. Set it up, then help me iterate on the Snake game app on it.",
+   "gold": [
+    [
+     "m5-onboard"
+    ],
+    [
+     "cardputer-buddy"
+    ]
+   ],
+   "ok": [
+    "systematic-debugging",
+    "tanulo-mod"
+   ]
+  },
+  {
+   "id": "t12-learning-api",
+   "task": "For my learning project, build a REST API with authentication and a database, and explain each step and decision as you go so that I understand it.",
+   "gold": [
+    [
+     "tanulo-mod"
+    ],
+    [
+     "backend-expert"
+    ]
+   ],
+   "ok": [
+    "best-option-advisor",
+    "smarter",
+    "test-driven-development",
+    "brainstorming",
+    "writing-plans",
+    "code-reviewer"
+   ]
+  }
+ ],
+ "summary": {
+  "s/native": {
+   "set_size": 45,
+   "runs": 12,
+   "gold_loaded": 38,
+   "gold_named": 38,
+   "gold": 39,
+   "recall_loaded": 0.974,
+   "recall_named": 0.974,
+   "tasks_all_gold_loaded": 11,
+   "wrong_loaded": 0,
+   "outside_pool_loaded": 2,
+   "input_tokens_median": 42573.5,
+   "output_tokens_median": 480.5,
+   "cost_usd_median": 0.2236,
+   "tool_calls_median": 4.0,
+   "seconds_median": 9.1,
+   "native_skills_listed": 63,
+   "session_fixed_tokens": 12652
+  },
+  "s/kapu": {
+   "set_size": 45,
+   "runs": 12,
+   "gold_loaded": 38,
+   "gold_named": 38,
+   "gold": 39,
+   "recall_loaded": 0.974,
+   "recall_named": 0.974,
+   "tasks_all_gold_loaded": 11,
+   "wrong_loaded": 3,
+   "outside_pool_loaded": 0,
+   "input_tokens_median": 58266.0,
+   "output_tokens_median": 1353.5,
+   "cost_usd_median": 0.1314,
+   "tool_calls_median": 5.5,
+   "seconds_median": 24.799999999999997,
+   "native_skills_listed": null,
+   "session_fixed_tokens": 4775
+  },
+  "s/md": {
+   "set_size": 45,
+   "runs": 12,
+   "gold_loaded": 39,
+   "gold_named": 39,
+   "gold": 39,
+   "recall_loaded": 1.0,
+   "recall_named": 1.0,
+   "tasks_all_gold_loaded": 12,
+   "wrong_loaded": 14,
+   "outside_pool_loaded": 0,
+   "input_tokens_median": 93176.0,
+   "output_tokens_median": 1700.5,
+   "cost_usd_median": 0.2829,
+   "tool_calls_median": 10.5,
+   "seconds_median": 24.5,
+   "native_skills_listed": null,
+   "session_fixed_tokens": 5430
+  },
+  "l/native": {
+   "set_size": 91,
+   "runs": 12,
+   "gold_loaded": 39,
+   "gold_named": 39,
+   "gold": 39,
+   "recall_loaded": 1.0,
+   "recall_named": 1.0,
+   "tasks_all_gold_loaded": 12,
+   "wrong_loaded": 0,
+   "outside_pool_loaded": 2,
+   "input_tokens_median": 44953.0,
+   "output_tokens_median": 591.0,
+   "cost_usd_median": 0.2363,
+   "tool_calls_median": 4.0,
+   "seconds_median": 11.649999999999999,
+   "native_skills_listed": 109,
+   "session_fixed_tokens": 14081
+  },
+  "l/kapu": {
+   "set_size": 91,
+   "runs": 12,
+   "gold_loaded": 38,
+   "gold_named": 38,
+   "gold": 39,
+   "recall_loaded": 0.974,
+   "recall_named": 0.974,
+   "tasks_all_gold_loaded": 11,
+   "wrong_loaded": 3,
+   "outside_pool_loaded": 0,
+   "input_tokens_median": 48972.5,
+   "output_tokens_median": 1208.5,
+   "cost_usd_median": 0.099,
+   "tool_calls_median": 5.0,
+   "seconds_median": 21.95,
+   "native_skills_listed": null,
+   "session_fixed_tokens": 4775
+  },
+  "l/md": {
+   "set_size": 91,
+   "runs": 12,
+   "gold_loaded": 39,
+   "gold_named": 39,
+   "gold": 39,
+   "recall_loaded": 1.0,
+   "recall_named": 1.0,
+   "tasks_all_gold_loaded": 12,
+   "wrong_loaded": 12,
+   "outside_pool_loaded": 0,
+   "input_tokens_median": 107726.5,
+   "output_tokens_median": 1751.0,
+   "cost_usd_median": 0.3359,
+   "tool_calls_median": 10.5,
+   "seconds_median": 32.55,
+   "native_skills_listed": null,
+   "session_fixed_tokens": 5430
+  }
+ },
+ "runs": [
+  {
+   "task": "t01-landing",
+   "form": "kapu",
+   "set": "l",
+   "set_size": 91,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "app-signature",
+    "frontend-design",
+    "frontend-design-2026",
+    "frontend-expert",
+    "signature"
+   ],
+   "named": [
+    "app-signature",
+    "frontend-design",
+    "frontend-design-2026",
+    "frontend-expert",
+    "signature"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 5,
+   "tools": [
+    "kapu_map",
+    "kapu_open",
+    "kapu_describe",
+    "kapu_open",
+    "kapu_open"
+   ],
+   "turns": 6,
+   "seconds": 21.0,
+   "input_tokens": 77707,
+   "output_tokens": 1432,
+   "cost_usd": 0.178231
+  },
+  {
+   "task": "t01-landing",
+   "form": "md",
+   "set": "l",
+   "set_size": 91,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "app-signature",
+    "frontend-design",
+    "frontend-design-2026",
+    "frontend-expert",
+    "signature"
+   ],
+   "named": [
+    "app-signature",
+    "frontend-design",
+    "frontend-design-2026",
+    "frontend-expert",
+    "signature"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 11,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Grep",
+    "Grep",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Grep"
+   ],
+   "turns": 12,
+   "seconds": 26.9,
+   "input_tokens": 107244,
+   "output_tokens": 1784,
+   "cost_usd": 0.23395320000000003
+  },
+  {
+   "task": "t01-landing",
+   "form": "native",
+   "set": "l",
+   "set_size": 91,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "app-signature",
+    "brainstorming",
+    "frontend-design",
+    "frontend-design-2026",
+    "frontend-expert",
+    "signature"
+   ],
+   "named": [
+    "app-signature",
+    "brainstorming",
+    "frontend-design",
+    "frontend-design-2026",
+    "frontend-expert",
+    "signature"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 6,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 13,
+   "seconds": 16.2,
+   "input_tokens": 44864,
+   "output_tokens": 710,
+   "cost_usd": 0.2373134
+  },
+  {
+   "task": "t02-figma-to-code",
+   "form": "kapu",
+   "set": "l",
+   "set_size": 91,
+   "gold": 3,
+   "gold_loaded": 2,
+   "gold_named": 2,
+   "loaded": [
+    "figma-design-to-code",
+    "figma-implement-motion"
+   ],
+   "named": [
+    "figma-design-to-code",
+    "figma-implement-motion"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 5,
+   "tools": [
+    "kapu_map",
+    "kapu_search",
+    "kapu_search",
+    "kapu_open",
+    "kapu_search"
+   ],
+   "turns": 6,
+   "seconds": 25.2,
+   "input_tokens": 43305,
+   "output_tokens": 1025,
+   "cost_usd": 0.09737879999999999
+  },
+  {
+   "task": "t02-figma-to-code",
+   "form": "md",
+   "set": "l",
+   "set_size": 91,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "figma-design-to-code",
+    "figma-implement-motion",
+    "frontend-design-2026",
+    "frontend-expert",
+    "video-interaction-mapper"
+   ],
+   "named": [
+    "figma-design-to-code",
+    "figma-implement-motion",
+    "frontend-expert"
+   ],
+   "wrong_loaded": [
+    "video-interaction-mapper"
+   ],
+   "outside_pool": [],
+   "tool_calls": 12,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Grep",
+    "Grep",
+    "Grep",
+    "Grep",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read"
+   ],
+   "turns": 13,
+   "seconds": 36.4,
+   "input_tokens": 107452,
+   "output_tokens": 2211,
+   "cost_usd": 0.243962
+  },
+  {
+   "task": "t02-figma-to-code",
+   "form": "native",
+   "set": "l",
+   "set_size": 91,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "figma-design-to-code",
+    "figma-implement-motion",
+    "frontend-expert"
+   ],
+   "named": [
+    "figma-design-to-code",
+    "figma-implement-motion",
+    "frontend-expert"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 3,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 7,
+   "seconds": 17.4,
+   "input_tokens": 39078,
+   "output_tokens": 645,
+   "cost_usd": 0.18978
+  },
+  {
+   "task": "t03-mcp-server",
+   "form": "kapu",
+   "set": "l",
+   "set_size": 91,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "build-mcp-server",
+    "build-mcpb",
+    "mcp-builder"
+   ],
+   "named": [
+    "build-mcp-server",
+    "build-mcpb",
+    "mcp-builder"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 3,
+   "tools": [
+    "kapu_map",
+    "kapu_map",
+    "kapu_open"
+   ],
+   "turns": 4,
+   "seconds": 14.8,
+   "input_tokens": 30796,
+   "output_tokens": 844,
+   "cost_usd": 0.07873820000000001
+  },
+  {
+   "task": "t03-mcp-server",
+   "form": "md",
+   "set": "l",
+   "set_size": 91,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "backend-expert",
+    "build-mcp-app",
+    "build-mcp-server",
+    "build-mcpb",
+    "mcp-builder",
+    "mcp-integration"
+   ],
+   "named": [
+    "backend-expert",
+    "build-mcp-server",
+    "build-mcpb",
+    "mcp-builder"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 9,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read"
+   ],
+   "turns": 10,
+   "seconds": 24.4,
+   "input_tokens": 71457,
+   "output_tokens": 1594,
+   "cost_usd": 0.3407296
+  },
+  {
+   "task": "t03-mcp-server",
+   "form": "native",
+   "set": "l",
+   "set_size": 91,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "build-mcp-server",
+    "build-mcpb",
+    "mcp-builder"
+   ],
+   "named": [
+    "build-mcp-server",
+    "build-mcpb",
+    "mcp-builder"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 3,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 7,
+   "seconds": 10.1,
+   "input_tokens": 40109,
+   "output_tokens": 653,
+   "cost_usd": 0.211175
+  },
+  {
+   "task": "t04-cc-plugin",
+   "form": "kapu",
+   "set": "l",
+   "set_size": 91,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "command-development",
+    "hook-development",
+    "plugin-settings",
+    "plugin-structure"
+   ],
+   "named": [
+    "command-development",
+    "hook-development",
+    "plugin-settings",
+    "plugin-structure"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 5,
+   "tools": [
+    "kapu_map",
+    "kapu_map",
+    "kapu_search",
+    "kapu_open",
+    "kapu_describe"
+   ],
+   "turns": 6,
+   "seconds": 18.7,
+   "input_tokens": 51835,
+   "output_tokens": 1050,
+   "cost_usd": 0.0966128
+  },
+  {
+   "task": "t04-cc-plugin",
+   "form": "md",
+   "set": "l",
+   "set_size": 91,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "command-development",
+    "configure",
+    "example-command",
+    "hook-development",
+    "plugin-settings",
+    "plugin-structure",
+    "writing-hookify-rules"
+   ],
+   "named": [
+    "command-development",
+    "hook-development",
+    "plugin-settings",
+    "plugin-structure"
+   ],
+   "wrong_loaded": [
+    "configure",
+    "example-command"
+   ],
+   "outside_pool": [],
+   "tool_calls": 10,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read"
+   ],
+   "turns": 11,
+   "seconds": 21.4,
+   "input_tokens": 79354,
+   "output_tokens": 1653,
+   "cost_usd": 0.39249639999999997
+  },
+  {
+   "task": "t04-cc-plugin",
+   "form": "native",
+   "set": "l",
+   "set_size": 91,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "command-development",
+    "hook-development",
+    "plugin-settings",
+    "plugin-structure"
+   ],
+   "named": [
+    "command-development",
+    "hook-development",
+    "plugin-settings",
+    "plugin-structure"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 4,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 8,
+   "seconds": 13.6,
+   "input_tokens": 45917,
+   "output_tokens": 859,
+   "cost_usd": 0.2486316
+  },
+  {
+   "task": "t05-flaky-500",
+   "form": "kapu",
+   "set": "l",
+   "set_size": 91,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "backend-expert",
+    "code-reviewer",
+    "smarter",
+    "systematic-debugging",
+    "test-driven-development",
+    "verification-before-completion"
+   ],
+   "named": [
+    "backend-expert",
+    "smarter",
+    "systematic-debugging",
+    "test-driven-development",
+    "verification-before-completion"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 6,
+   "tools": [
+    "kapu_map",
+    "kapu_search",
+    "kapu_search",
+    "kapu_open",
+    "kapu_map",
+    "kapu_open"
+   ],
+   "turns": 7,
+   "seconds": 35.5,
+   "input_tokens": 77716,
+   "output_tokens": 1646,
+   "cost_usd": 0.186132
+  },
+  {
+   "task": "t05-flaky-500",
+   "form": "md",
+   "set": "l",
+   "set_size": 91,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "backend-expert",
+    "receipts",
+    "smarter",
+    "systematic-debugging",
+    "test-driven-development",
+    "verification-before-completion"
+   ],
+   "named": [
+    "backend-expert",
+    "smarter",
+    "systematic-debugging",
+    "test-driven-development",
+    "verification-before-completion"
+   ],
+   "wrong_loaded": [
+    "receipts"
+   ],
+   "outside_pool": [],
+   "tool_calls": 12,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Grep",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Grep",
+    "Read"
+   ],
+   "turns": 13,
+   "seconds": 33.1,
+   "input_tokens": 138860,
+   "output_tokens": 1885,
+   "cost_usd": 0.33107600000000004
+  },
+  {
+   "task": "t05-flaky-500",
+   "form": "native",
+   "set": "l",
+   "set_size": 91,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "backend-expert",
+    "systematic-debugging",
+    "test-driven-development",
+    "verification-before-completion"
+   ],
+   "named": [
+    "backend-expert",
+    "systematic-debugging",
+    "test-driven-development",
+    "verification-before-completion"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 4,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 9,
+   "seconds": 9.9,
+   "input_tokens": 39000,
+   "output_tokens": 498,
+   "cost_usd": 0.1860912
+  },
+  {
+   "task": "t06-publish",
+   "form": "kapu",
+   "set": "l",
+   "set_size": 91,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "app-signature",
+    "code-reviewer",
+    "github-guardian",
+    "github-portfolio-publisher",
+    "requesting-code-review",
+    "signature"
+   ],
+   "named": [
+    "app-signature",
+    "code-reviewer",
+    "github-guardian",
+    "github-portfolio-publisher",
+    "signature"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 5,
+   "tools": [
+    "kapu_map",
+    "kapu_search",
+    "kapu_describe",
+    "kapu_open",
+    "kapu_search"
+   ],
+   "turns": 6,
+   "seconds": 30.8,
+   "input_tokens": 74664,
+   "output_tokens": 1627,
+   "cost_usd": 0.2131516
+  },
+  {
+   "task": "t06-publish",
+   "form": "md",
+   "set": "l",
+   "set_size": 91,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "app-signature",
+    "code-reviewer",
+    "computer-use",
+    "docs",
+    "github-guardian",
+    "github-portfolio-publisher",
+    "humanizer",
+    "requesting-code-review",
+    "signature"
+   ],
+   "named": [
+    "app-signature",
+    "code-reviewer",
+    "github-guardian",
+    "github-portfolio-publisher",
+    "requesting-code-review",
+    "signature",
+    "verification-before-completion"
+   ],
+   "wrong_loaded": [
+    "computer-use",
+    "docs",
+    "humanizer"
+   ],
+   "outside_pool": [],
+   "tool_calls": 17,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Glob",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Grep",
+    "Grep",
+    "Grep",
+    "Read",
+    "Read",
+    "Read",
+    "Read"
+   ],
+   "turns": 18,
+   "seconds": 49.6,
+   "input_tokens": 218327,
+   "output_tokens": 3034,
+   "cost_usd": 0.3820194
+  },
+  {
+   "task": "t06-publish",
+   "form": "native",
+   "set": "l",
+   "set_size": 91,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "app-signature",
+    "code-reviewer",
+    "github-guardian",
+    "github-portfolio-publisher",
+    "signature"
+   ],
+   "named": [
+    "app-signature",
+    "code-reviewer",
+    "github-guardian",
+    "github-portfolio-publisher",
+    "signature"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [
+    "run"
+   ],
+   "tool_calls": 6,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 13,
+   "seconds": 13.2,
+   "input_tokens": 40635,
+   "output_tokens": 921,
+   "cost_usd": 0.2076078
+  },
+  {
+   "task": "t07-office",
+   "form": "kapu",
+   "set": "l",
+   "set_size": 91,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "pdf",
+    "pptx",
+    "xlsx"
+   ],
+   "named": [
+    "pdf",
+    "pptx",
+    "xlsx"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 7,
+   "tools": [
+    "kapu_map",
+    "kapu_search",
+    "kapu_search",
+    "kapu_search",
+    "kapu_search",
+    "kapu_map",
+    "kapu_open"
+   ],
+   "turns": 8,
+   "seconds": 22.9,
+   "input_tokens": 52682,
+   "output_tokens": 1306,
+   "cost_usd": 0.144428
+  },
+  {
+   "task": "t07-office",
+   "form": "md",
+   "set": "l",
+   "set_size": 91,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "docs",
+    "pdf",
+    "pptx",
+    "xlsx"
+   ],
+   "named": [
+    "pdf",
+    "pptx",
+    "xlsx"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 9,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Read",
+    "Read",
+    "Read",
+    "Grep",
+    "Grep",
+    "Read"
+   ],
+   "turns": 10,
+   "seconds": 36.4,
+   "input_tokens": 153144,
+   "output_tokens": 1390,
+   "cost_usd": 0.2672176
+  },
+  {
+   "task": "t07-office",
+   "form": "native",
+   "set": "l",
+   "set_size": 91,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "pdf",
+    "pptx",
+    "xlsx"
+   ],
+   "named": [
+    "pdf",
+    "pptx",
+    "xlsx"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [
+    "dataviz"
+   ],
+   "tool_calls": 4,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 9,
+   "seconds": 16.2,
+   "input_tokens": 48144,
+   "output_tokens": 377,
+   "cost_usd": 0.256792
+  },
+  {
+   "task": "t08-billing-plan",
+   "form": "kapu",
+   "set": "l",
+   "set_size": 91,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "brainstorming",
+    "subagent-driven-development",
+    "using-git-worktrees",
+    "writing-plans"
+   ],
+   "named": [
+    "brainstorming",
+    "subagent-driven-development",
+    "using-git-worktrees",
+    "writing-plans"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 5,
+   "tools": [
+    "kapu_map",
+    "kapu_search",
+    "kapu_search",
+    "kapu_open",
+    "kapu_open"
+   ],
+   "turns": 6,
+   "seconds": 22.0,
+   "input_tokens": 46110,
+   "output_tokens": 1200,
+   "cost_usd": 0.0868536
+  },
+  {
+   "task": "t08-billing-plan",
+   "form": "md",
+   "set": "l",
+   "set_size": 91,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "backend-expert",
+    "brainstorming",
+    "finishing-a-development-branch",
+    "requesting-code-review",
+    "subagent-driven-development",
+    "test-driven-development",
+    "using-git-worktrees",
+    "using-superpowers",
+    "verification-before-completion",
+    "writing-plans"
+   ],
+   "named": [
+    "backend-expert",
+    "brainstorming",
+    "finishing-a-development-branch",
+    "requesting-code-review",
+    "subagent-driven-development",
+    "test-driven-development",
+    "using-git-worktrees",
+    "using-superpowers",
+    "verification-before-completion",
+    "writing-plans"
+   ],
+   "wrong_loaded": [
+    "using-superpowers"
+   ],
+   "outside_pool": [],
+   "tool_calls": 13,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read"
+   ],
+   "turns": 14,
+   "seconds": 43.6,
+   "input_tokens": 108001,
+   "output_tokens": 1815,
+   "cost_usd": 0.33082100000000003
+  },
+  {
+   "task": "t08-billing-plan",
+   "form": "native",
+   "set": "l",
+   "set_size": 91,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "backend-expert",
+    "best-option-advisor",
+    "brainstorming",
+    "subagent-driven-development",
+    "test-driven-development",
+    "using-git-worktrees",
+    "writing-plans"
+   ],
+   "named": [
+    "backend-expert",
+    "best-option-advisor",
+    "brainstorming",
+    "subagent-driven-development",
+    "test-driven-development",
+    "using-git-worktrees",
+    "writing-plans"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 7,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 15,
+   "seconds": 9.2,
+   "input_tokens": 56792,
+   "output_tokens": 660,
+   "cost_usd": 0.3316438
+  },
+  {
+   "task": "t09-new-skill",
+   "form": "kapu",
+   "set": "l",
+   "set_size": 91,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "skill-creator",
+    "skill-development",
+    "writing-skills"
+   ],
+   "named": [
+    "skill-creator",
+    "skill-development",
+    "writing-skills"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 5,
+   "tools": [
+    "kapu_map",
+    "kapu_search",
+    "kapu_describe",
+    "kapu_map",
+    "kapu_open"
+   ],
+   "turns": 6,
+   "seconds": 21.3,
+   "input_tokens": 45133,
+   "output_tokens": 1217,
+   "cost_usd": 0.08607000000000001
+  },
+  {
+   "task": "t09-new-skill",
+   "form": "md",
+   "set": "l",
+   "set_size": 91,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "code-reviewer",
+    "skill-creator",
+    "skill-development",
+    "writing-skills"
+   ],
+   "named": [
+    "code-reviewer",
+    "skill-creator",
+    "skill-development",
+    "writing-skills"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 9,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Grep",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read"
+   ],
+   "turns": 10,
+   "seconds": 20.4,
+   "input_tokens": 105428,
+   "output_tokens": 1431,
+   "cost_usd": 0.4462408
+  },
+  {
+   "task": "t09-new-skill",
+   "form": "native",
+   "set": "l",
+   "set_size": 91,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "skill-creator",
+    "skill-development",
+    "writing-skills"
+   ],
+   "named": [
+    "skill-creator",
+    "skill-development",
+    "writing-skills"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 3,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 7,
+   "seconds": 8.7,
+   "input_tokens": 58467,
+   "output_tokens": 495,
+   "cost_usd": 0.341814
+  },
+  {
+   "task": "t10-design-system",
+   "form": "kapu",
+   "set": "l",
+   "set_size": 91,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "figma-code-connect",
+    "figma-generate-library",
+    "figma-use"
+   ],
+   "named": [
+    "figma-code-connect",
+    "figma-generate-library",
+    "figma-use"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 4,
+   "tools": [
+    "kapu_search",
+    "kapu_map",
+    "kapu_search",
+    "kapu_open"
+   ],
+   "turns": 5,
+   "seconds": 18.1,
+   "input_tokens": 43203,
+   "output_tokens": 940,
+   "cost_usd": 0.1005568
+  },
+  {
+   "task": "t10-design-system",
+   "form": "md",
+   "set": "l",
+   "set_size": 91,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "figma-code-connect",
+    "figma-code-workflows",
+    "figma-create-new-file",
+    "figma-generate-library",
+    "figma-use"
+   ],
+   "named": [
+    "figma-code-connect",
+    "figma-create-new-file",
+    "figma-generate-library",
+    "figma-use"
+   ],
+   "wrong_loaded": [
+    "figma-code-workflows"
+   ],
+   "outside_pool": [],
+   "tool_calls": 10,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Grep",
+    "Grep"
+   ],
+   "turns": 11,
+   "seconds": 32.0,
+   "input_tokens": 170633,
+   "output_tokens": 1718,
+   "cost_usd": 0.4036746
+  },
+  {
+   "task": "t10-design-system",
+   "form": "native",
+   "set": "l",
+   "set_size": 91,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "figma-code-connect",
+    "figma-generate-library",
+    "figma-use"
+   ],
+   "named": [
+    "figma-code-connect",
+    "figma-generate-library",
+    "figma-use"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 3,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 7,
+   "seconds": 16.4,
+   "input_tokens": 58359,
+   "output_tokens": 391,
+   "cost_usd": 0.3388856
+  },
+  {
+   "task": "t11-cardputer",
+   "form": "kapu",
+   "set": "l",
+   "set_size": 91,
+   "gold": 2,
+   "gold_loaded": 2,
+   "gold_named": 2,
+   "loaded": [
+    "cardputer-buddy",
+    "m5-onboard"
+   ],
+   "named": [
+    "cardputer-buddy",
+    "m5-onboard"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 4,
+   "tools": [
+    "kapu_map",
+    "kapu_search",
+    "kapu_open",
+    "kapu_search"
+   ],
+   "turns": 5,
+   "seconds": 21.9,
+   "input_tokens": 38399,
+   "output_tokens": 849,
+   "cost_usd": 0.07759740000000001
+  },
+  {
+   "task": "t11-cardputer",
+   "form": "md",
+   "set": "l",
+   "set_size": 91,
+   "gold": 2,
+   "gold_loaded": 2,
+   "gold_named": 2,
+   "loaded": [
+    "cardputer-buddy",
+    "m5-onboard"
+   ],
+   "named": [
+    "cardputer-buddy",
+    "m5-onboard"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 6,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Glob",
+    "Read",
+    "Read"
+   ],
+   "turns": 7,
+   "seconds": 15.8,
+   "input_tokens": 60922,
+   "output_tokens": 904,
+   "cost_usd": 0.1604296
+  },
+  {
+   "task": "t11-cardputer",
+   "form": "native",
+   "set": "l",
+   "set_size": 91,
+   "gold": 2,
+   "gold_loaded": 2,
+   "gold_named": 2,
+   "loaded": [
+    "cardputer-buddy",
+    "m5-onboard"
+   ],
+   "named": [
+    "cardputer-buddy",
+    "m5-onboard"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 2,
+   "tools": [
+    "Skill",
+    "Skill"
+   ],
+   "turns": 5,
+   "seconds": 9.5,
+   "input_tokens": 38559,
+   "output_tokens": 398,
+   "cost_usd": 0.1806022
+  },
+  {
+   "task": "t12-learning-api",
+   "form": "kapu",
+   "set": "l",
+   "set_size": 91,
+   "gold": 2,
+   "gold_loaded": 2,
+   "gold_named": 2,
+   "loaded": [
+    "app-signature",
+    "backend-expert",
+    "best-option-advisor",
+    "code-reviewer",
+    "signature",
+    "smarter",
+    "tanulo-mod",
+    "test-driven-development",
+    "verification-before-completion"
+   ],
+   "named": [
+    "backend-expert",
+    "best-option-advisor",
+    "code-reviewer",
+    "smarter",
+    "tanulo-mod",
+    "test-driven-development",
+    "verification-before-completion"
+   ],
+   "wrong_loaded": [
+    "app-signature",
+    "signature",
+    "verification-before-completion"
+   ],
+   "outside_pool": [],
+   "tool_calls": 14,
+   "tools": [
+    "kapu_map",
+    "kapu_search",
+    "kapu_map",
+    "kapu_open",
+    "kapu_open",
+    "kapu_open",
+    "kapu_describe",
+    "kapu_open",
+    "kapu_open",
+    "kapu_open",
+    "kapu_open",
+    "kapu_open",
+    "kapu_open",
+    "kapu_open"
+   ],
+   "turns": 15,
+   "seconds": 47.7,
+   "input_tokens": 149980,
+   "output_tokens": 3530,
+   "cost_usd": 0.3611846
+  },
+  {
+   "task": "t12-learning-api",
+   "form": "md",
+   "set": "l",
+   "set_size": 91,
+   "gold": 2,
+   "gold_loaded": 2,
+   "gold_named": 2,
+   "loaded": [
+    "backend-expert",
+    "best-option-advisor",
+    "brainstorming",
+    "code-reviewer",
+    "generate-project-plan",
+    "smarter",
+    "tanulo-mod",
+    "test-driven-development",
+    "using-superpowers",
+    "verification-before-completion",
+    "writing-plans"
+   ],
+   "named": [
+    "backend-expert",
+    "best-option-advisor",
+    "brainstorming",
+    "code-reviewer",
+    "smarter",
+    "tanulo-mod",
+    "test-driven-development",
+    "verification-before-completion",
+    "writing-plans"
+   ],
+   "wrong_loaded": [
+    "generate-project-plan",
+    "using-superpowers",
+    "verification-before-completion"
+   ],
+   "outside_pool": [],
+   "tool_calls": 18,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Grep",
+    "Grep",
+    "Read",
+    "Grep",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read"
+   ],
+   "turns": 19,
+   "seconds": 40.9,
+   "input_tokens": 179122,
+   "output_tokens": 3161,
+   "cost_usd": 0.35968720000000004
+  },
+  {
+   "task": "t12-learning-api",
+   "form": "native",
+   "set": "l",
+   "set_size": 91,
+   "gold": 2,
+   "gold_loaded": 2,
+   "gold_named": 2,
+   "loaded": [
+    "backend-expert",
+    "best-option-advisor",
+    "brainstorming",
+    "tanulo-mod",
+    "test-driven-development",
+    "writing-plans"
+   ],
+   "named": [
+    "backend-expert",
+    "best-option-advisor",
+    "brainstorming",
+    "tanulo-mod",
+    "test-driven-development",
+    "writing-plans"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 6,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 13,
+   "seconds": 7.8,
+   "input_tokens": 45042,
+   "output_tokens": 537,
+   "cost_usd": 0.235293
+  },
+  {
+   "task": "t01-landing",
+   "form": "kapu",
+   "set": "s",
+   "set_size": 45,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "app-signature",
+    "frontend-design",
+    "frontend-design-2026",
+    "frontend-expert",
+    "signature"
+   ],
+   "named": [
+    "app-signature",
+    "frontend-design",
+    "frontend-design-2026",
+    "frontend-expert",
+    "signature"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 6,
+   "tools": [
+    "kapu_map",
+    "kapu_open",
+    "kapu_describe",
+    "kapu_map",
+    "kapu_open",
+    "kapu_open"
+   ],
+   "turns": 7,
+   "seconds": 22.7,
+   "input_tokens": 67404,
+   "output_tokens": 1567,
+   "cost_usd": 0.16866799999999998
+  },
+  {
+   "task": "t01-landing",
+   "form": "md",
+   "set": "s",
+   "set_size": 45,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "app-signature",
+    "frontend-design",
+    "frontend-design-2026",
+    "frontend-expert",
+    "receipts",
+    "signature"
+   ],
+   "named": [
+    "app-signature",
+    "frontend-design",
+    "frontend-design-2026",
+    "frontend-expert",
+    "signature"
+   ],
+   "wrong_loaded": [
+    "receipts"
+   ],
+   "outside_pool": [],
+   "tool_calls": 11,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Grep",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Grep",
+    "Read"
+   ],
+   "turns": 12,
+   "seconds": 23.8,
+   "input_tokens": 109232,
+   "output_tokens": 1783,
+   "cost_usd": 0.27239500000000005
+  },
+  {
+   "task": "t01-landing",
+   "form": "native",
+   "set": "s",
+   "set_size": 45,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "app-signature",
+    "brainstorming",
+    "frontend-design",
+    "frontend-design-2026",
+    "frontend-expert",
+    "signature"
+   ],
+   "named": [
+    "app-signature",
+    "brainstorming",
+    "frontend-design",
+    "frontend-design-2026",
+    "frontend-expert",
+    "signature"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 6,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 13,
+   "seconds": 9.0,
+   "input_tokens": 42021,
+   "output_tokens": 613,
+   "cost_usd": 0.22377559999999996
+  },
+  {
+   "task": "t02-figma-to-code",
+   "form": "kapu",
+   "set": "s",
+   "set_size": 45,
+   "gold": 3,
+   "gold_loaded": 2,
+   "gold_named": 2,
+   "loaded": [
+    "figma-design-to-code",
+    "figma-implement-motion"
+   ],
+   "named": [
+    "figma-design-to-code",
+    "figma-implement-motion"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 6,
+   "tools": [
+    "kapu_map",
+    "kapu_map",
+    "kapu_map",
+    "kapu_search",
+    "kapu_open",
+    "kapu_search"
+   ],
+   "turns": 7,
+   "seconds": 29.0,
+   "input_tokens": 62016,
+   "output_tokens": 1189,
+   "cost_usd": 0.16715960000000002
+  },
+  {
+   "task": "t02-figma-to-code",
+   "form": "md",
+   "set": "s",
+   "set_size": 45,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "figma-design-to-code",
+    "figma-implement-motion",
+    "figma-use",
+    "frontend-design",
+    "frontend-design-2026",
+    "frontend-expert"
+   ],
+   "named": [
+    "figma-design-to-code",
+    "figma-implement-motion",
+    "frontend-expert"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 10,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Grep",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read"
+   ],
+   "turns": 11,
+   "seconds": 26.7,
+   "input_tokens": 68756,
+   "output_tokens": 1708,
+   "cost_usd": 0.2639858
+  },
+  {
+   "task": "t02-figma-to-code",
+   "form": "native",
+   "set": "s",
+   "set_size": 45,
+   "gold": 3,
+   "gold_loaded": 2,
+   "gold_named": 2,
+   "loaded": [
+    "figma-design-to-code",
+    "figma-implement-motion"
+   ],
+   "named": [
+    "figma-design-to-code",
+    "figma-implement-motion"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 2,
+   "tools": [
+    "Skill",
+    "Skill"
+   ],
+   "turns": 5,
+   "seconds": 7.2,
+   "input_tokens": 35094,
+   "output_tokens": 411,
+   "cost_usd": 0.16437419999999997
+  },
+  {
+   "task": "t03-mcp-server",
+   "form": "kapu",
+   "set": "s",
+   "set_size": 45,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "build-mcp-server",
+    "build-mcpb",
+    "mcp-builder"
+   ],
+   "named": [
+    "build-mcp-server",
+    "build-mcpb",
+    "mcp-builder"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 5,
+   "tools": [
+    "kapu_map",
+    "kapu_map",
+    "kapu_open",
+    "kapu_open",
+    "kapu_open"
+   ],
+   "turns": 6,
+   "seconds": 18.0,
+   "input_tokens": 55498,
+   "output_tokens": 1270,
+   "cost_usd": 0.13998880000000002
+  },
+  {
+   "task": "t03-mcp-server",
+   "form": "md",
+   "set": "s",
+   "set_size": 45,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "backend-expert",
+    "build-mcp-server",
+    "build-mcpb",
+    "mcp-builder",
+    "mcp-integration"
+   ],
+   "named": [
+    "backend-expert",
+    "build-mcp-server",
+    "build-mcpb",
+    "mcp-builder"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 8,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read"
+   ],
+   "turns": 9,
+   "seconds": 17.8,
+   "input_tokens": 61376,
+   "output_tokens": 1339,
+   "cost_usd": 0.26094080000000003
+  },
+  {
+   "task": "t03-mcp-server",
+   "form": "native",
+   "set": "s",
+   "set_size": 45,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "build-mcp-server",
+    "build-mcpb",
+    "mcp-builder"
+   ],
+   "named": [
+    "build-mcp-server",
+    "build-mcpb",
+    "mcp-builder"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 3,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 7,
+   "seconds": 11.1,
+   "input_tokens": 37172,
+   "output_tokens": 520,
+   "cost_usd": 0.1959156
+  },
+  {
+   "task": "t04-cc-plugin",
+   "form": "kapu",
+   "set": "s",
+   "set_size": 45,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "command-development",
+    "hook-development",
+    "plugin-settings",
+    "plugin-structure"
+   ],
+   "named": [
+    "command-development",
+    "hook-development",
+    "plugin-settings",
+    "plugin-structure"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 6,
+   "tools": [
+    "kapu_map",
+    "kapu_map",
+    "kapu_open",
+    "kapu_describe",
+    "kapu_search",
+    "kapu_search"
+   ],
+   "turns": 7,
+   "seconds": 26.9,
+   "input_tokens": 51532,
+   "output_tokens": 1223,
+   "cost_usd": 0.0982962
+  },
+  {
+   "task": "t04-cc-plugin",
+   "form": "md",
+   "set": "s",
+   "set_size": 45,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "command-development",
+    "github-guardian",
+    "hook-development",
+    "plugin-settings",
+    "plugin-structure"
+   ],
+   "named": [
+    "command-development",
+    "hook-development",
+    "plugin-settings",
+    "plugin-structure"
+   ],
+   "wrong_loaded": [
+    "github-guardian"
+   ],
+   "outside_pool": [],
+   "tool_calls": 8,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read"
+   ],
+   "turns": 9,
+   "seconds": 17.1,
+   "input_tokens": 71682,
+   "output_tokens": 1168,
+   "cost_usd": 0.3273796
+  },
+  {
+   "task": "t04-cc-plugin",
+   "form": "native",
+   "set": "s",
+   "set_size": 45,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "command-development",
+    "hook-development",
+    "plugin-settings",
+    "plugin-structure"
+   ],
+   "named": [
+    "command-development",
+    "hook-development",
+    "plugin-settings",
+    "plugin-structure"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 4,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 8,
+   "seconds": 9.5,
+   "input_tokens": 43126,
+   "output_tokens": 671,
+   "cost_usd": 0.2336898
+  },
+  {
+   "task": "t05-flaky-500",
+   "form": "kapu",
+   "set": "s",
+   "set_size": 45,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "backend-expert",
+    "code-reviewer",
+    "systematic-debugging",
+    "test-driven-development",
+    "verification-before-completion"
+   ],
+   "named": [
+    "backend-expert",
+    "systematic-debugging",
+    "test-driven-development",
+    "verification-before-completion"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 5,
+   "tools": [
+    "kapu_map",
+    "kapu_map",
+    "kapu_map",
+    "kapu_open",
+    "kapu_open"
+   ],
+   "turns": 6,
+   "seconds": 18.0,
+   "input_tokens": 47453,
+   "output_tokens": 1342,
+   "cost_usd": 0.1227926
+  },
+  {
+   "task": "t05-flaky-500",
+   "form": "md",
+   "set": "s",
+   "set_size": 45,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "backend-expert",
+    "github-guardian",
+    "receipts",
+    "systematic-debugging",
+    "test-driven-development",
+    "verification-before-completion"
+   ],
+   "named": [
+    "backend-expert",
+    "systematic-debugging",
+    "test-driven-development",
+    "verification-before-completion"
+   ],
+   "wrong_loaded": [
+    "github-guardian",
+    "receipts"
+   ],
+   "outside_pool": [],
+   "tool_calls": 12,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Grep",
+    "Grep",
+    "Glob",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read"
+   ],
+   "turns": 13,
+   "seconds": 25.2,
+   "input_tokens": 89252,
+   "output_tokens": 2019,
+   "cost_usd": 0.24995300000000004
+  },
+  {
+   "task": "t05-flaky-500",
+   "form": "native",
+   "set": "s",
+   "set_size": 45,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "backend-expert",
+    "systematic-debugging",
+    "test-driven-development",
+    "verification-before-completion"
+   ],
+   "named": [
+    "backend-expert",
+    "systematic-debugging",
+    "test-driven-development",
+    "verification-before-completion"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 4,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 9,
+   "seconds": 7.4,
+   "input_tokens": 36119,
+   "output_tokens": 441,
+   "cost_usd": 0.17304940000000002
+  },
+  {
+   "task": "t06-publish",
+   "form": "kapu",
+   "set": "s",
+   "set_size": 45,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "app-signature",
+    "code-reviewer",
+    "github-guardian",
+    "github-portfolio-publisher",
+    "requesting-code-review",
+    "signature",
+    "verification-before-completion"
+   ],
+   "named": [
+    "app-signature",
+    "code-reviewer",
+    "github-guardian",
+    "github-portfolio-publisher",
+    "requesting-code-review",
+    "signature",
+    "verification-before-completion"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 5,
+   "tools": [
+    "kapu_map",
+    "kapu_map",
+    "kapu_open",
+    "kapu_describe",
+    "kapu_open"
+   ],
+   "turns": 6,
+   "seconds": 21.6,
+   "input_tokens": 61034,
+   "output_tokens": 1582,
+   "cost_usd": 0.13618979999999997
+  },
+  {
+   "task": "t06-publish",
+   "form": "md",
+   "set": "s",
+   "set_size": 45,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "app-signature",
+    "code-reviewer",
+    "github-guardian",
+    "github-portfolio-publisher",
+    "receipts",
+    "requesting-code-review",
+    "signature",
+    "verification-before-completion"
+   ],
+   "named": [
+    "app-signature",
+    "code-reviewer",
+    "github-guardian",
+    "github-portfolio-publisher",
+    "requesting-code-review",
+    "signature",
+    "verification-before-completion"
+   ],
+   "wrong_loaded": [
+    "receipts"
+   ],
+   "outside_pool": [],
+   "tool_calls": 14,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Glob",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Grep",
+    "Grep",
+    "Read"
+   ],
+   "turns": 15,
+   "seconds": 40.4,
+   "input_tokens": 155505,
+   "output_tokens": 2219,
+   "cost_usd": 0.29331759999999996
+  },
+  {
+   "task": "t06-publish",
+   "form": "native",
+   "set": "s",
+   "set_size": 45,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "app-signature",
+    "code-reviewer",
+    "github-guardian",
+    "github-portfolio-publisher",
+    "signature"
+   ],
+   "named": [
+    "app-signature",
+    "code-reviewer",
+    "github-guardian",
+    "github-portfolio-publisher",
+    "signature"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [
+    "run"
+   ],
+   "tool_calls": 6,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 13,
+   "seconds": 17.1,
+   "input_tokens": 37854,
+   "output_tokens": 896,
+   "cost_usd": 0.196006
+  },
+  {
+   "task": "t07-office",
+   "form": "kapu",
+   "set": "s",
+   "set_size": 45,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "pdf",
+    "pptx",
+    "xlsx"
+   ],
+   "named": [
+    "pdf",
+    "pptx",
+    "xlsx"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 5,
+   "tools": [
+    "kapu_map",
+    "kapu_search",
+    "kapu_search",
+    "kapu_open",
+    "kapu_describe"
+   ],
+   "turns": 6,
+   "seconds": 28.0,
+   "input_tokens": 46126,
+   "output_tokens": 1054,
+   "cost_usd": 0.0828526
+  },
+  {
+   "task": "t07-office",
+   "form": "md",
+   "set": "s",
+   "set_size": 45,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "pdf",
+    "pptx",
+    "xlsx"
+   ],
+   "named": [
+    "pdf",
+    "pptx",
+    "xlsx"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 6,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Read",
+    "Read",
+    "Read"
+   ],
+   "turns": 7,
+   "seconds": 14.1,
+   "input_tokens": 58842,
+   "output_tokens": 788,
+   "cost_usd": 0.2169972
+  },
+  {
+   "task": "t07-office",
+   "form": "native",
+   "set": "s",
+   "set_size": 45,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "pdf",
+    "pptx",
+    "xlsx"
+   ],
+   "named": [
+    "pdf",
+    "pptx",
+    "xlsx"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [
+    "dataviz"
+   ],
+   "tool_calls": 4,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 9,
+   "seconds": 6.6,
+   "input_tokens": 45288,
+   "output_tokens": 370,
+   "cost_usd": 0.2449502
+  },
+  {
+   "task": "t08-billing-plan",
+   "form": "kapu",
+   "set": "s",
+   "set_size": 45,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "backend-expert",
+    "brainstorming",
+    "subagent-driven-development",
+    "test-driven-development",
+    "using-git-worktrees",
+    "writing-plans"
+   ],
+   "named": [
+    "backend-expert",
+    "brainstorming",
+    "requesting-code-review",
+    "subagent-driven-development",
+    "test-driven-development",
+    "using-git-worktrees",
+    "writing-plans"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 8,
+   "tools": [
+    "kapu_map",
+    "kapu_map",
+    "kapu_search",
+    "kapu_search",
+    "kapu_describe",
+    "kapu_describe",
+    "kapu_open",
+    "kapu_open"
+   ],
+   "turns": 9,
+   "seconds": 43.0,
+   "input_tokens": 63642,
+   "output_tokens": 1902,
+   "cost_usd": 0.1265518
+  },
+  {
+   "task": "t08-billing-plan",
+   "form": "md",
+   "set": "s",
+   "set_size": 45,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "backend-expert",
+    "brainstorming",
+    "code-reviewer",
+    "requesting-code-review",
+    "subagent-driven-development",
+    "test-driven-development",
+    "using-git-worktrees",
+    "verification-before-completion",
+    "writing-plans"
+   ],
+   "named": [
+    "backend-expert",
+    "brainstorming",
+    "code-reviewer",
+    "requesting-code-review",
+    "subagent-driven-development",
+    "test-driven-development",
+    "using-git-worktrees",
+    "verification-before-completion",
+    "writing-plans"
+   ],
+   "wrong_loaded": [
+    "code-reviewer"
+   ],
+   "outside_pool": [],
+   "tool_calls": 15,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Grep",
+    "Glob",
+    "Grep",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read"
+   ],
+   "turns": 16,
+   "seconds": 34.6,
+   "input_tokens": 196798,
+   "output_tokens": 2643,
+   "cost_usd": 0.4139912
+  },
+  {
+   "task": "t08-billing-plan",
+   "form": "native",
+   "set": "s",
+   "set_size": 45,
+   "gold": 4,
+   "gold_loaded": 4,
+   "gold_named": 4,
+   "loaded": [
+    "backend-expert",
+    "brainstorming",
+    "requesting-code-review",
+    "subagent-driven-development",
+    "test-driven-development",
+    "using-git-worktrees",
+    "verification-before-completion",
+    "writing-plans"
+   ],
+   "named": [
+    "backend-expert",
+    "brainstorming",
+    "requesting-code-review",
+    "subagent-driven-development",
+    "test-driven-development",
+    "using-git-worktrees",
+    "verification-before-completion",
+    "writing-plans"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 8,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 17,
+   "seconds": 11.4,
+   "input_tokens": 94550,
+   "output_tokens": 807,
+   "cost_usd": 0.3401538
+  },
+  {
+   "task": "t09-new-skill",
+   "form": "kapu",
+   "set": "s",
+   "set_size": 45,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "code-reviewer",
+    "skill-creator",
+    "skill-development",
+    "writing-skills"
+   ],
+   "named": [
+    "skill-creator",
+    "skill-development",
+    "writing-skills"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 5,
+   "tools": [
+    "kapu_map",
+    "kapu_map",
+    "kapu_search",
+    "kapu_open",
+    "kapu_open"
+   ],
+   "turns": 6,
+   "seconds": 34.5,
+   "input_tokens": 53194,
+   "output_tokens": 1365,
+   "cost_usd": 0.118262
+  },
+  {
+   "task": "t09-new-skill",
+   "form": "md",
+   "set": "s",
+   "set_size": 45,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "code-reviewer",
+    "skill-creator",
+    "skill-development",
+    "writing-skills"
+   ],
+   "named": [
+    "code-reviewer",
+    "skill-creator",
+    "skill-development",
+    "writing-skills"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 8,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Grep",
+    "Read",
+    "Read",
+    "Read",
+    "Read"
+   ],
+   "turns": 9,
+   "seconds": 23.7,
+   "input_tokens": 97100,
+   "output_tokens": 1693,
+   "cost_usd": 0.4211346
+  },
+  {
+   "task": "t09-new-skill",
+   "form": "native",
+   "set": "s",
+   "set_size": 45,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "skill-creator",
+    "skill-development",
+    "writing-skills"
+   ],
+   "named": [
+    "skill-creator",
+    "skill-development",
+    "writing-skills"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 3,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 7,
+   "seconds": 9.2,
+   "input_tokens": 55558,
+   "output_tokens": 438,
+   "cost_usd": 0.3285482
+  },
+  {
+   "task": "t10-design-system",
+   "form": "kapu",
+   "set": "s",
+   "set_size": 45,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "figma-code-connect",
+    "figma-generate-library",
+    "figma-use"
+   ],
+   "named": [
+    "figma-code-connect",
+    "figma-generate-library",
+    "figma-use"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 4,
+   "tools": [
+    "kapu_map",
+    "kapu_map",
+    "kapu_open",
+    "kapu_search"
+   ],
+   "turns": 5,
+   "seconds": 22.3,
+   "input_tokens": 40305,
+   "output_tokens": 887,
+   "cost_usd": 0.0822252
+  },
+  {
+   "task": "t10-design-system",
+   "form": "md",
+   "set": "s",
+   "set_size": 45,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "figma-code-connect",
+    "figma-design-to-code",
+    "figma-generate-library",
+    "figma-spec",
+    "figma-use",
+    "frontend-expert"
+   ],
+   "named": [
+    "figma-code-connect",
+    "figma-generate-library",
+    "figma-use"
+   ],
+   "wrong_loaded": [
+    "figma-design-to-code",
+    "figma-spec"
+   ],
+   "outside_pool": [],
+   "tool_calls": 11,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Glob",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Grep",
+    "Read"
+   ],
+   "turns": 12,
+   "seconds": 25.8,
+   "input_tokens": 172085,
+   "output_tokens": 1597,
+   "cost_usd": 0.4012876
+  },
+  {
+   "task": "t10-design-system",
+   "form": "native",
+   "set": "s",
+   "set_size": 45,
+   "gold": 3,
+   "gold_loaded": 3,
+   "gold_named": 3,
+   "loaded": [
+    "figma-code-connect",
+    "figma-generate-library",
+    "figma-use"
+   ],
+   "named": [
+    "figma-code-connect",
+    "figma-generate-library",
+    "figma-use"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 3,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 7,
+   "seconds": 7.5,
+   "input_tokens": 55426,
+   "output_tokens": 380,
+   "cost_usd": 0.3263478
+  },
+  {
+   "task": "t11-cardputer",
+   "form": "kapu",
+   "set": "s",
+   "set_size": 45,
+   "gold": 2,
+   "gold_loaded": 2,
+   "gold_named": 2,
+   "loaded": [
+    "cardputer-buddy",
+    "m5-onboard"
+   ],
+   "named": [
+    "cardputer-buddy",
+    "m5-onboard"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 7,
+   "tools": [
+    "kapu_map",
+    "kapu_open",
+    "kapu_open",
+    "kapu_open",
+    "kapu_search",
+    "kapu_map",
+    "kapu_open"
+   ],
+   "turns": 8,
+   "seconds": 40.7,
+   "input_tokens": 102563,
+   "output_tokens": 1554,
+   "cost_usd": 0.1854236
+  },
+  {
+   "task": "t11-cardputer",
+   "form": "md",
+   "set": "s",
+   "set_size": 45,
+   "gold": 2,
+   "gold_loaded": 2,
+   "gold_named": 2,
+   "loaded": [
+    "cardputer-buddy",
+    "m5-onboard"
+   ],
+   "named": [
+    "cardputer-buddy",
+    "m5-onboard"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 6,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Grep",
+    "Read",
+    "Read"
+   ],
+   "turns": 7,
+   "seconds": 18.1,
+   "input_tokens": 60828,
+   "output_tokens": 1067,
+   "cost_usd": 0.1632886
+  },
+  {
+   "task": "t11-cardputer",
+   "form": "native",
+   "set": "s",
+   "set_size": 45,
+   "gold": 2,
+   "gold_loaded": 2,
+   "gold_named": 2,
+   "loaded": [
+    "cardputer-buddy",
+    "m5-onboard"
+   ],
+   "named": [
+    "cardputer-buddy",
+    "m5-onboard"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 2,
+   "tools": [
+    "Skill",
+    "Skill"
+   ],
+   "turns": 5,
+   "seconds": 6.7,
+   "input_tokens": 35701,
+   "output_tokens": 330,
+   "cost_usd": 0.1675244
+  },
+  {
+   "task": "t12-learning-api",
+   "form": "kapu",
+   "set": "s",
+   "set_size": 45,
+   "gold": 2,
+   "gold_loaded": 2,
+   "gold_named": 2,
+   "loaded": [
+    "app-signature",
+    "backend-expert",
+    "brainstorming",
+    "code-reviewer",
+    "signature",
+    "tanulo-mod",
+    "test-driven-development",
+    "verification-before-completion",
+    "writing-plans"
+   ],
+   "named": [
+    "backend-expert",
+    "brainstorming",
+    "code-reviewer",
+    "tanulo-mod",
+    "test-driven-development",
+    "verification-before-completion",
+    "writing-plans"
+   ],
+   "wrong_loaded": [
+    "app-signature",
+    "signature",
+    "verification-before-completion"
+   ],
+   "outside_pool": [],
+   "tool_calls": 6,
+   "tools": [
+    "kapu_map",
+    "kapu_map",
+    "kapu_open",
+    "kapu_open",
+    "kapu_open",
+    "kapu_open"
+   ],
+   "turns": 7,
+   "seconds": 20.5,
+   "input_tokens": 65614,
+   "output_tokens": 1695,
+   "cost_usd": 0.2261254
+  },
+  {
+   "task": "t12-learning-api",
+   "form": "md",
+   "set": "s",
+   "set_size": 45,
+   "gold": 2,
+   "gold_loaded": 2,
+   "gold_named": 2,
+   "loaded": [
+    "app-signature",
+    "backend-expert",
+    "brainstorming",
+    "code-reviewer",
+    "github-guardian",
+    "receipts",
+    "requesting-code-review",
+    "signature",
+    "tanulo-mod",
+    "test-driven-development",
+    "verification-before-completion",
+    "writing-plans"
+   ],
+   "named": [
+    "backend-expert",
+    "brainstorming",
+    "code-reviewer",
+    "tanulo-mod",
+    "test-driven-development",
+    "verification-before-completion",
+    "writing-plans"
+   ],
+   "wrong_loaded": [
+    "app-signature",
+    "github-guardian",
+    "receipts",
+    "requesting-code-review",
+    "signature",
+    "verification-before-completion"
+   ],
+   "outside_pool": [],
+   "tool_calls": 16,
+   "tools": [
+    "Glob",
+    "Glob",
+    "Glob",
+    "Grep",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read",
+    "Read"
+   ],
+   "turns": 17,
+   "seconds": 37.9,
+   "input_tokens": 142827,
+   "output_tokens": 2671,
+   "cost_usd": 0.3744526
+  },
+  {
+   "task": "t12-learning-api",
+   "form": "native",
+   "set": "s",
+   "set_size": 45,
+   "gold": 2,
+   "gold_loaded": 2,
+   "gold_named": 2,
+   "loaded": [
+    "backend-expert",
+    "brainstorming",
+    "tanulo-mod",
+    "test-driven-development",
+    "writing-plans"
+   ],
+   "named": [
+    "backend-expert",
+    "brainstorming",
+    "tanulo-mod",
+    "test-driven-development",
+    "writing-plans"
+   ],
+   "wrong_loaded": [],
+   "outside_pool": [],
+   "tool_calls": 5,
+   "tools": [
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill",
+    "Skill"
+   ],
+   "turns": 11,
+   "seconds": 21.5,
+   "input_tokens": 64941,
+   "output_tokens": 880,
+   "cost_usd": 0.2233564
+  }
+ ],
+ "kapu_tools": {
+  "kapu": "0.2.1 before release: the kind catalog (D154) and the shared open budget (D155)",
+  "native, md": "the runs of 2026-10-26-skill-finding.json; only the KAPU runs were repeated"
+ }
+}

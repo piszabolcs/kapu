@@ -443,6 +443,17 @@ mod tests {
             "{}",
             s.graph
         );
+        // D154: the catalog lists the skill once, its reference folded in
+        let catalog = crate::view::kind_catalog_in(&s, "skill").unwrap();
+        assert_eq!(catalog.len(), 1, "{catalog:?}");
+        assert_eq!(catalog[0].folded, ["pdf-tools-reference-forms"]);
+        assert_eq!(
+            catalog[0].line(),
+            format!(
+                "pdf-tools | {}t | Merge and split PDF files. | +1 room",
+                catalog[0].tokens
+            )
+        );
         let _ = std::fs::remove_dir_all(&root);
     }
 }

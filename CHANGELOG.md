@@ -5,6 +5,15 @@ The file format has its own version (`%KAPU 1.2`, see `SPEC-KAPU.md`); the tools
 
 ## [Unreleased]
 
+Specification v1.2.1; the file format stays 1.2.
+
+### Changed
+- `kapu_map kind=` and `kapu map --kind` give the kind's catalog (D154): one line per room with its price and the start of its description, so an agent can choose skills from one reply; a skill's reference rooms are folded into the skill (`+5 rooms`). Its default budget is 4000 tokens, and the first map names the catalog of the most common kind.
+- `kapu_open` with several ids shares the budget evenly (D155), so one call shows the start of every door; without `max_tokens` each door gets 2000 tokens, for up to five doors.
+
+### Added
+- The skill-finding measurement (D153): `tools/study/skill_pool.py`, `skill_eval.py` and `skill_tasks.json`, results in `bench/RESULTS.md` chapter 11 and on the results page.
+
 ## [0.2.0] - 2026-10-26
 
 Specification v1.2 and file format 1.2, from the two review records of 2026-10-26. KAPU is now aimed at two cases: a personal knowledge base and memory for coding agents on any platform, and knowledge for local models with a small context.

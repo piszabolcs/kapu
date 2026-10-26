@@ -365,13 +365,22 @@ fn map(file: &Path, group: Option<&str>, kind: Option<&str>) -> Result<Output, E
             &kapu_core::Limits::default(),
             kapu_core::BodyLength::Tolerate,
         )?;
-        let lines = kapu_core::view::kind_lines_in(&s, kind)?;
-        let text = if lines.is_empty() {
+        // D154: the catalog, one line per room with its description
+        let catalog = kapu_core::view::kind_catalog_in(&s, kind)?;
+        let text = if catalog.is_empty() {
             format!("no room of kind `{kind}`")
         } else {
-            lines.join("\n")
+            catalog
+                .iter()
+                .map(kapu_core::view::KindEntry::line)
+                .collect::<Vec<_>>()
+                .join("\n")
         };
-        return Ok(Output::new(json!({ "kind": kind, "lines": lines }), text));
+        let rooms: Vec<Value> = catalog
+            .iter()
+            .map(|e| json!({ "id": e.id, "tokens": e.tokens, "description": e.description, "folded": e.folded }))
+            .collect();
+        return Ok(Output::new(json!({ "kind": kind, "rooms": rooms }), text));
     }
     let v = kapu_core::view::map_view(&data, group)?;
     let groups: Vec<Value> = v

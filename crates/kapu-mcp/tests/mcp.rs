@@ -488,10 +488,15 @@ async fn k03_kind_filters_map_and_search() {
     let client = connect(&dir).await;
     let (_, notes) = call(&client, "kapu_map", json!({ "file": f, "kind": "note" })).await;
     let notes = priced(&notes).1;
+    // D154: the catalog, a room with its price and description per line
     assert!(
-        notes.starts_with("R electron-leckek |") && !notes.contains("frontend"),
+        notes.starts_with("kind=note: 1 rooms |")
+            && notes.contains("\nelectron-leckek | ")
+            && !notes.contains("frontend"),
         "{notes}"
     );
+    let (_, first) = call(&client, "kapu_map", json!({ "file": f })).await;
+    assert!(first.contains("kapu_map kind=note"), "{first}");
     let (_, none) = call(&client, "kapu_map", json!({ "file": f, "kind": "recipe" })).await;
     assert!(none.contains("no room of kind `recipe`"), "{none}");
     let (_, hits) = call(
@@ -506,6 +511,65 @@ async fn k03_kind_filters_map_and_search() {
     );
     client.cancel().await.unwrap();
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// D155: several doors in one `kapu_open` share the budget, so each shows its
+/// start; the next part of one comes, cut the same way, from a call for it alone.
+#[tokio::test]
+async fn several_doors_share_the_open_budget() {
+    let dir = workdir("share");
+    let file = dir.join("big.kapu");
+    std::fs::write(
+        &file,
+        kapu_core::build::build(&budget_corpus()).unwrap().bytes,
+    )
+    .unwrap();
+    let f = file.to_str().unwrap();
+    let client = connect(&dir).await;
+    let ids = ["topic-1", "topic-2", "topic-3"];
+    // without max_tokens: what one door would get, each
+    let (err, all) = call(&client, "kapu_open", json!({ "file": f, "ids": ids })).await;
+    assert!(!err, "{all}");
+    assert_eq!(all.matches("<kapu-room ").count(), 3, "{all}");
+    assert!(
+        all.contains("next: kapu_open ids=[\"topic-2\"] part=2"),
+        "{all}"
+    );
+    assert!(kapu_core::terms::tokens(&all).unwrap() <= 6000);
+    let (_, alone) = call(
+        &client,
+        "kapu_open",
+        json!({ "file": f, "ids": ["topic-2"] }),
+    )
+    .await;
+    assert_eq!(frame_of(&all, "topic-2"), frame_of(&alone, "topic-2"));
+    // with max_tokens: an even share, named in the next-part call
+    let (_, shared) = call(
+        &client,
+        "kapu_open",
+        json!({ "file": f, "ids": ids, "max_tokens": 3000 }),
+    )
+    .await;
+    assert_eq!(shared.matches("<kapu-room ").count(), 3, "{shared}");
+    assert!(
+        shared.contains("ids=[\"topic-2\"] max_tokens=1000 part=2"),
+        "{shared}"
+    );
+    let (_, one) = call(
+        &client,
+        "kapu_open",
+        json!({ "file": f, "ids": ["topic-2"], "max_tokens": 1000 }),
+    )
+    .await;
+    assert_eq!(frame_of(&shared, "topic-2"), frame_of(&one, "topic-2"));
+    client.cancel().await.unwrap();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The text inside the `<kapu-room>` frame of door `id` in a reply.
+fn frame_of<'a>(reply: &'a str, id: &str) -> &'a str {
+    let start = reply.find(&format!(" id=\"{id}\" ")).unwrap();
+    inner(&reply[reply[..start].rfind("<kapu-room ").unwrap()..])
 }
 
 /// The text inside the first `<kapu-room>` frame of a reply.

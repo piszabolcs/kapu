@@ -38,7 +38,7 @@ struct MapArgs {
     group: Option<String>,
     /// Room id: list its sub-doors.
     room: Option<String>,
-    /// List the rooms of a kind (skill, project, pattern, note).
+    /// A kind's catalog (skill, project, pattern, note).
     kind: Option<String>,
     /// true: every content-scan warning.
     scan: Option<bool>,
@@ -94,7 +94,7 @@ struct OpenArgs {
     file: String,
     /// Door ids.
     ids: Vec<String>,
-    /// Reply budget (default 2000); a longer door comes in parts.
+    /// Reply budget (default 2000 per door); a longer door comes in parts.
     max_tokens: Option<u64>,
     /// The part to open, from 1.
     part: Option<usize>,
@@ -142,6 +142,11 @@ const MAX_SCAN_LINES: usize = 10;
 
 /// Default reply budgets in tokens (K-02, K-05, K-06, K-07, D145).
 const MAP_TOKENS: u64 = 1000;
+/// `kapu_map kind=`: a catalog of up to about a hundred rooms (D154).
+const CATALOG_TOKENS: u64 = 4000;
+/// Opening several doors without `max_tokens`: [`OPEN_TOKENS`] each, for at
+/// most this many doors (D155).
+const OPEN_SHARED_DOORS: u64 = 5;
 const SEARCH_TOKENS: u64 = 600;
 const DESCRIBE_TOKENS: u64 = 2000;
 const OPEN_TOKENS: u64 = 2000;
@@ -638,7 +643,12 @@ impl KapuServer {
     fn map_text(&self, args: &MapArgs) -> Outcome {
         let file = self.file(&args.file)?;
         let s = file.sections();
-        let budget = args.max_tokens.unwrap_or(MAP_TOKENS).max(MIN_TOKENS);
+        let default = if args.kind.is_some() {
+            CATALOG_TOKENS
+        } else {
+            MAP_TOKENS
+        };
+        let budget = args.max_tokens.unwrap_or(default).max(MIN_TOKENS);
         let lines =
             |list: Vec<String>| -> Vec<String> { list.into_iter().map(|l| l + "\n").collect() };
         let mut head = String::new();
@@ -646,11 +656,23 @@ impl KapuServer {
         let items: Vec<String>;
         let more: String;
         if let Some(kind) = &args.kind {
-            // D144: the rooms of one kind, across groups
-            items = lines(kapu_core::view::kind_lines_in(&s, kind)?);
-            if items.is_empty() {
+            // D144, D154: the catalog of one kind, across groups, to choose from
+            let catalog = kapu_core::view::kind_catalog_in(&s, kind)?;
+            if catalog.is_empty() {
                 let _ = writeln!(foot, "no room of kind `{kind}`");
+            } else {
+                let _ = writeln!(
+                    head,
+                    "kind={kind}: {} rooms | id | price | description | folded rooms\n(open the ones you need in one call: kapu_open ids=[...])",
+                    catalog.len()
+                );
             }
+            items = lines(
+                catalog
+                    .iter()
+                    .map(kapu_core::view::KindEntry::line)
+                    .collect(),
+            );
             more =
                 format!("rooms of kind `{kind}`; raise max_tokens or use kapu_search kind={kind}");
         } else if let Some(room) = &args.room {
@@ -682,6 +704,13 @@ impl KapuServer {
             head.push('\n');
             if !view.flat {
                 foot.push_str("\n(a group's rooms: kapu_map group=<gid>)\n");
+            }
+            // D154: a kind's catalog lists every room with its description
+            if let Some((kind, _)) = view.totals.kinds.iter().max_by_key(|(_, n)| *n) {
+                let _ = writeln!(
+                    foot,
+                    "(every {kind} with its description: kapu_map kind={kind})"
+                );
             }
             items = lines(view.raw_lines);
             more =
@@ -786,7 +815,16 @@ impl KapuServer {
             opened = kapu_core::open_path(Path::new(&args.file), &refs)?;
         }
         let name = name_of(&args.file);
-        let budget = args.max_tokens.unwrap_or(OPEN_TOKENS).max(MIN_TOKENS);
+        // D155: several doors share the budget, so one call opens the start of
+        // each; without max_tokens every door gets what one door would get
+        let doors = u64::try_from(args.ids.len()).unwrap_or(u64::MAX).max(1);
+        let budget = args
+            .max_tokens
+            .unwrap_or(OPEN_TOKENS * doors.min(OPEN_SHARED_DOORS))
+            .max(MIN_TOKENS);
+        let share = (budget / doors).max(MIN_TOKENS);
+        // the next part, cut the same way, from a call for that door alone
+        let again = (share != OPEN_TOKENS || args.max_tokens.is_some()).then_some(share);
         let want = args.part.unwrap_or(1);
         let mut items = Vec::new();
         for (id, item) in args.ids.iter().zip(&opened.doors) {
@@ -798,7 +836,7 @@ impl KapuServer {
                 }
             };
             let neighbours = neighbours_block(d);
-            let size = part_budget(&name, d, budget, price(&neighbours)?)?;
+            let size = part_budget(&name, d, share, price(&neighbours)?)?;
             // D136, D145: a long door comes in parts that fit the budget
             let pieces = fit_parts(&d.text, size)?;
             let Some(piece) = want.checked_sub(1).and_then(|i| pieces.get(i)) else {
@@ -814,7 +852,7 @@ impl KapuServer {
             };
             let mut block = kapu_core::frame(&name, &shown);
             if pieces.len() > 1 {
-                block.push_str(&parts_line(id, want, &pieces, args.max_tokens)?);
+                block.push_str(&parts_line(id, want, &pieces, again)?);
             }
             if want == 1 {
                 block.push_str(&neighbours);

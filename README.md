@@ -49,15 +49,16 @@ Retrieval is room-level recall@10: the page the accepted answer links to is amon
 
 **Finding skills.** 12 development tasks with 39 relevant skills fixed in advance, Claude Opus, a prompt that asks for the skills ([chapter 11](bench/RESULTS.md#11-finding-skills-native-skills-one-kapu-file-a-markdown-folder)):
 
-| 91 skills as | Relevant skills found | Wrong loaded | Tokens per task | Fixed cost per session |
-|---|---:|---:|---:|---:|
-| Native Claude Code skills | 39/39 | 0 | 44,953 | 14,081 |
-| One KAPU file | 38/39 | 0 | 88,418 | 4,774 |
-| A folder of Markdown files | 39/39 | 12 | 107,726 | 5,430 |
+| 91 skills as | Relevant skills found | Wrong loaded | Tokens per task | $ per task | Fixed cost per session |
+|---|---:|---:|---:|---:|---:|
+| Native Claude Code skills | 39/39 | 0 | 44,953 | 0.236 | 14,081 |
+| One KAPU file, with the catalog (0.2.1) | 38/39 | 3 | 48,973 | 0.099 | 4,775 |
+| One KAPU file (0.2.0) | 38/39 | 0 | 88,418 | 0.255 | 4,774 |
+| A folder of Markdown files | 39/39 | 12 | 107,726 | 0.336 | 5,430 |
 
-With 91 skills the native skills are the better choice for a task that needs them; KAPU costs about twice as much there, but about 9,300 tokens less in every session that needs none, and its cost does not grow with the number of skills.
+With the catalog of tools 0.2.1 (`kapu_map kind=skill`: every skill with its description in one reply) the KAPU file finds as many skills as before in 5 calls instead of 9, with about the native skills' tokens; it costs less per task because it opens the first 2,000 tokens of each skill instead of the whole skill, and its fixed cost per session is a third of the native list's. The native skills still find one more and load nothing wrong.
 
-What one session costs, whatever the size of the file: the six tools' descriptions and input schemas are 797 tokens, a map reply at most 1,000, ten search hits with an excerpt each at most 600 (format 1.2, measured on a 3,000-room file and the corpora above).
+What one session costs, whatever the size of the file: the six tools' descriptions and input schemas are 798 tokens, a map reply at most 1,000, ten search hits with an excerpt each at most 600 (format 1.2, measured on a 3,000-room file and the corpora above).
 
 ## Why
 
@@ -139,11 +140,11 @@ Then ask, for example: "Use `notes.kapu` to answer: how do we deploy the staging
 
 | Tool | What it returns |
 |---|---|
-| `kapu_map` | the map: groups, rooms and their token prices, the content language and kinds, the guide on first use; `kind=` lists the rooms of one kind |
+| `kapu_map` | the map: groups, rooms and their token prices, the content language and kinds, the guide on first use; `kind=` gives a catalog of one kind (every skill with its description, in one reply) |
 | `kapu_search` | the best sections for a query, each with its price and the line that matched; `kind=` filters |
 | `kapu_ask` | search and open in one call: the best section's text, more whole sections if they fit, and the other matches |
 | `kapu_describe` | the description and tags of a section, without opening it |
-| `kapu_open` | the text of a section, framed so it cannot pose as instructions; long sections in parts |
+| `kapu_open` | the text of sections, framed so it cannot pose as instructions; several in one call share the budget; long sections in parts |
 | `kapu_write` | adds a room from Markdown (a project card, for example), rebuilds the file and reports what the content scan found |
 
 Every reply starts with `reply: N tokens`, and every reading tool takes `max_tokens` (map 1,000, search 600, the others 2,000 by default); a reply never goes over it.
