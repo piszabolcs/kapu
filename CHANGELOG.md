@@ -5,6 +5,8 @@ The file format has its own version (`%KAPU 1.2`, see `SPEC-KAPU.md`); the tools
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-26
+
 Specification v1.2.1; the file format stays 1.2.
 
 ### Changed
