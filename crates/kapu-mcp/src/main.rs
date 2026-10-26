@@ -363,13 +363,16 @@ fn neighbours_block(door: &OpenedDoor) -> String {
     out
 }
 
-/// The tokens a door's frame adds around its text.
+/// The tokens a door's frame adds around its text, at most: the frame with an
+/// empty boundary plus one token per hex digit of its two boundaries. The
+/// boundary is random (D106), so its own price is not used: the part size has
+/// to be the same on every call.
 fn frame_tokens(name: &str, door: &OpenedDoor) -> Result<u64, Error> {
     let empty = OpenedDoor {
         text: String::new(),
         ..door.clone()
     };
-    Ok(price(&kapu_core::frame(name, &empty))? + 4)
+    Ok(price(&kapu_core::frame_with_boundary(name, &empty, ""))? + 2 * 12 + 4)
 }
 
 /// D145: the part size of a door opened with a reply budget: what is left of

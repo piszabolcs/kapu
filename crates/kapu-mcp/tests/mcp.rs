@@ -508,6 +508,15 @@ async fn k03_kind_filters_map_and_search() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// The text inside the first `<kapu-room>` frame of a reply.
+fn inner(reply: &str) -> &str {
+    let start = reply.find("<kapu-room ").unwrap();
+    let body = &reply[start..];
+    let open_end = body.find('\n').unwrap() + 1;
+    let close = body.find("</kapu-room boundary=").unwrap();
+    &body[open_end..close]
+}
+
 /// 60 rooms of six long sections each, every section with a code block.
 fn budget_corpus() -> Vec<kapu_core::build::RoomSource> {
     (0..60)
@@ -595,6 +604,40 @@ async fn k06_replies_stay_within_max_tokens() {
         "{one}\n{two}"
     );
     assert!(one.contains("max_tokens=1000 part=2"), "{one}");
+    // D145: the same call cuts at the same places, and the parts make the door
+    let parts_line = |reply: &str| {
+        reply
+            .lines()
+            .find(|l| l.starts_with("part "))
+            .map(str::to_owned)
+    };
+    let (_, again) = call(
+        &client,
+        "kapu_open",
+        json!({ "file": f, "ids": ["topic-3"], "max_tokens": 1000 }),
+    )
+    .await;
+    assert_eq!(parts_line(&one), parts_line(&again));
+    let count: usize = parts_line(&one)
+        .and_then(|l| l.split(" of ").nth(1)?.split(',').next()?.parse().ok())
+        .unwrap();
+    let mut joined = String::new();
+    for part in 1..=count {
+        let (_, reply) = call(
+            &client,
+            "kapu_open",
+            json!({ "file": f, "ids": ["topic-3"], "max_tokens": 1000, "part": part }),
+        )
+        .await;
+        joined.push_str(inner(&reply));
+    }
+    let (_, whole) = call(
+        &client,
+        "kapu_open",
+        json!({ "file": f, "ids": ["topic-3"], "max_tokens": 100_000 }),
+    )
+    .await;
+    assert_eq!(joined, inner(&whole));
     client.cancel().await.unwrap();
     let _ = std::fs::remove_dir_all(&dir);
 }
