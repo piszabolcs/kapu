@@ -1288,7 +1288,7 @@ impl KapuServer {
             idempotent_hint = true,
             open_world_hint = false
         ),
-        description = "Keyword and meaning search: one hit per room (id, title, price, score, source), each with an excerpt line."
+        description = "Keyword and meaning search: one door per room (id, title, price, score, source) with an excerpt line."
     )]
     async fn kapu_search(
         &self,
@@ -1305,7 +1305,7 @@ impl KapuServer {
             idempotent_hint = true,
             open_world_hint = false
         ),
-        description = "Search and open in one call: the start of the best door of each of the first 5 rooms within max_tokens, and the other matches."
+        description = "Search and open in one call: the start of the best door of the first 5 rooms within max_tokens, then the other matches."
     )]
     async fn kapu_ask(
         &self,

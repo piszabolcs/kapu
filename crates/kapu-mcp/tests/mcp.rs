@@ -104,6 +104,14 @@ async fn check_tool_list(client: &RunningService<RoleClient, ()>) {
         assert_eq!(a.destructive_hint, Some(writes), "{}", tool.name);
         assert_eq!(a.open_world_hint, Some(false), "{}", tool.name);
     }
+    // K-01 (D145): names, descriptions and input schemas as compact JSON
+    // cost at most 800 tokens (o200k_base)
+    let listed: Vec<Value> = tools
+        .iter()
+        .map(|t| json!({"name": t.name, "description": t.description, "inputSchema": t.input_schema}))
+        .collect();
+    let price = kapu_core::terms::tokens(&serde_json::to_string(&listed).unwrap()).unwrap();
+    assert!(price <= 800, "the tool list costs {price} tokens");
     // D145: the guide is the server's instructions and the first map; the
     // open tool says what opened content is
     let open_tool = tools.iter().find(|t| t.name == "kapu_open").unwrap();
