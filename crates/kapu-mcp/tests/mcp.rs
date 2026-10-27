@@ -29,11 +29,17 @@ fn workdir(tag: &str) -> PathBuf {
 }
 
 async fn connect(dir: &Path) -> RunningService<RoleClient, ()> {
+    connect_with(dir, &[]).await
+}
+
+/// [`connect`] with server arguments (`--rank <json>`).
+async fn connect_with(dir: &Path, args: &[&str]) -> RunningService<RoleClient, ()> {
     let tiny = root().join("tests/model/kapu-test-tiny");
     let cache = dir.join("cache");
     let transport = TokioChildProcess::new(
         tokio::process::Command::new(env!("CARGO_BIN_EXE_kapu-mcp")).configure(|cmd| {
-            cmd.env("KAPU_MODEL_DIR", &tiny)
+            cmd.args(args)
+                .env("KAPU_MODEL_DIR", &tiny)
                 .env("KAPU_CACHE_DIR", &cache);
         }),
     )
@@ -702,6 +708,41 @@ async fn k06_replies_stay_within_max_tokens() {
     )
     .await;
     assert_eq!(joined, inner(&whole));
+    client.cancel().await.unwrap();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Plan v2: `--rank` sets the ranking switches of the server; collapsed, a
+/// search hit names the other matching doors of its room (J1), and the
+/// confidence mode of `kapu_ask` (J12) says how sure it is.
+#[tokio::test]
+async fn rank_argument_sets_collapse_and_ask_confidence() {
+    let dir = workdir("rank");
+    let file = dir.join("minta.kapu");
+    std::fs::copy(root().join("tests/vectors/minta.kapu"), &file).unwrap();
+    let f = file.to_str().unwrap();
+    let plain = connect(&dir).await;
+    let (_, before) = call(&plain, "kapu_search", json!({"file": f, "query": "gomb"})).await;
+    assert!(!before.contains("matching in this room"), "{before}");
+    plain.cancel().await.unwrap();
+    let client = connect_with(&dir, &["--rank", r#"{"collapse": 1, "ask": "confidence"}"#]).await;
+    let (err, after) = call(&client, "kapu_search", json!({"file": f, "query": "gomb"})).await;
+    assert!(!err, "{after}");
+    assert!(after.contains("matching in this room: "), "{after}");
+    let (err, ask) = call(&client, "kapu_ask", json!({"file": f, "query": "gomb"})).await;
+    assert!(!err, "{ask}");
+    assert!(
+        ask.contains(
+            "
+confidence: high
+"
+        ) || ask.contains(
+            "
+confidence: low
+"
+        ),
+        "{ask}"
+    );
     client.cancel().await.unwrap();
     let _ = std::fs::remove_dir_all(&dir);
 }

@@ -28,7 +28,8 @@ FRAME_ID = re.compile(r'<kapu-room file="[^"]*" id="([^"]+)"')
 
 class Server:
     def __init__(self, exe):
-        self.p = subprocess.Popen([exe], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        # `exe` is the server, or a list: the server and its arguments
+        self.p = subprocess.Popen(exe if isinstance(exe, list) else [exe], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         self.n = 0
         self.rpc("initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "measure", "version": "0"}})
         self.send({"jsonrpc": "2.0", "method": "notifications/initialized"})

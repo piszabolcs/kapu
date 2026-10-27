@@ -6,6 +6,7 @@
     clippy::indexing_slicing
 )]
 
+use std::fmt::Write as _;
 use std::path::PathBuf;
 
 use kapu_core::build::{RoomSource, build_with};
@@ -320,6 +321,146 @@ fn vec_section_and_cache_rank_alike() {
         let from_cache = kapu_core::search::rankings_in(&without, query, Some(&cache)).unwrap();
         assert_eq!(from_vec, from_cache, "{query}");
     }
+}
+
+/// The rankings of the golden file: BM25 on `minta.kapu` (no model) and the
+/// hybrid on the four test rooms with the tiny model, scores as bits.
+fn golden_lines(options: &SearchOptions) -> String {
+    let model = tiny();
+    let cache = VectorCache::in_memory(&model);
+    let minta = std::fs::read(root().join("tests/vectors/minta.kapu")).unwrap();
+    let built = build_with(&rooms(), Some(&model)).unwrap().bytes;
+    let mut out = String::new();
+    for (name, file) in [("minta", &minta), ("rooms", &built)] {
+        for query in [
+            "gomb",
+            "electron preload",
+            "glass button css",
+            "szoba",
+            "sötét téma színek",
+            "escape",
+            "index vector cache",
+            "palette color",
+        ] {
+            let options = SearchOptions {
+                k: 50,
+                ..options.clone()
+            };
+            let r = search(file, query, &options, Some(&cache)).unwrap();
+            for h in r.hits {
+                let _ = writeln!(
+                    out,
+                    "{name}\t{query}\t{}\t{:016x}\t{}",
+                    h.id,
+                    h.score.to_bits(),
+                    h.source.as_str()
+                );
+            }
+        }
+    }
+    out
+}
+
+/// Plan v2 rule 5: with every ranking switch off, the BM25 and hybrid
+/// rankings are bit for bit those of 0.2.1. `KAPU_BLESS=1` rewrites the file.
+#[test]
+fn rankings_with_every_switch_off_are_those_of_0_2_1() {
+    let path = root().join("tests/vectors/rankings-0.2.1.tsv");
+    let now = golden_lines(&SearchOptions::default());
+    if std::env::var_os("KAPU_BLESS").is_some() {
+        std::fs::write(&path, &now).unwrap();
+    }
+    let golden = std::fs::read_to_string(&path).unwrap();
+    assert!(golden.lines().count() > 40, "{golden}");
+    assert_eq!(now, golden);
+}
+
+#[test]
+fn rank_options_come_from_json_and_reject_typos() {
+    use kapu_core::search::{Fusion, RankOptions, Stemming};
+    let empty = RankOptions::from_json(&serde_json::json!({"name": "base"})).unwrap();
+    assert_eq!(empty, RankOptions::default());
+    let r = RankOptions::from_json(&serde_json::json!({
+        "stemming": "en", "collapse": 1, "room_beta": 0.1, "fusion": "convex",
+        "w_bm25": 2.0, "split_avgdl": true, "parent": 0.25, "rescore_bm25": 50,
+    }))
+    .unwrap();
+    assert_eq!(r.stemming, Stemming::English);
+    assert_eq!(
+        (r.collapse, r.fusion, r.rescore_bm25),
+        (1, Fusion::Convex, 50)
+    );
+    assert!(r.split_avgdl && (r.parent - 0.25).abs() < 1e-12);
+    for bad in [
+        serde_json::json!({"colapse": 1}),
+        serde_json::json!({"stemming": "fr"}),
+        serde_json::json!({"rrf_k": 0}),
+        serde_json::json!({"w_vec": -1}),
+        serde_json::json!([1]),
+    ] {
+        assert!(RankOptions::from_json(&bad).is_err(), "{bad}");
+    }
+    assert_eq!(RankOptions::from_json(&r.to_json()).unwrap(), r);
+}
+
+#[test]
+fn collapse_keeps_one_door_per_room_and_names_the_others() {
+    // J1: the room and its section match; collapsed, the room is one hit
+    let data = std::fs::read(root().join("tests/vectors/minta.kapu")).unwrap();
+    let plain = search(&data, "gomb", &SearchOptions::default(), None).unwrap();
+    let rooms = |hits: &[kapu_core::search::SearchHit]| {
+        hits.iter()
+            .map(|h| kapu_core::search::room_of(&h.id).to_owned())
+            .collect::<Vec<_>>()
+    };
+    let before = rooms(&plain.hits);
+    assert!(
+        before
+            .iter()
+            .enumerate()
+            .any(|(i, r)| before[..i].contains(r)),
+        "{before:?}"
+    );
+    let options = SearchOptions {
+        rank: kapu_core::search::RankOptions {
+            collapse: 1,
+            ..Default::default()
+        },
+        ..SearchOptions::default()
+    };
+    let collapsed = search(&data, "gomb", &options, None).unwrap();
+    let after = rooms(&collapsed.hits);
+    let mut unique = after.clone();
+    unique.dedup();
+    assert_eq!(after, unique, "one hit per room");
+    let first = &collapsed.hits[0];
+    assert_eq!(first.id, plain.hits[0].id, "the best door stays the hit");
+    assert!(
+        first.also.contains(&plain.hits[1].id),
+        "{:?}",
+        collapsed.hits
+    );
+}
+
+#[test]
+fn two_line_excerpt_adds_the_neighbouring_line() {
+    // J11: the best line and the line next to it, joined by " / "
+    let rooms = vec![RoomSource {
+        id: "glass".into(),
+        content: "# Glass\nIntro line about nothing.\n\nUse a backdrop blur behind the glass.\nThe radius is 12px for cards.\n".into(),
+    }];
+    let built = kapu_core::build::build(&rooms).unwrap();
+    let s = kapu_core::Sections::parse(&built.bytes).unwrap();
+    let one =
+        kapu_core::search::excerpts_lines_in(&s, &["glass"], "backdrop blur radius", 1).unwrap();
+    let two =
+        kapu_core::search::excerpts_lines_in(&s, &["glass"], "backdrop blur radius", 2).unwrap();
+    assert!(!one[0].contains(" / "), "{one:?}");
+    assert_eq!(
+        two[0],
+        "Use a backdrop blur behind the glass. / The radius is 12px for cards."
+    );
+    assert!(two[0].chars().count() <= kapu_core::search::EXCERPT2_CHARS);
 }
 
 fn hex32(bytes: &[u8; 32]) -> String {

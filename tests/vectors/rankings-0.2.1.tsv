@@ -1,0 +1,58 @@
+minta	gomb	frontend-design-alapok/glass-gomb	4001358870c76796	bm25
+minta	gomb	frontend-design-alapok	3ffc74f257063ac5	bm25
+minta	electron preload	electron-leckek	40135a1b9408d57b	bm25
+minta	electron preload	frontend-design-alapok/glass-gomb	400f75cc6049b2da	bm25
+minta	electron preload	frontend-design-alapok	400789086a7c56d8	bm25
+minta	electron preload	electron-leckek/preload-bridge	3fffc1e054a82c8a	bm25
+minta	glass button css	frontend-design-alapok	400530ae26628738	bm25
+minta	glass button css	frontend-design-alapok/glass-gomb	400309b84caa45b6	bm25
+minta	glass button css	frontend-design-alapok/szinek	3ffe56354c41f891	bm25
+minta	szoba	electron-leckek/szobajelolo-escape	4006651b38640d54	bm25
+minta	szoba	electron-leckek	3ffd4d7ef1d4200e	bm25
+minta	sötét téma színek	frontend-design-alapok	40258b927a854dea	bm25
+minta	sötét téma színek	frontend-design-alapok/szinek	4010a61b73e8ab1b	bm25
+minta	escape	electron-leckek/szobajelolo-escape	4010f5b79512d854	bm25
+minta	escape	electron-leckek	3ffd4d7ef1d4200e	bm25
+minta	palette color	frontend-design-alapok/szinek	3ffc0ef44e9dc04e	bm25
+minta	palette color	frontend-design-alapok	3ff9a372db5ba0b8	bm25
+minta	palette color	frontend-design-alapok/glass-gomb	3ff327bf66e6c5be	bm25
+rooms	gomb	gombok	3fa0853aaffeef26	both
+rooms	gomb	gombok/glass-gomb	3fa0842108421084	both
+rooms	gomb	adat	3f90c9714fbcda3b	vec
+rooms	gomb	paletta	3f90000000000000	vec
+rooms	gomb	electron	3f8f81f81f81f820	vec
+rooms	electron preload	electron	3fa0c9714fbcda3b	both
+rooms	electron preload	gombok	3f90842108421084	vec
+rooms	electron preload	paletta	3f90410410410410	vec
+rooms	electron preload	gombok/glass-gomb	3f90000000000000	vec
+rooms	electron preload	adat	3f8f81f81f81f820	vec
+rooms	glass button css	gombok/glass-gomb	3fa0c9714fbcda3b	both
+rooms	glass button css	gombok	3fa062928c418a4a	both
+rooms	glass button css	paletta	3f90842108421084	vec
+rooms	glass button css	electron	3f90000000000000	vec
+rooms	glass button css	adat	3f8f81f81f81f820	vec
+rooms	szoba	adat	3f90c9714fbcda3b	vec
+rooms	szoba	gombok/glass-gomb	3f90842108421084	vec
+rooms	szoba	paletta	3f90410410410410	vec
+rooms	szoba	electron	3f90000000000000	vec
+rooms	szoba	gombok	3f8f81f81f81f820	vec
+rooms	sötét téma színek	gombok	3fa0c9714fbcda3b	both
+rooms	sötét téma színek	gombok/glass-gomb	3f90842108421084	vec
+rooms	sötét téma színek	electron	3f90410410410410	vec
+rooms	sötét téma színek	paletta	3f90000000000000	vec
+rooms	sötét téma színek	adat	3f8f81f81f81f820	vec
+rooms	escape	adat	3f90c9714fbcda3b	vec
+rooms	escape	electron	3f90842108421084	vec
+rooms	escape	gombok	3f90410410410410	vec
+rooms	escape	gombok/glass-gomb	3f90000000000000	vec
+rooms	escape	paletta	3f8f81f81f81f820	vec
+rooms	index vector cache	adat	3fa0c9714fbcda3b	both
+rooms	index vector cache	gombok	3f90842108421084	vec
+rooms	index vector cache	electron	3f90410410410410	vec
+rooms	index vector cache	gombok/glass-gomb	3f90000000000000	vec
+rooms	index vector cache	paletta	3f8f81f81f81f820	vec
+rooms	palette color	gombok	3fa0853aaffeef26	both
+rooms	palette color	paletta	3fa0853aaffeef26	both
+rooms	palette color	gombok/glass-gomb	3fa0228e8c01864a	both
+rooms	palette color	adat	3f90842108421084	vec
+rooms	palette color	electron	3f90000000000000	vec

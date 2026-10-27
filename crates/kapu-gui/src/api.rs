@@ -358,6 +358,7 @@ impl Session {
                 k,
                 max_price,
                 kind: args.get("kind").and_then(Value::as_str).map(str::to_owned),
+                ..SearchOptions::default()
             },
             cache.as_ref(),
         )?;

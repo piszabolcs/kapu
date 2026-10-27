@@ -10,7 +10,7 @@
 
 use crate::embed::VectorCache;
 use crate::error::{Error, ErrorCode, Result};
-use crate::search::rankings_in;
+use crate::search::{RankOptions, Rankings, rankings_with};
 use crate::text::slug;
 
 /// One question of the benchmark.
@@ -185,28 +185,63 @@ pub fn evaluate(
     questions: &[Question],
     cache: Option<&VectorCache<'_>>,
 ) -> Result<Evaluation> {
+    let s =
+        crate::Sections::parse_with(file, &crate::Limits::default(), crate::BodyLength::Tolerate)?;
+    Ok(evaluate_with(&s, questions, &RankOptions::default(), cache)?.0)
+}
+
+/// One question's rankings in one configuration (M0): the expected door,
+/// the three rankings and the search time.
+#[derive(Debug, Clone, PartialEq)]
+pub struct QuestionRun {
+    /// The expected door id (D49).
+    pub expected: String,
+    /// The rankings, to [`crate::search::BENCH_DEPTH`].
+    pub rankings: Rankings,
+    /// Wall time of the search, in milliseconds.
+    pub ms: f64,
+}
+
+/// [`evaluate`] on a parsed file with the ranking switches of `rank`, and
+/// every question's rankings (M0).
+///
+/// # Errors
+/// A broken section or a tokenizer failure.
+pub fn evaluate_with(
+    s: &crate::Sections<'_>,
+    questions: &[Question],
+    rank: &RankOptions,
+    cache: Option<&VectorCache<'_>>,
+) -> Result<(Evaluation, Vec<QuestionRun>)> {
     let mut bm25 = Vec::with_capacity(questions.len());
     let mut vector = Vec::with_capacity(questions.len());
     let mut hybrid = Vec::with_capacity(questions.len());
+    let mut runs = Vec::with_capacity(questions.len());
     let mut vector_available = true;
-    let s =
-        crate::Sections::parse_with(file, &crate::Limits::default(), crate::BodyLength::Tolerate)?;
     for q in questions {
-        let r = rankings_in(&s, &q.kerdes, cache)?;
+        let start = std::time::Instant::now();
+        let r = rankings_with(s, &q.kerdes, rank, cache)?;
+        let ms = start.elapsed().as_secs_f64() * 1000.0;
         let expected = q.expected();
-        bm25.push((r.bm25, expected.clone()));
-        match r.vector {
-            Some(v) => vector.push((v, expected.clone())),
+        bm25.push((r.bm25.clone(), expected.clone()));
+        match &r.vector {
+            Some(v) => vector.push((v.clone(), expected.clone())),
             None => vector_available = false,
         }
-        hybrid.push((r.hybrid, expected));
+        hybrid.push((r.hybrid.clone(), expected.clone()));
+        runs.push(QuestionRun {
+            expected,
+            rankings: r,
+            ms,
+        });
     }
-    Ok(Evaluation {
+    let evaluation = Evaluation {
         questions: questions.len(),
         bm25: score(&bm25),
         vector: vector_available.then(|| score(&vector)),
         hybrid: score(&hybrid),
-    })
+    };
+    Ok((evaluation, runs))
 }
 
 #[cfg(test)]

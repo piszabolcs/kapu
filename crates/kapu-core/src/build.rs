@@ -417,15 +417,26 @@ fn build_doors(rooms: &[RoomSource]) -> Result<(Vec<Door>, Vec<u8>)> {
     Ok((doors, body))
 }
 
+/// The weight of the title and tag words in `#INDEX` (ASSUMPTION-05: 3).
+static TITLE_WEIGHT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(3);
+
+/// Plan v2 M0 title-weight axis, for measurement builds only: a file built
+/// with another weight than 3 is not a valid KAPU file (`validate --full`
+/// rebuilds the index with 3 and finds the difference).
+pub fn set_title_weight_for_measurement(weight: u64) {
+    TITLE_WEIGHT.store(weight.max(1), std::sync::atomic::Ordering::Relaxed);
+}
+
 fn count_terms(door: &mut Door) {
     let mut raw: BTreeMap<String, u64> = BTreeMap::new();
     let mut stemmed: BTreeMap<String, u64> = BTreeMap::new();
     let mut dl = 0u64;
     let tags = door.tags.join(" ");
     let content = indexed_text(&door.served);
+    let title = TITLE_WEIGHT.load(std::sync::atomic::Ordering::Relaxed);
     for (text, weight) in [
-        (door.title.as_str(), 3u64),
-        (tags.as_str(), 3),
+        (door.title.as_str(), title),
+        (tags.as_str(), title),
         (door.description.as_str(), 1),
         (content.as_str(), 1),
     ] {

@@ -35,6 +35,10 @@ struct Cli {
     /// Build without a vector model (emb=none).
     #[arg(long, global = true)]
     no_model: bool,
+    /// Measurement only (plan v2 M0): weight of the title and tag words in
+    /// the index instead of 3; the file does not validate.
+    #[arg(long, global = true, hide = true)]
+    title_weight: Option<u64>,
     #[command(subcommand)]
     command: Command,
 }
@@ -115,7 +119,17 @@ enum Command {
         ids: Vec<String>,
     },
     /// Retrieval quality on a question set (recall@5/10, MRR@10).
-    Bench { file: PathBuf, questions: PathBuf },
+    Bench {
+        file: PathBuf,
+        questions: PathBuf,
+        /// Ranking switches: a JSON object, or a list of them run one after
+        /// the other (the ablation matrix).
+        #[arg(long)]
+        config: Option<PathBuf>,
+        /// Write every question's rankings, per configuration, as JSON lines.
+        #[arg(long)]
+        rankings: Option<PathBuf>,
+    },
 }
 
 /// What a command produced: JSON for `--json`, text otherwise, warnings for
@@ -317,12 +331,32 @@ fn run(cli: &Cli) -> Result<Output, Error> {
                 k: *k,
                 max_price: *max_price,
                 kind: kind.clone(),
+                ..SearchOptions::default()
             };
             search(cli, file, query, &options)
         }
         Command::Describe { file, ids } => describe(file, ids),
         Command::Open { file, ids } => open(file, ids),
-        Command::Bench { file, questions } => bench(cli, file, questions),
+        Command::Bench {
+            file,
+            questions,
+            config,
+            rankings,
+        } => bench_any(cli, file, questions, config.as_deref(), rankings.as_deref()),
+    }
+}
+
+/// `kapu bench`: the matrix with `--config`, otherwise the plain table.
+fn bench_any(
+    cli: &Cli,
+    file: &Path,
+    questions: &Path,
+    config: Option<&Path>,
+    rankings: Option<&Path>,
+) -> Result<Output, Error> {
+    match config {
+        Some(config) => bench_matrix(cli, file, questions, config, rankings),
+        None => bench(cli, file, questions),
     }
 }
 
@@ -552,6 +586,131 @@ fn bench(cli: &Cli, file: &Path, questions: &Path) -> Result<Output, Error> {
     ))
 }
 
+/// The configurations of `kapu bench --config`: one object or a list, each
+/// with an optional `name` (default `c<N>`).
+fn bench_configs(path: &Path) -> Result<Vec<(String, kapu_core::search::RankOptions)>, Error> {
+    let text = std::fs::read_to_string(path).map_err(|e| io_err(path, &e))?;
+    let value: Value = serde_json::from_str(&text).map_err(|e| {
+        Error::new(
+            ErrorCode::E012,
+            format!("{}: not JSON: {e}", path.display()),
+        )
+    })?;
+    let list = match value {
+        Value::Array(list) => list,
+        one => vec![one],
+    };
+    list.iter()
+        .enumerate()
+        .map(|(i, v)| {
+            let name = v
+                .get("name")
+                .and_then(Value::as_str)
+                .map_or_else(|| format!("c{i}"), str::to_owned);
+            Ok((name, kapu_core::search::RankOptions::from_json(v)?))
+        })
+        .collect()
+}
+
+/// Median and 95th percentile of `ms`.
+fn percentiles(ms: &[f64]) -> (f64, f64) {
+    let mut sorted = ms.to_vec();
+    sorted.sort_by(f64::total_cmp);
+    let at = |q: f64| {
+        #[allow(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            clippy::cast_precision_loss
+        )]
+        let i = ((sorted.len().saturating_sub(1)) as f64 * q).round() as usize;
+        sorted.get(i).copied().unwrap_or(0.0)
+    };
+    (at(0.5), at(0.95))
+}
+
+/// `kapu bench --config` (plan v2 M0): every configuration on the same
+/// questions, the scores and search times of each, and with `--rankings`
+/// every question's rankings.
+fn bench_matrix(
+    cli: &Cli,
+    file: &Path,
+    questions: &Path,
+    config: &Path,
+    rankings: Option<&Path>,
+) -> Result<Output, Error> {
+    use std::io::Write as _;
+    let configs = bench_configs(config)?;
+    let data = read(file)?;
+    let text = std::fs::read_to_string(questions).map_err(|e| io_err(questions, &e))?;
+    let qs = kapu_core::evaluate::parse_questions(&text)?;
+    let model = reader_model(cli, &data)?;
+    let cache = model.as_ref().map(VectorCache::new);
+    let s = kapu_core::Sections::parse_with(
+        &data,
+        &kapu_core::Limits::default(),
+        kapu_core::BodyLength::Tolerate,
+    )?;
+    let mut sink = match rankings {
+        Some(path) => Some(std::io::BufWriter::new(
+            std::fs::File::create(path).map_err(|e| io_err(path, &e))?,
+        )),
+        None => None,
+    };
+    let mut lines = vec![
+        format!("{} questions, {} configurations", qs.len(), configs.len()),
+        "| Configuration | BM25 room r@10 | vector room r@10 | hybrid room r@10 | hybrid room MRR@10 | hybrid r@10 | ms p50 |".to_owned(),
+        "|---|---:|---:|---:|---:|---:|---:|".to_owned(),
+    ];
+    let mut items = Vec::new();
+    for (name, rank) in &configs {
+        let (e, runs) = kapu_core::evaluate::evaluate_with(&s, &qs, rank, cache.as_ref())?;
+        let ms: Vec<f64> = runs.iter().map(|r| r.ms).collect();
+        let (p50, p95) = percentiles(&ms);
+        if let Some(out) = sink.as_mut() {
+            for (i, run) in runs.iter().enumerate() {
+                let line = json!({
+                    "config": name, "q": i, "expected": run.expected, "ms": run.ms,
+                    "bm25": run.rankings.bm25, "vector": run.rankings.vector, "hybrid": run.rankings.hybrid,
+                });
+                writeln!(out, "{line}").map_err(|e| io_err(rankings.unwrap_or(file), &e))?;
+            }
+        }
+        lines.push(format!(
+            "| {name} | {:.3} | {} | {:.3} | {:.3} | {:.3} | {p50:.1} |",
+            e.bm25.room_recall10,
+            e.vector
+                .as_ref()
+                .map_or_else(|| "-".to_owned(), |v| format!("{:.3}", v.room_recall10)),
+            e.hybrid.room_recall10,
+            e.hybrid.room_mrr10,
+            e.hybrid.recall10,
+        ));
+        items.push(json!({
+            "name": name, "options": rank.to_json(),
+            "bm25": scores_json(&e.bm25), "vector": e.vector.as_ref().map(scores_json), "hybrid": scores_json(&e.hybrid),
+            "ms_p50": p50, "ms_p95": p95,
+        }));
+    }
+    if let (Some(out), Some(path)) = (sink.as_mut(), rankings) {
+        out.flush().map_err(|e| io_err(path, &e))?;
+    }
+    let embhash: String = s.header.embhash.0.iter().fold(String::new(), |mut h, b| {
+        let _ = write!(h, "{b:02x}");
+        h
+    });
+    Ok(Output::new(
+        json!({
+            "questions": qs.len(),
+            "tool": env!("CARGO_PKG_VERSION"),
+            "format": s.header.version,
+            "emb": s.header.emb, "embhash": embhash,
+            "vector": model.is_some(),
+            "configs": items,
+        }),
+        lines.join("\n"),
+    ))
+}
+
 /// Parses the command line; `--version` prints the app info card and `--help`
 /// ends with the author signature.
 fn parse_cli() -> Cli {
@@ -584,6 +743,9 @@ fn write_failed(e: &std::io::Error) -> ExitCode {
 
 fn main() -> ExitCode {
     let cli = parse_cli();
+    if let Some(weight) = cli.title_weight {
+        kapu_core::build::set_title_weight_for_measurement(weight);
+    }
     let start = Instant::now();
     let result = run(&cli);
     let elapsed = start.elapsed().as_secs_f64() * 1000.0;

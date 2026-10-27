@@ -143,16 +143,26 @@ fn stemmers() -> &'static (Stemmer, Stemmer) {
 /// in that order (D80: the Snowball generation of `rust-stemmers` 1.2).
 #[must_use]
 pub fn stems(term: &str) -> Vec<String> {
-    let (hu, en) = stemmers();
+    stems_of(term, true, true)
+}
+
+/// [`stems`] with only the stemmers asked for: the term itself always, then
+/// the Hungarian and the English stem if `hu` and `en` (the M0 stemming axis).
+#[must_use]
+pub fn stems_of(term: &str, hu: bool, en: bool) -> Vec<String> {
+    let (hu_stemmer, en_stemmer) = stemmers();
     let mut out: Vec<String> = Vec::with_capacity(3);
-    for t in [
-        term.to_owned(),
-        hu.stem(term).into_owned(),
-        en.stem(term).into_owned(),
-    ] {
+    let mut add = |t: String| {
         if !t.is_empty() && !out.contains(&t) {
             out.push(t);
         }
+    };
+    add(term.to_owned());
+    if hu {
+        add(hu_stemmer.stem(term).into_owned());
+    }
+    if en {
+        add(en_stemmer.stem(term).into_owned());
     }
     out
 }
