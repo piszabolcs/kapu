@@ -78,16 +78,19 @@ jobs:
           name="kapu-$v-${{ matrix.target }}"
           mkdir -p "dist/$name/models/potion-multilingual-128M-i8"
           cp "target/release/kapu${{ matrix.exe }}" "target/release/kapu-mcp${{ matrix.exe }}" "target/release/kapu-gui${{ matrix.exe }}" "dist/$name/"
-          mkdir -p "dist/$name/examples" && cp examples/kapu-spec.kapu "dist/$name/examples/"
+          mkdir -p "dist/$name/examples" && cp examples/kapu-spec.kapu examples/kapu-docs.kapu "dist/$name/examples/"
           cp models/potion-multilingual-128M-i8/* "dist/$name/models/potion-multilingual-128M-i8/"
           cp LICENSE README.md SPEC-KAPU.md THIRD-PARTY.md "dist/$name/"
           printf 'SPEC-KAPU.md: CC BY 4.0, https://creativecommons.org/licenses/by/4.0/\n' > "dist/$name/LICENSE-SPEC.txt"
           "dist/$name/kapu${{ matrix.exe }}" new "dist/smoke.kapu"
           "dist/$name/kapu${{ matrix.exe }}" validate --full "dist/smoke.kapu"
-          cd dist && if [ "${{ matrix.exe }}" = ".exe" ]; then 7z a "$name.zip" "$name" >/dev/null; else tar czf "$name.tar.gz" "$name"; fi
+          cd dist && if [ "${{ matrix.exe }}" = ".exe" ]; then f="$name.zip"; 7z a "$f" "$name" >/dev/null; else f="$name.tar.gz"; tar czf "$f" "$name"; fi
+          # install.sh and install.ps1 check the archive against this
+          if command -v sha256sum >/dev/null; then sha256sum "$f" > "$f.sha256"; else shasum -a 256 "$f" > "$f.sha256"; fi
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
           files: |
             dist/*.zip
             dist/*.tar.gz
+            dist/*.sha256

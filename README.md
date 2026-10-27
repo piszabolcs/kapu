@@ -4,7 +4,7 @@
 
 # KAPU
 
-**A personal knowledge base in a single text file that any MCP-capable agent can search for a few hundred tokens.**
+**Pack your Markdown docs and agent skills into one indexed text file. Claude Code, Codex or a local model searches it over MCP and reads only what it needs, within a token budget.**
 
 ![Rust](https://img.shields.io/badge/Rust-1.90%2B-B7410E?style=flat-square&logo=rust&logoColor=white)
 ![MCP](https://img.shields.io/badge/MCP-stdio%20server-1F2328?style=flat-square)
@@ -12,7 +12,7 @@
 ![Offline](https://img.shields.io/badge/offline-single%20binary-2EA44F?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 
-[Results](#results) · [Quickstart](#quickstart) · [Connect an agent](#connect-an-agent) · [When not to use it](#when-not-to-use-it) · [How it works](#how-it-works) · [Magyar](#magyar)
+[Try it](#try-it-in-30-seconds) · [Results](#results) · [How it works](#how-it-works) · [Desktop window](#desktop-window) · [When not to use it](#when-not-to-use-it) · [Connect an agent](#connect-an-agent) · [Magyar](#magyar)
 
 </div>
 
@@ -20,13 +20,77 @@
   <img src="docs/assets/demo.svg" alt="Terminal: kapu map shows the rooms of a file with their token prices, kapu search finds the section that answers a question, kapu open prints only that section" width="860" />
 </p>
 
-Put your skills, code patterns and project notes in one `.kapu` file, and Claude Code, Codex, Copilot or a local model finds the relevant part on its own, without loading the rest. You no longer have to remember which of your 30 skills fits the task, or whether you already built something similar six months ago.
+Your skills, code patterns, manuals and project notes go into one `.kapu` file. The agent first sees a map of every section with its token price, searches, and opens only the sections it needs. Nothing to host: one binary, an optional offline embedding model, and a plain UTF-8 file you can copy anywhere.
 
-It is built for two cases: **coding agents** that should use your accumulated knowledge on any platform, and **local LLMs**, where every token in the context costs memory and seconds. Every reply of the MCP server starts with its own price in tokens and stays within a budget the agent sets, and one call (`kapu_ask`) can search and open the answer.
+It is built for two cases: **coding agents** that should use your accumulated knowledge on any platform, and **local LLMs**, where every token in the context costs memory and seconds. Every reply of the MCP server starts with its own price in tokens and stays within a budget the agent sets.
 
-> On a 207,000-token manual the model had never seen, Claude agents using KAPU answered **12 of 12** beginner questions while reading **4,104 tokens** per question: **half** of what the same agents read with grep over the Markdown file, and **2%** of pasting the whole manual into the context.
+## Try it in 30 seconds
+
+**1. Install** the prebuilt `kapu` and `kapu-mcp` (Windows x64, Linux x64, macOS on Apple silicon), with the embedding model included. No Rust, no Python.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/piszabolcs/kapu/main/install.sh | sh
+```
+
+```powershell
+irm https://raw.githubusercontent.com/piszabolcs/kapu/main/install.ps1 | iex
+```
+
+The scripts download the archive of the latest release, check its SHA-256, unpack it under your user folder and print the next commands. You can also download the archive from [Releases](https://github.com/piszabolcs/kapu/releases) yourself.
+
+**2. Pack** a folder of agent skills, or any folder of Markdown files (one room per file, `##` headings become sections):
+
+```bash
+kapu import --skills ~/.claude/skills skills.kapu
+kapu import ./my-notes notes.kapu
+```
+
+**3. Connect** it to Claude Code (other clients: [Connect an agent](#connect-an-agent)):
+
+```bash
+claude mcp add kapu -- kapu-mcp
+```
+
+**4. Ask:** "Which of my skills fit this task? Look in `skills.kapu`." The agent reads the skill catalog in one reply and opens only what it needs.
+
+To look around first, the archive has this project's own documentation as a KAPU file:
+
+```bash
+kapu map examples/kapu-docs.kapu
+kapu search examples/kapu-docs.kapu "how do I connect it to an agent" --k 3
+kapu open examples/kapu-docs.kapu overview/connect-an-agent
+```
+
+<details>
+<summary>Build from source</summary>
+
+With [Rust](https://rustup.rs) 1.90 or newer (any stable toolchain; CI tests with 1.99.1 and with the minimum):
+
+```bash
+git clone https://github.com/piszabolcs/kapu.git
+cd kapu
+cargo build --release -p kapu-cli -p kapu-mcp
+```
+
+Search by meaning is optional. For it, download [`minishlab/potion-multilingual-128M`](https://huggingface.co/minishlab/potion-multilingual-128M) (`config.json`, `README.md`, `tokenizer.json`, `model.safetensors`) into `models/potion-multilingual-128M` and make the int8 copy the tools look for: `python tools/quantize.py models/potion-multilingual-128M`. The release archives include that copy already. Without the model, keyword search (BM25) still works.
+
+</details>
+
+The skill import keeps every skill's name as the title and its description as the first line, marks the room `kind: skill` (and `has_scripts: yes`), puts its scripts in as code blocks and its reference files in as linked rooms. A file built with the model carries its search vectors, so the first search on another machine needs no warm-up.
 
 ## Results
+
+| Measured with Claude agents | Without KAPU | With KAPU |
+|---|---|---|
+| A 207,000-token manual the model had never seen, 12 questions | grep over the Markdown file: 8,280 tokens read per question, 12 correct | **4,104 tokens** per question, 12 correct |
+| PLC manuals of six vendors, 36 questions | the model alone: 28% correct | **92% correct** (97% with the right page pasted in) |
+| 24 questions those manuals do not answer | the model alone made up 11 answers | made up **1** |
+| 91 agent skills, 12 development tasks | native Claude Code skills: $0.236 per task, 14,081 tokens fixed per session, 39 of 39 found | **$0.099** per task, **4,775** tokens fixed, 38 of 39 found |
+
+Not every number favours KAPU: on public documentation with Stack Overflow questions its search is level with page-deduplicated chunked BM25 on the Rust book and behind it on Kubernetes and MDN, and the native skills find one more skill than the KAPU file. The details, the method and every limit are below and on the **[results page](https://piszabolcs.github.io/kapu/results/)** ([source](docs/results/index.html); PDF in [English](docs/results/kapu-measurements-en.pdf) and [Hungarian](docs/results/kapu-measurements-hu.pdf)).
+
+<details>
+<summary>Full benchmarks and method</summary>
 
 The same 12 questions about the PixelLab documentation (third-party, not published), the same prompt for every format, three blind judges checking every claim against the documentation (tools 0.1, format 1.1):
 
@@ -67,6 +131,50 @@ With the catalog of tools 0.2.1 (`kapu_map kind=skill`: every skill with its des
 
 What one session costs, whatever the size of the file: the six tools' descriptions and input schemas are 799 tokens, a map reply at most 1,000, ten search hits with an excerpt each at most 600 (format 1.2, measured on a 3,000-room file and the corpora above).
 
+</details>
+
+## How it works
+
+A `.kapu` file is plain UTF-8 text. The Markdown body is the single source of truth; every other section is rebuilt from it, byte for byte, by `kapu build`.
+
+```text
+%KAPU 1.2          512-byte header: where each section starts, fingerprints, counts
+#MAP    ... #END   groups and doors (rooms and their sections) with token prices and kinds
+#DESC   ... #END   one-line descriptions and tags
+#GRAPH  ... #END   links, shared rare terms and similar meaning between doors
+#INDEX  ... #END   BM25 index; postings are positions in #DOCS, not ids
+#DOCS   ... #END   byte offset, length, BLAKE3 fingerprint and word count of every door
+#VEC    ... #END   the sign bits of every search vector, base64 (with a model only)
+#BODY              the Markdown rooms, one after the other
+```
+
+- **Map first.** The map reply stays within 1,000 tokens even for 13 million tokens of documentation: the guide, a totals line and the groups (Leiden clusters named by their keywords); a group lists its rooms with prices.
+- **Hybrid search.** BM25 with English and Hungarian stemming, plus a static multilingual embedding model with one vector per 512-token window of a section, merged with reciprocal rank fusion. The file keeps one sign bit per vector component (2-3% of the file); those pick 200 candidates, and the model's float vectors order them.
+- **Opening is a seek.** The reader jumps to the byte offset in `#DOCS`, checks the section's fingerprint and returns its text. A section longer than the budget comes in parts, cut at headings or blank lines.
+- **Edits stay safe.** If someone edits the body by hand, the fingerprints no longer match; the reader notices, rebuilds the positions from the room markers and reports a stale index until the next build.
+- **Content scan.** Writing a room warns about text that tries to override an agent's instructions, hidden characters, long encoded blocks and unexpected download commands. It warns, it does not block.
+
+The format is specified in [SPEC-KAPU.md](SPEC-KAPU.md) (in Hungarian for now), with test vectors for every error code in [tests/vectors](tests/vectors) and a byte-level Python reference builder in [tools/build_vectors.py](tools/build_vectors.py).
+
+## Desktop window
+
+`kapu-gui` shows a file the way an agent sees it: map, rooms, search, graph and checks.
+
+<table>
+  <tr>
+    <td align="center" width="50%"><img src="docs/screenshots/01-main.png" alt="KAPU window: the map with token prices on the left, an open room in the middle, its tags, neighbours and fingerprint on the right" /><br/><sub>Map, an open room and its neighbours</sub></td>
+    <td align="center" width="50%"><img src="docs/screenshots/02-search.png" alt="Search view: a question, ten doors ranked by words and meaning, with token prices and a running total" /><br/><sub>Hybrid search with a running token total</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="50%"><img src="docs/screenshots/03-graph.png" alt="Graph view: rooms as dots coloured by group, edges for shared terms and similar meaning" /><br/><sub>Graph of the doors, coloured by group</sub></td>
+    <td align="center" width="50%"><img src="docs/screenshots/04-check.png" alt="Check view: a full check that rebuilt the file and found the same bytes" /><br/><sub>Full check: fingerprints and a byte-for-byte rebuild</sub></td>
+  </tr>
+</table>
+
+The release archives include it (`kapu-gui examples/kapu-docs.kapu`); from source: `cargo build --release -p kapu-gui`.
+
+On Linux the window needs WebKitGTK: `sudo apt install libwebkit2gtk-4.1-dev libxdo-dev libssl-dev librsvg2-dev`.
+
 ## Why
 
 AI agents get their working knowledge as Markdown: a manual, a specification, a library of skills, project notes. Pasting all of it costs tokens on every turn and pushes the useful part out of the context window. A vector database needs a server and an embedding service, cuts the text into chunks and loses the structure. Many small files lose the overview, and the agent has to guess which one to read.
@@ -89,35 +197,6 @@ KAPU keeps the Markdown as it is and adds, in the same file, a map of every sect
 
 KAPU is strong where there are **many separate pieces of knowledge** (skills, patterns, projects), where **one large document** is the source, where **several agents or platforms** use the same knowledge, and where **the context is expensive** (local models).
 
-## Quickstart
-
-Build from source with [Rust](https://rustup.rs) 1.90 or newer (any stable toolchain; CI tests with 1.99.1 and with the minimum):
-
-```bash
-git clone https://github.com/piszabolcs/kapu.git
-cd kapu
-cargo build --release -p kapu-cli -p kapu-mcp
-```
-
-Look around in the example, which is this project's own documentation as a KAPU file:
-
-```bash
-target/release/kapu map examples/kapu-docs.kapu
-target/release/kapu search examples/kapu-docs.kapu "how do I connect it to an agent" --k 3
-target/release/kapu open examples/kapu-docs.kapu overview/connect-an-agent
-```
-
-Make your own from a folder of Markdown files (one room per file, `##` headings become sections), or from a folder of agent skills:
-
-```bash
-target/release/kapu import ./my-notes notes.kapu
-target/release/kapu import --skills ~/.claude/skills skills.kapu
-```
-
-The skill import keeps every skill's name as the title and its description as the first line, marks the room `kind: skill` (and `has_scripts: yes`), puts its scripts in as code blocks and its reference files in as linked rooms.
-
-Search by meaning is optional. For it, download [`minishlab/potion-multilingual-128M`](https://huggingface.co/minishlab/potion-multilingual-128M) (`config.json`, `README.md`, `tokenizer.json`, `model.safetensors`) into `models/potion-multilingual-128M` and make the int8 copy the tools look for: `python tools/quantize.py models/potion-multilingual-128M`. A file built with the model carries its search vectors, so the first search on another machine needs no warm-up; the reader still needs the model to embed the query. Without it, keyword search (BM25) still works.
-
 ## Connect an agent
 
 The server speaks MCP over stdio; `KAPU_MODEL_DIR` points it at the model folder if it is not next to the binary.
@@ -125,7 +204,7 @@ The server speaks MCP over stdio; `KAPU_MODEL_DIR` points it at the model folder
 **Claude Code** (tried):
 
 ```bash
-claude mcp add kapu -- /path/to/kapu-mcp
+claude mcp add kapu -- kapu-mcp
 ```
 
 **Codex CLI**, in `~/.codex/config.toml` (not tried):
@@ -175,9 +254,9 @@ A shell command can still print the file; the instruction line covers that case 
 A room can name its kind on a `kind:` line in its head: `skill`, `project`, `pattern` or `note`. The map and the search filter by it, and the map's totals line counts them (`kinds=project:4,skill:30`). A project card is a room for one project you did, at most about 600 tokens:
 
 ```bash
-target/release/kapu template --kind project > card.md   # Goal, Period, Stack, Key decisions, What worked, What did not, Where the code is
-target/release/kapu add notes.kapu card.md
-target/release/kapu map notes.kapu --kind project
+kapu template --kind project > card.md   # Goal, Period, Stack, Key decisions, What worked, What did not, Where the code is
+kapu add notes.kapu card.md
+kapu map notes.kapu --kind project
 ```
 
 An agent can write one too: `kapu_write`'s description gives it the card's sections.
@@ -192,51 +271,6 @@ The body is the source; everything else in the file is rebuilt from it. Two ways
 ```
 
 Or keep the Markdown in git (`kapu export notes.kapu ./notes`) and build the file from it (`kapu import ./notes notes.kapu`). `kapu` warns when a file is above 50 MiB, GitHub's warning size.
-
-## How it works
-
-A `.kapu` file is plain UTF-8 text. The Markdown body is the single source of truth; every other section is rebuilt from it, byte for byte, by `kapu build`.
-
-```text
-%KAPU 1.2          512-byte header: where each section starts, fingerprints, counts
-#MAP    ... #END   groups and doors (rooms and their sections) with token prices and kinds
-#DESC   ... #END   one-line descriptions and tags
-#GRAPH  ... #END   links, shared rare terms and similar meaning between doors
-#INDEX  ... #END   BM25 index; postings are positions in #DOCS, not ids
-#DOCS   ... #END   byte offset, length, BLAKE3 fingerprint and word count of every door
-#VEC    ... #END   the sign bits of every search vector, base64 (with a model only)
-#BODY              the Markdown rooms, one after the other
-```
-
-- **Map first.** The map reply stays within 1,000 tokens even for 13 million tokens of documentation: the guide, a totals line and the groups (Leiden clusters named by their keywords); a group lists its rooms with prices.
-- **Hybrid search.** BM25 with English and Hungarian stemming, plus a static multilingual embedding model with one vector per 512-token window of a section, merged with reciprocal rank fusion. The file keeps one sign bit per vector component (2-3% of the file); those pick 200 candidates, and the model's float vectors order them.
-- **Opening is a seek.** The reader jumps to the byte offset in `#DOCS`, checks the section's fingerprint and returns its text. A section longer than the budget comes in parts, cut at headings or blank lines.
-- **Edits stay safe.** If someone edits the body by hand, the fingerprints no longer match; the reader notices, rebuilds the positions from the room markers and reports a stale index until the next build.
-- **Content scan.** Writing a room warns about text that tries to override an agent's instructions, hidden characters, long encoded blocks and unexpected download commands. It warns, it does not block.
-
-The format is specified in [SPEC-KAPU.md](SPEC-KAPU.md) (in Hungarian for now), with test vectors for every error code in [tests/vectors](tests/vectors) and a byte-level Python reference builder in [tools/build_vectors.py](tools/build_vectors.py).
-
-## Desktop window
-
-`kapu-gui` shows a file the way an agent sees it: map, rooms, search, graph and checks.
-
-<table>
-  <tr>
-    <td align="center" width="50%"><img src="docs/screenshots/01-main.png" alt="KAPU window: the map with token prices on the left, an open room in the middle, its tags, neighbours and fingerprint on the right" /><br/><sub>Map, an open room and its neighbours</sub></td>
-    <td align="center" width="50%"><img src="docs/screenshots/02-search.png" alt="Search view: a question, ten doors ranked by words and meaning, with token prices and a running total" /><br/><sub>Hybrid search with a running token total</sub></td>
-  </tr>
-  <tr>
-    <td align="center" width="50%"><img src="docs/screenshots/03-graph.png" alt="Graph view: rooms as dots coloured by group, edges for shared terms and similar meaning" /><br/><sub>Graph of the doors, coloured by group</sub></td>
-    <td align="center" width="50%"><img src="docs/screenshots/04-check.png" alt="Check view: a full check that rebuilt the file and found the same bytes" /><br/><sub>Full check: fingerprints and a byte-for-byte rebuild</sub></td>
-  </tr>
-</table>
-
-```bash
-cargo build --release -p kapu-gui
-target/release/kapu-gui examples/kapu-docs.kapu
-```
-
-On Linux the window needs WebKitGTK: `sudo apt install libwebkit2gtk-4.1-dev libxdo-dev libssl-dev librsvg2-dev`.
 
 ## Architecture
 
@@ -299,7 +333,7 @@ kapu/
 
 KAPU is a working pre-release: the format, the command line, the MCP server and the Windows window are in daily use; the measurements above are a pilot, not a benchmark.
 
-- [x] Prebuilt binaries for Windows, Linux and macOS from the release workflow (v0.2.0)
+- [x] Prebuilt binaries for Windows, Linux and macOS from the release workflow (v0.2.0), one-line install scripts with checksums (v0.3.0)
 - [ ] A local model tried end to end, with measurements (the Codex CLI and VS Code configurations above stay untried)
 - [x] Finding skills: native skills, a KAPU file and a Markdown folder at 45 and 91 skills
 - [x] Plan v2, phases 1 to 3: every ranking change measured on a fixed dev/test split, fair chunk baselines, oracle and abstention runs (0.3.0)
@@ -317,7 +351,7 @@ Code: MIT, see [LICENSE](LICENSE). Specification (`SPEC-KAPU.md`): CC BY 4.0. Fo
 
 ## Magyar
 
-**Személyes tudásbázis egyetlen szövegfájlban, amelyben bármely MCP-képes ügynök néhány száz tokenből keres.**
+**A Markdown-dokumentumaid és ügynök-skilljeid egyetlen indexelt szövegfájlban. A Claude Code, a Codex vagy egy helyi modell MCP-n át keres benne, és csak azt olvassa el, amire szüksége van, tokenkereten belül.**
 
 A skilljeid, kódmintáid és projektjegyzeteid egy `.kapu` fájlba kerülnek, és a Claude Code, a Codex, a Copilot vagy egy helyi modell magától megtalálja a hozzá illő részt, a többit nem tölti be. Két esetre készült: **kódoló ügynököknek**, amelyek bármelyik platformon használják a felgyűlt tudásodat, és **helyi nyelvi modelleknek**, ahol a kontextus minden tokenje memória és másodperc. Az MCP szerver minden válasza a saját árával kezdődik és a megadott tokenkereten belül marad; egyetlen hívás (`kapu_ask`) keres és ki is nyitja a választ.
 
@@ -334,7 +368,7 @@ A nyilvános dokumentációkon (Rust Book, Kubernetes, MDN) a keresés 32-282 ms
 
 **Amire nem való:** kicsi, jól szétszedett Markdown-mappára (ott a grep is olcsó), naponta változó csapatos dokumentációra (a git diff zajos, ilyenkor a Markdown a forrás), és futtatandó skillekre (a KAPU a tudást adja, a szkriptet nem futtatja).
 
-**Kipróbálás:** Rust 1.90 vagy újabb, `cargo build --release -p kapu-cli -p kapu-mcp`, majd `target/release/kapu map examples/kapu-docs.kapu`. Saját fájl egy Markdown-mappából: `kapu import ./jegyzetek jegyzetek.kapu`, skillekből: `kapu import --skills ~/.claude/skills skillek.kapu`, projektkártya: `kapu template --kind project`. Claude Code-hoz: `claude mcp add kapu -- /path/to/kapu-mcp`; a Codex és a VS Code beállítása fent, a [Connect an agent](#connect-an-agent) részben.
+**Kipróbálás:** telepítés előre fordított binárissal és a beágyazó modellel, Rust és Python nélkül: Linuxon és macOS-en `curl -fsSL https://raw.githubusercontent.com/piszabolcs/kapu/main/install.sh | sh`, Windowson `irm https://raw.githubusercontent.com/piszabolcs/kapu/main/install.ps1 | iex` (vagy a kiadás archívuma a [Releases](https://github.com/piszabolcs/kapu/releases) oldalról), majd `kapu map examples/kapu-docs.kapu`; forrásból: Rust 1.90 vagy újabb, `cargo build --release -p kapu-cli -p kapu-mcp`. Saját fájl egy Markdown-mappából: `kapu import ./jegyzetek jegyzetek.kapu`, skillekből: `kapu import --skills ~/.claude/skills skillek.kapu`, projektkártya: `kapu template --kind project`. Claude Code-hoz: `claude mcp add kapu -- kapu-mcp`; a Codex és a VS Code beállítása fent, a [Connect an agent](#connect-an-agent) részben.
 
 **Hogyan működik:** a `.kapu` fájl sima UTF-8 szöveg. A Markdown törzs az egyetlen igazságforrás; a térkép a tokenárakkal, a keresőindex, a keresés vektorai, a gráf és az ujjlenyomatok bájtra azonosan újraépülnek belőle. A formátum specifikációja: [SPEC-KAPU.md](SPEC-KAPU.md).
 
