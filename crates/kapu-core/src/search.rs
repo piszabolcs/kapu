@@ -144,6 +144,16 @@ pub struct RankOptions {
     pub min_door_tokens: u64,
     /// How many hits of each ranking the fusion takes (50 in FR-16/2).
     pub depth: usize,
+    /// J9: one step on `#GRAPH` from the first `graph_seeds` fused hits: a
+    /// door gains `gamma(type) * weight * score` of each neighbouring seed
+    /// room, per edge type (0 = off).
+    pub graph_link: f64,
+    /// J9: `gamma` of `term` edges.
+    pub graph_term: f64,
+    /// J9: `gamma` of `sim` edges.
+    pub graph_sim: f64,
+    /// J9: how many fused hits seed the step.
+    pub graph_seeds: usize,
 }
 
 impl Default for RankOptions {
@@ -162,9 +172,16 @@ impl Default for RankOptions {
             room_beta: 0.0,
             min_door_tokens: 0,
             depth: TOP_N,
+            graph_link: 0.0,
+            graph_term: 0.0,
+            graph_sim: 0.0,
+            graph_seeds: GRAPH_SEEDS,
         }
     }
 }
+
+/// J9: the fused hits that seed the graph step.
+pub const GRAPH_SEEDS: usize = 30;
 
 impl RankOptions {
     /// From one configuration object of `kapu bench --config` (M0). Every
@@ -213,6 +230,14 @@ impl RankOptions {
                     .map(|x| r.adaptive = x)
                     .is_some(),
                 "room_beta" => num().map(|x| r.room_beta = x).is_some(),
+                "graph_link" => num().map(|x| r.graph_link = x).is_some(),
+                "graph_term" => num().map(|x| r.graph_term = x).is_some(),
+                "graph_sim" => num().map(|x| r.graph_sim = x).is_some(),
+                "graph_seeds" => count()
+                    .and_then(|x| usize::try_from(x).ok())
+                    .filter(|x| *x > 0)
+                    .map(|x| r.graph_seeds = x)
+                    .is_some(),
                 "rescore_bm25" => count()
                     .and_then(|x| usize::try_from(x).ok())
                     .map(|x| r.rescore_bm25 = x)
@@ -253,6 +278,10 @@ impl RankOptions {
             "room_beta": self.room_beta,
             "min_door_tokens": self.min_door_tokens,
             "depth": self.depth,
+            "graph_link": self.graph_link,
+            "graph_term": self.graph_term,
+            "graph_sim": self.graph_sim,
+            "graph_seeds": self.graph_seeds,
         })
     }
 }
@@ -426,6 +455,8 @@ pub enum Source {
     Vec,
     /// Both rankings.
     Both,
+    /// Neither: a neighbour of a hit on the graph (J9).
+    Graph,
 }
 
 impl Source {
@@ -436,6 +467,7 @@ impl Source {
             Self::Bm25 => "bm25",
             Self::Vec => "vec",
             Self::Both => "both",
+            Self::Graph => "graph",
         }
     }
 }
@@ -589,7 +621,7 @@ fn ranked_in(
 
     let vector_status = vector_status(s, cache);
     let (Some(cache), VectorStatus::Available) = (cache, &vector_status) else {
-        let hits = keyword
+        let mut hits = keyword
             .iter()
             .map(|h| SearchHit {
                 title: title(&h.id),
@@ -600,6 +632,9 @@ fn ranked_in(
                 also: Vec::new(),
             })
             .collect();
+        if rank.graph_link > 0.0 || rank.graph_term > 0.0 || rank.graph_sim > 0.0 {
+            hits = graph_step(s, hits, rank, &allowed, &|id| (title(id), price(id)))?;
+        }
         return Ok(Ranked {
             bm25: keyword,
             vector: None,
@@ -642,12 +677,78 @@ fn ranked_in(
             .total_cmp(&a.score)
             .then_with(|| a.id.as_bytes().cmp(b.id.as_bytes()))
     });
+    if rank.graph_link > 0.0 || rank.graph_term > 0.0 || rank.graph_sim > 0.0 {
+        hits = graph_step(s, hits, rank, &allowed, &|id| (title(id), price(id)))?;
+    }
     Ok(Ranked {
         bm25: keyword,
         vector: Some(semantic),
         hits: collapse(hits, rank, limit),
         status: VectorStatus::Available,
     })
+}
+
+/// J9 (plan v2, variant A): one step of score diffusion on `#GRAPH`. The
+/// first `graph_seeds` hits give their room's best score; every edge from a
+/// seed room (both ways for the undirected `term` and `sim`) adds `gamma *
+/// weight * score` to its other end. A door the step reaches that was no
+/// hit joins with source `graph`.
+fn graph_step(
+    s: &Sections<'_>,
+    mut hits: Vec<SearchHit>,
+    rank: &RankOptions,
+    allowed: &dyn Fn(&str) -> bool,
+    about: &dyn Fn(&str) -> (String, u64),
+) -> Result<Vec<SearchHit>> {
+    let mut seeds: BTreeMap<&str, f64> = BTreeMap::new();
+    for h in hits.iter().take(rank.graph_seeds) {
+        let best = seeds.entry(room_of(&h.id)).or_insert(h.score);
+        *best = best.max(h.score);
+    }
+    let mut gain: BTreeMap<String, f64> = BTreeMap::new();
+    for e in crate::catalog::parse_graph(s.graph)? {
+        let gamma = match e.kind {
+            "link" => rank.graph_link,
+            "term" => rank.graph_term,
+            "sim" => rank.graph_sim,
+            _ => 0.0,
+        };
+        if gamma <= 0.0 {
+            continue;
+        }
+        if let Some(score) = seeds.get(room_of(e.from)) {
+            *gain.entry(e.to.to_owned()).or_insert(0.0) += gamma * e.weight * score;
+        }
+        if e.kind != "link"
+            && let Some(score) = seeds.get(room_of(e.to))
+        {
+            *gain.entry(e.from.to_owned()).or_insert(0.0) += gamma * e.weight * score;
+        }
+    }
+    for h in &mut hits {
+        if let Some(extra) = gain.remove(&h.id) {
+            h.score += extra;
+        }
+    }
+    for (id, extra) in gain {
+        if allowed(&id) {
+            let (title, tokens) = about(&id);
+            hits.push(SearchHit {
+                id,
+                title,
+                tokens,
+                score: extra,
+                source: Source::Graph,
+                also: Vec::new(),
+            });
+        }
+    }
+    hits.sort_by(|a, b| {
+        b.score
+            .total_cmp(&a.score)
+            .then_with(|| a.id.as_bytes().cmp(b.id.as_bytes()))
+    });
+    Ok(hits)
 }
 
 /// FR-10/4: whether the reader's model matches the file's `embhash`.

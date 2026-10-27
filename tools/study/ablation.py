@@ -3,7 +3,7 @@
     python tools/study/ablation.py run <kapu> <matrix.json> <work-dir> \
         <set>=<file.kapu>:<questions.jsonl> ...
     python tools/study/ablation.py report <work-dir> <splits-dir> <out.json> \
-        [--base base] <set> ...
+        [--base base] [--chunks <dir of chunk-<set>.json>] <set> ...
 
 `run` calls `kapu bench --json --config <matrix> --rankings` once per question
 set (`<work-dir>/<set>.bench.json`, `<set>.rankings.jsonl`); a set whose two
@@ -155,10 +155,14 @@ def git_commit():
 
 
 def report(argv):
-    base = "base"
+    base, chunks = "base", None
     if "--base" in argv:
         i = argv.index("--base")
         base = argv[i + 1]
+        del argv[i:i + 2]
+    if "--chunks" in argv:
+        i = argv.index("--chunks")
+        chunks = Path(argv[i + 1])
         del argv[i:i + 2]
     work, splits, out = Path(argv[0]), Path(argv[1]), Path(argv[2])
     names = argv[3:]
@@ -224,6 +228,20 @@ def report(argv):
             cfg["ms_p50_ratio"] = c["ms_p50"] / max(next(x["ms_p50"] for x in bench["configs"] if x["name"] == base), 1e-9)
             del ms
             entry["configs"][cname] = cfg
+        chunk_file = chunks / f"chunk-{name}.json" if chunks else None
+        if chunk_file and chunk_file.is_file():
+            # M2: the fair baseline is the chunk ranking with one hit per room
+            doc = json.loads(chunk_file.read_text(encoding="utf-8"))
+            entry["chunk"] = {}
+            for mode in ("bm25", "vector", "hybrid"):
+                if mode not in doc or "ranks" not in doc[mode]:
+                    continue
+                entry["chunk"][mode] = {}
+                for unit in ("units", "dedup"):
+                    ranks = doc[mode]["ranks"][unit]
+                    entry["chunk"][mode][unit] = {
+                        part: metrics([r for r, p in zip(ranks, parts) if part == "all" or p == part])
+                        for part in ("dev", "test", "all")}
         result["sets"][name] = entry
     for cname, by_part in pooled.items():
         result["pooled"][cname] = {}
@@ -320,6 +338,18 @@ def print_table(result, base):
             fmt = lambda v: f"{v['diff']:+.3f} [{v['lo']:+.3f}, {v['hi']:+.3f}]"
             tail = [fmt(p["r@10"]), fmt(p["mrr@10"]), f"{a['max_p50_ratio']:.2f}", "yes" if a["accepted"] else ""]
         print(f"| {c} | " + " | ".join(cells + tail) + " |")
+    chunked = [s for s in sets if "chunk" in result["sets"][s]]
+    if chunked:
+        print()
+        print("| set (test) | KAPU base hybrid | chunk BM25 dedup | chunk vector dedup | chunk hybrid dedup | chunk BM25 units |")
+        print("|---|---:|---:|---:|---:|---:|")
+        for s in chunked:
+            e = result["sets"][s]
+            k = e["configs"][base]["parts"]["test"]["metrics"]["hybrid"]["room"]
+            c = e["chunk"]
+            cell = lambda m: f"{m['r@10']:.3f} / {m['mrr@10']:.3f}"
+            print(f"| {s} | {cell(k)} | {cell(c['bm25']['dedup']['test'])} | {cell(c['vector']['dedup']['test'])} | "
+                  f"{cell(c['hybrid']['dedup']['test']) if 'hybrid' in c else '-'} | {cell(c['bm25']['units']['test'])} |")
     print()
     print("| fix | chosen on dev | dev gain | test d r@10 [95%] | test d MRR [95%] | worst set | accepted |")
     print("|---|---|---:|---:|---:|---:|---|")

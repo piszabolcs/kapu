@@ -6,8 +6,11 @@ Rooms are cut into 512-token chunks (o200k_base, 64 overlap) and ranked by
 potion-multilingual-128M (f32, model2vec) cosine and by BM25 (k1 1.2, b 0.75,
 lower-case word tokens, no stemming). A question hits when a chunk of its gold
 room is among the top k units, the same rule as `kapu bench` lenient (a door
-or its room); `dedup` also reports k distinct rooms. Embeddings are cached
-next to the room folder (`<rooms>.meta/chunks.npz`).
+or its room); `dedup` also reports k distinct rooms. `hybrid` fuses the first 50 chunks
+of both by RRF (k 60), as KAPU fuses its doors (plan v2 N7). Every ranking
+also keeps the gold room's rank per question (`ranks`), for the dev/test
+parts of plan v2 M1. Embeddings are cached next to the room folder
+(`<rooms>.meta/chunks.npz`).
 """
 
 import json
@@ -93,6 +96,16 @@ def metrics(ranked_rooms_per_q, golds):
     return {"recall@5": round(r5 / n, 3), "recall@10": round(r10 / n, 3), "mrr@10": round(mrr / n, 3), "n": n}
 
 
+def gold_ranks(ranked_rooms_per_q, golds):
+    """Per question the rank of the gold room (1-based, None beyond 100), so a
+    part of the questions can be scored again (plan v2 M1)."""
+    out = []
+    for ranked, gold in zip(ranked_rooms_per_q, golds):
+        top = ranked[:100]
+        out.append(top.index(gold) + 1 if gold in top else None)
+    return out
+
+
 def dedup(seq):
     seen, out = set(), []
     for x in seq:
@@ -112,16 +125,33 @@ def main(rooms: Path, questions: Path, out: Path):
     qemb /= np.linalg.norm(qemb, axis=1, keepdims=True) + 1e-9
     bm = BM25([t for _, t in cs])
     report = {"chunks": len(cs), "chunk_tokens": SIZE, "overlap": OVERLAP}
+    orders = {}
     for name, score_fn in (("vector", lambda i: emb @ qemb[i]), ("bm25", lambda i: bm.scores(qs[i]["kerdes"]))):
         units, distinct = [], []
+        orders[name] = []
         for i in range(len(qs)):
             order = np.argsort(-score_fn(i))[:200]
+            orders[name].append([int(j) for j in order])
             ranked = [room_of[j] for j in order]
             units.append(ranked)
             distinct.append(dedup(ranked))
-        report[name] = {"units": metrics(units, golds), "dedup": metrics(distinct, golds)}
+        report[name] = {"units": metrics(units, golds), "dedup": metrics(distinct, golds),
+                        "ranks": {"units": gold_ranks(units, golds), "dedup": gold_ranks(distinct, golds)}}
+    # plan v2 N7: chunk hybrid with the same static model, RRF (k 60) of the
+    # first 50 chunks of each ranking, as KAPU fuses its doors
+    units, distinct = [], []
+    for i in range(len(qs)):
+        fused = {}
+        for name in ("bm25", "vector"):
+            for rank, j in enumerate(orders[name][i][:50]):
+                fused[j] = fused.get(j, 0.0) + 1 / (60 + rank + 1)
+        ranked = [room_of[j] for j, _ in sorted(fused.items(), key=lambda x: (-x[1], x[0]))]
+        units.append(ranked)
+        distinct.append(dedup(ranked))
+    report["hybrid"] = {"units": metrics(units, golds), "dedup": metrics(distinct, golds),
+                        "ranks": {"units": gold_ranks(units, golds), "dedup": gold_ranks(distinct, golds)}}
     out.write_text(json.dumps(report, indent=2), encoding="utf-8")
-    print(json.dumps(report, indent=2))
+    print(json.dumps({k: ({u: v[u] for u in ("units", "dedup")} if isinstance(v, dict) else v) for k, v in report.items()}, indent=2))
 
 
 if __name__ == "__main__":
