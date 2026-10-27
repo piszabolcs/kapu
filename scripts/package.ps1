@@ -24,8 +24,8 @@ Copy-Item target\release\kapu.exe, target\release\kapu-mcp.exe, target\release\k
 New-Item -ItemType Directory -Force "$out\examples" | Out-Null
 Copy-Item examples\kapu-spec.kapu, examples\kapu-docs.kapu "$out\examples"
 Copy-Item "$model\model.safetensors", "$model\tokenizer.json", "$model\config.json", "$model\README.md" "$out\models\potion-multilingual-128M-i8"
-Copy-Item LICENSE, README.md, SPEC-KAPU.md, THIRD-PARTY.md $out
-Set-Content -Encoding utf8 "$out\LICENSE-SPEC.txt" "SPEC-KAPU.md is licensed under Creative Commons Attribution 4.0 International (CC BY 4.0): https://creativecommons.org/licenses/by/4.0/`nAuthor and originator: Pinter Szabolcs."
+Copy-Item LICENSE, README.md, SPEC-KAPU.md, SPEC-KAPU.hu.md, THIRD-PARTY.md $out
+Set-Content -Encoding utf8 "$out\LICENSE-SPEC.txt" "SPEC-KAPU.md and SPEC-KAPU.hu.md are licensed under Creative Commons Attribution 4.0 International (CC BY 4.0): https://creativecommons.org/licenses/by/4.0/`nAuthor and originator: Pinter Szabolcs."
 
 # smoke test of the package, from inside the package folder
 Push-Location $out

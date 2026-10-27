@@ -154,7 +154,7 @@ A `.kapu` file is plain UTF-8 text. The Markdown body is the single source of tr
 - **Edits stay safe.** If someone edits the body by hand, the fingerprints no longer match; the reader notices, rebuilds the positions from the room markers and reports a stale index until the next build.
 - **Content scan.** Writing a room warns about text that tries to override an agent's instructions, hidden characters, long encoded blocks and unexpected download commands. It warns, it does not block.
 
-The format is specified in [SPEC-KAPU.md](SPEC-KAPU.md) (in Hungarian for now), with test vectors for every error code in [tests/vectors](tests/vectors) and a byte-level Python reference builder in [tools/build_vectors.py](tools/build_vectors.py).
+The format is specified in [SPEC-KAPU.md](SPEC-KAPU.md) (the Hungarian original: [SPEC-KAPU.hu.md](SPEC-KAPU.hu.md)), with test vectors for every error code in [tests/vectors](tests/vectors) and a byte-level Python reference builder in [tools/build_vectors.py](tools/build_vectors.py).
 
 ## Desktop window
 
@@ -339,13 +339,13 @@ KAPU is a working pre-release: the format, the command line, the MCP server and 
 - [x] Plan v2, phases 1 to 3: every ranking change measured on a fixed dev/test split, fair chunk baselines, oracle and abstention runs (0.3.0)
 - [ ] Plan v2, phases 4 to 7: document and query expansion, smaller vector windows, a re-ranker, the filtered catalog, task runs with agents, repeated runs
 - [ ] The same at 250 skills, and with a prompt that does not mention skills
-- [ ] The specification in English
+- [x] The specification in English (v0.3.0)
 - [ ] Better search when the question and the text are in different languages without translation (a Hungarian question on English text: 0.55 recall@10; translated by the agent: 0.78)
 - [ ] The desktop window tested by hand on Linux and macOS
 
 ## License
 
-Code: MIT, see [LICENSE](LICENSE). Specification (`SPEC-KAPU.md`): CC BY 4.0. Fonts in `crates/kapu-gui/ui/fonts`: SIL Open Font License 1.1. Third-party crates and the model: [THIRD-PARTY.md](THIRD-PARTY.md).
+Code: MIT, see [LICENSE](LICENSE). Specification (`SPEC-KAPU.md`, `SPEC-KAPU.hu.md`): CC BY 4.0. Fonts in `crates/kapu-gui/ui/fonts`: SIL Open Font License 1.1. Third-party crates and the model: [THIRD-PARTY.md](THIRD-PARTY.md).
 
 ---
 
@@ -370,7 +370,7 @@ A nyilvános dokumentációkon (Rust Book, Kubernetes, MDN) a keresés 32-282 ms
 
 **Kipróbálás:** telepítés előre fordított binárissal és a beágyazó modellel, Rust és Python nélkül: Linuxon és macOS-en `curl -fsSL https://raw.githubusercontent.com/piszabolcs/kapu/main/install.sh | sh`, Windowson `irm https://raw.githubusercontent.com/piszabolcs/kapu/main/install.ps1 | iex` (vagy a kiadás archívuma a [Releases](https://github.com/piszabolcs/kapu/releases) oldalról), majd `kapu map examples/kapu-docs.kapu`; forrásból: Rust 1.90 vagy újabb, `cargo build --release -p kapu-cli -p kapu-mcp`. Saját fájl egy Markdown-mappából: `kapu import ./jegyzetek jegyzetek.kapu`, skillekből: `kapu import --skills ~/.claude/skills skillek.kapu`, projektkártya: `kapu template --kind project`. Claude Code-hoz: `claude mcp add kapu -- kapu-mcp`; a Codex és a VS Code beállítása fent, a [Connect an agent](#connect-an-agent) részben.
 
-**Hogyan működik:** a `.kapu` fájl sima UTF-8 szöveg. A Markdown törzs az egyetlen igazságforrás; a térkép a tokenárakkal, a keresőindex, a keresés vektorai, a gráf és az ujjlenyomatok bájtra azonosan újraépülnek belőle. A formátum specifikációja: [SPEC-KAPU.md](SPEC-KAPU.md).
+**Hogyan működik:** a `.kapu` fájl sima UTF-8 szöveg. A Markdown törzs az egyetlen igazságforrás; a térkép a tokenárakkal, a keresőindex, a keresés vektorai, a gráf és az ujjlenyomatok bájtra azonosan újraépülnek belőle. A formátum specifikációja magyarul: [SPEC-KAPU.hu.md](SPEC-KAPU.hu.md), angolul: [SPEC-KAPU.md](SPEC-KAPU.md).
 
 **Licenc:** a kód MIT, a specifikáció CC BY 4.0.
 

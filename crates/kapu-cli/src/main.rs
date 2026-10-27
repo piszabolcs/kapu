@@ -451,20 +451,30 @@ fn search(cli: &Cli, file: &Path, query: &str, options: &SearchOptions) -> Resul
     let hits: Vec<Value> = r
         .hits
         .iter()
-        .map(|h| json!({ "id": h.id, "title": h.title, "tokens": h.tokens, "score": h.score, "source": h.source.as_str() }))
+        .map(|h| json!({ "id": h.id, "title": h.title, "tokens": h.tokens, "score": h.score, "source": h.source.as_str(), "also": h.also }))
         .collect();
     let mut text: String = r
         .hits
         .iter()
         .map(|h| {
-            format!(
+            let mut line = format!(
                 "{} | {} | {}t | {:.4} | {}",
                 h.id,
                 h.title,
                 h.tokens,
                 h.score,
                 h.source.as_str()
-            )
+            );
+            // D158: the room's other matching doors, as kapu_search shows them
+            if !h.also.is_empty() {
+                let shown: Vec<&str> = h.also.iter().take(5).map(String::as_str).collect();
+                let more = h.also.len() - shown.len();
+                let _ = write!(line, "\n  also in this room: {}", shown.join(", "));
+                if more > 0 {
+                    let _ = write!(line, " (+{more} more)");
+                }
+            }
+            line
         })
         .collect::<Vec<_>>()
         .join("\n");
