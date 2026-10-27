@@ -458,10 +458,10 @@ async fn a21_guide_names_the_content_language() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// K-07 (D146): `kapu_ask` searches and opens the best door in one call, and
-/// lists the other hits.
+/// K-07 (D146, D159): `kapu_ask` searches and opens in one call: the start of
+/// the best door of each of the first rooms, and lists the other hits.
 #[tokio::test]
-async fn k07_ask_opens_the_best_door() {
+async fn k07_ask_opens_the_start_of_the_best_rooms() {
     let dir = workdir("ask");
     let file = dir.join("minta.kapu");
     std::fs::copy(root().join("tests/vectors/minta.kapu"), &file).unwrap();
@@ -478,6 +478,22 @@ async fn k07_ask_opens_the_best_door() {
     assert!(body.starts_with("<kapu-room "), "{reply}");
     assert!(body.contains("backdrop-filter"), "{reply}");
     assert!(n <= 2000);
+    // D159: the start of the best door of each room, one frame per room
+    let (_, two) = call(
+        &client,
+        "kapu_ask",
+        json!({ "file": f, "query": "gomb preload" }),
+    )
+    .await;
+    let ids: Vec<&str> = two
+        .match_indices(" id=\"")
+        .filter_map(|(i, _)| two.get(i + 5..).and_then(|t| t.split('"').next()))
+        .collect();
+    let rooms: std::collections::BTreeSet<&str> = ids
+        .iter()
+        .map(|id| id.split('/').next().unwrap_or(id))
+        .collect();
+    assert!(rooms.len() >= 2 && rooms.len() == ids.len(), "{two}");
     let (_, none) = call(&client, "kapu_ask", json!({ "file": f, "query": "qqqzzz" })).await;
     assert!(priced(&none).1.starts_with("no match"), "{none}");
     client.cancel().await.unwrap();

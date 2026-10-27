@@ -11,7 +11,7 @@ Questions: `answerable.jsonl` (a gold room and answer) and `absent.jsonl`
 each an isolated `claude -p` run (no user settings, no other MCP servers):
 - `closed`: the question alone, no tools;
 - `oracle`: the gold room's text in the prompt, no tools (answerable only);
-- `kapu`: the kapu MCP tools on the file;
+- `kapu`: the kapu MCP tools on the file (`--rank {"collapse":1}`, J1);
 - `kapu_conf`: the same with `kapu-mcp --rank {"collapse":1,"ask":"confidence"}`
   (J12: does `confidence: low` lower the made-up answers?).
 Every prompt allows the answer `NOT FOUND`. A judge model (`judge`) grades
@@ -159,7 +159,8 @@ def run(argv):
     (work / "questions.json").write_text(json.dumps(qs, ensure_ascii=False, indent=1), encoding="utf-8")
     forms = opts["--forms"].split(",")
     configs = {}
-    for form, args in (("kapu", []), ("kapu_conf", ["--rank", '{"collapse": 1, "ask": "confidence"}'])):
+    for form, args in (("kapu", ["--rank", '{"collapse": 1}']),
+                       ("kapu_conf", ["--rank", '{"collapse": 1, "ask": "confidence"}'])):
         cfg = {"mcpServers": {"kapu": {"command": str(mcp.resolve()), "args": args,
                                        "env": {"KAPU_MODEL_DIR": str(model_dir.resolve())}}}}
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:

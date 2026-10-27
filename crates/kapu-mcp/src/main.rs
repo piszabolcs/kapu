@@ -133,7 +133,7 @@ struct KapuServer {
     tuning: Arc<Tuning>,
 }
 
-/// How `kapu_ask` spends its budget (J12).
+/// How `kapu_ask` spends its budget (J12; `Spread` since D159).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AskMode {
     /// Open the best hit, then more whole doors that fit (D146).
@@ -166,7 +166,7 @@ impl Default for Tuning {
     fn default() -> Self {
         Self {
             rank: RankOptions::default(),
-            ask: AskMode::Top,
+            ask: AskMode::Spread,
             ask_ratio: ASK_RATIO,
             excerpt_lines: 1,
         }
@@ -1132,6 +1132,10 @@ impl KapuServer {
             },
         };
         let r = self.search_result(&s, &args.query, &options)?;
+        if r.hits.is_empty() {
+            let foot = format!("no match\n{foot}");
+            return fit("", &[], &foot, budget, false, &|_| String::new());
+        }
         let name = name_of(&args.file);
         let picked: Vec<&kapu_core::search::SearchHit> = r.hits.iter().take(ASK_SPREAD).collect();
         let others: Vec<String> = r
@@ -1301,7 +1305,7 @@ impl KapuServer {
             idempotent_hint = true,
             open_world_hint = false
         ),
-        description = "Search and open in one call: the best door's content within max_tokens, more whole doors if they fit, and the other matches."
+        description = "Search and open in one call: the start of the best door of each of the first 5 rooms within max_tokens, and the other matches."
     )]
     async fn kapu_ask(
         &self,
