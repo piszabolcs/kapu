@@ -232,6 +232,7 @@ def report(argv):
             for metric, (a, b) in by_metric.items():
                 result["pooled"][cname][part][metric] = bootstrap(np.concatenate(a), np.concatenate(b), rng)
     result["accepted"] = {c: accept(result, c) for c in result["pooled"]}
+    result["selection"] = select(result, base)
     result["meta"] = {
         **(meta or {}),
         "date": datetime.date.today().isoformat(),
@@ -265,6 +266,42 @@ def accept(result, cname):
             "worst_set_diff": worst, "max_p50_ratio": slow}
 
 
+def groups_of(configs, base):
+    """The variants of each fix: the configuration names up to their last
+    `-<value>` part (`parent-0.25` -> `parent`), the fusion grids by kind."""
+    out = {}
+    for c in configs:
+        if c == base:
+            continue
+        if c.startswith("rrf-"):
+            key = "rrf"
+        elif c.startswith("convex-"):
+            key = "convex"
+        elif c.startswith("collapse-"):
+            key = "collapse"
+        elif c.startswith("stem-"):
+            key = "stemming"
+        else:
+            key = c.rsplit("-", 1)[0] if c[-1].isdigit() else c
+        out.setdefault(key, []).append(c)
+    return out
+
+
+def select(result, base):
+    """M1: per fix the variant with the best pooled dev gain (room recall@10
+    plus room MRR@10), then its test numbers and the M0 rule."""
+    configs = list(next(iter(result["sets"].values()))["configs"])
+    picks = {}
+    for group, variants in groups_of(configs, base).items():
+        def dev_gain(c):
+            p = result["pooled"][c]["dev"]
+            return p["r@10"]["diff"] + p["mrr@10"]["diff"]
+        best = max(variants, key=lambda c: (dev_gain(c), c))
+        picks[group] = {"variant": best, "variants": variants, "dev_gain": dev_gain(best),
+                        "test": result["pooled"][best]["test"], **result["accepted"][best]}
+    return picks
+
+
 def print_table(result, base):
     sets = list(result["sets"])
     print("| config | " + " | ".join(f"{s} r@10 / MRR" for s in sets) + " | pooled test d r@10 [95%] | d MRR [95%] | p50x | ok |")
@@ -283,6 +320,13 @@ def print_table(result, base):
             fmt = lambda v: f"{v['diff']:+.3f} [{v['lo']:+.3f}, {v['hi']:+.3f}]"
             tail = [fmt(p["r@10"]), fmt(p["mrr@10"]), f"{a['max_p50_ratio']:.2f}", "yes" if a["accepted"] else ""]
         print(f"| {c} | " + " | ".join(cells + tail) + " |")
+    print()
+    print("| fix | chosen on dev | dev gain | test d r@10 [95%] | test d MRR [95%] | worst set | accepted |")
+    print("|---|---|---:|---:|---:|---:|---|")
+    for group, p in result["selection"].items():
+        fmt = lambda v: f"{v['diff']:+.3f} [{v['lo']:+.3f}, {v['hi']:+.3f}]"
+        print(f"| {group} | {p['variant']} | {p['dev_gain']:+.3f} | {fmt(p['test']['r@10'])} | {fmt(p['test']['mrr@10'])} | "
+              f"{p['worst_set_diff']:+.3f} | {'yes' if p['accepted'] else 'no'} |")
 
 
 if __name__ == "__main__":

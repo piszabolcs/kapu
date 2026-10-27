@@ -213,35 +213,47 @@ pub fn evaluate_with(
     rank: &RankOptions,
     cache: Option<&VectorCache<'_>>,
 ) -> Result<(Evaluation, Vec<QuestionRun>)> {
-    let mut bm25 = Vec::with_capacity(questions.len());
-    let mut vector = Vec::with_capacity(questions.len());
-    let mut hybrid = Vec::with_capacity(questions.len());
-    let mut runs = Vec::with_capacity(questions.len());
-    let mut vector_available = true;
-    for q in questions {
-        let start = std::time::Instant::now();
-        let r = rankings_with(s, &q.kerdes, rank, cache)?;
-        let ms = start.elapsed().as_secs_f64() * 1000.0;
-        let expected = q.expected();
-        bm25.push((r.bm25.clone(), expected.clone()));
-        match &r.vector {
-            Some(v) => vector.push((v.clone(), expected.clone())),
-            None => vector_available = false,
-        }
-        hybrid.push((r.hybrid.clone(), expected.clone()));
-        runs.push(QuestionRun {
-            expected,
-            rankings: r,
-            ms,
-        });
+    let runs = questions
+        .iter()
+        .map(|q| run_question(s, q, rank, cache))
+        .collect::<Result<Vec<_>>>()?;
+    Ok((evaluation_of(&runs), runs))
+}
+
+/// One question in one configuration, timed (M0).
+///
+/// # Errors
+/// A broken section or a tokenizer failure.
+pub fn run_question(
+    s: &crate::Sections<'_>,
+    q: &Question,
+    rank: &RankOptions,
+    cache: Option<&VectorCache<'_>>,
+) -> Result<QuestionRun> {
+    let start = std::time::Instant::now();
+    let rankings = rankings_with(s, &q.kerdes, rank, cache)?;
+    Ok(QuestionRun {
+        expected: q.expected(),
+        rankings,
+        ms: start.elapsed().as_secs_f64() * 1000.0,
+    })
+}
+
+/// The scores of a configuration's runs.
+#[must_use]
+pub fn evaluation_of(runs: &[QuestionRun]) -> Evaluation {
+    let lists =
+        |pick: &dyn Fn(&Rankings) -> Option<&Vec<String>>| -> Option<Vec<(Vec<String>, String)>> {
+            runs.iter()
+                .map(|r| pick(&r.rankings).map(|l| (l.clone(), r.expected.clone())))
+                .collect()
+        };
+    Evaluation {
+        questions: runs.len(),
+        bm25: score(&lists(&|r| Some(&r.bm25)).unwrap_or_default()),
+        vector: lists(&|r| r.vector.as_ref()).map(|l| score(&l)),
+        hybrid: score(&lists(&|r| Some(&r.hybrid)).unwrap_or_default()),
     }
-    let evaluation = Evaluation {
-        questions: questions.len(),
-        bm25: score(&bm25),
-        vector: vector_available.then(|| score(&vector)),
-        hybrid: score(&hybrid),
-    };
-    Ok((evaluation, runs))
 }
 
 #[cfg(test)]

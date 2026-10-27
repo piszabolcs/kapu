@@ -129,6 +129,10 @@ enum Command {
         /// Write every question's rankings, per configuration, as JSON lines.
         #[arg(long)]
         rankings: Option<PathBuf>,
+        /// Run configuration by configuration, for search times without
+        /// the memory of the other configurations.
+        #[arg(long)]
+        timing: bool,
     },
 }
 
@@ -338,25 +342,21 @@ fn run(cli: &Cli) -> Result<Output, Error> {
         Command::Describe { file, ids } => describe(file, ids),
         Command::Open { file, ids } => open(file, ids),
         Command::Bench {
-            file,
-            questions,
-            config,
-            rankings,
-        } => bench_any(cli, file, questions, config.as_deref(), rankings.as_deref()),
+            file, questions, ..
+        } => bench_any(cli, file, questions),
     }
 }
 
 /// `kapu bench`: the matrix with `--config`, otherwise the plain table.
-fn bench_any(
-    cli: &Cli,
-    file: &Path,
-    questions: &Path,
-    config: Option<&Path>,
-    rankings: Option<&Path>,
-) -> Result<Output, Error> {
-    match config {
-        Some(config) => bench_matrix(cli, file, questions, config, rankings),
-        None => bench(cli, file, questions),
+fn bench_any(cli: &Cli, file: &Path, questions: &Path) -> Result<Output, Error> {
+    match &cli.command {
+        Command::Bench {
+            config: Some(config),
+            rankings,
+            timing,
+            ..
+        } => bench_matrix(cli, file, questions, config, rankings.as_deref(), *timing),
+        _ => bench(cli, file, questions),
     }
 }
 
@@ -637,6 +637,7 @@ fn bench_matrix(
     questions: &Path,
     config: &Path,
     rankings: Option<&Path>,
+    timing: bool,
 ) -> Result<Output, Error> {
     use std::io::Write as _;
     let configs = bench_configs(config)?;
@@ -661,9 +662,30 @@ fn bench_matrix(
         "| Configuration | BM25 room r@10 | vector room r@10 | hybrid room r@10 | hybrid room MRR@10 | hybrid r@10 | ms p50 |".to_owned(),
         "|---|---:|---:|---:|---:|---:|---:|".to_owned(),
     ];
+    // question by question through every configuration: the doors the
+    // vectors rescore for a question stay in memory (D143), so a matrix costs
+    // little more than one run; `--timing` runs configuration by
+    // configuration, each question cold as an agent's new question
+    let mut all: Vec<Vec<kapu_core::evaluate::QuestionRun>> = vec![Vec::new(); configs.len()];
+    if timing {
+        for ((_, rank), runs) in configs.iter().zip(all.iter_mut()) {
+            *runs = kapu_core::evaluate::evaluate_with(&s, &qs, rank, cache.as_ref())?.1;
+        }
+    } else {
+        for q in &qs {
+            for ((_, rank), runs) in configs.iter().zip(all.iter_mut()) {
+                runs.push(kapu_core::evaluate::run_question(
+                    &s,
+                    q,
+                    rank,
+                    cache.as_ref(),
+                )?);
+            }
+        }
+    }
     let mut items = Vec::new();
-    for (name, rank) in &configs {
-        let (e, runs) = kapu_core::evaluate::evaluate_with(&s, &qs, rank, cache.as_ref())?;
+    for ((name, rank), runs) in configs.iter().zip(&all) {
+        let e = kapu_core::evaluate::evaluation_of(runs);
         let ms: Vec<f64> = runs.iter().map(|r| r.ms).collect();
         let (p50, p95) = percentiles(&ms);
         if let Some(out) = sink.as_mut() {
@@ -705,6 +727,7 @@ fn bench_matrix(
             "format": s.header.version,
             "emb": s.header.emb, "embhash": embhash,
             "vector": model.is_some(),
+            "order": if timing { "configuration" } else { "question" },
             "configs": items,
         }),
         lines.join("\n"),
