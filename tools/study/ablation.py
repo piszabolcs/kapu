@@ -342,17 +342,31 @@ def groups_of(configs, base):
     return out
 
 
+def dev_worst(result, c):
+    """The largest loss of one set on the dev part, in either metric."""
+    worst = 0.0
+    for entry in result["sets"].values():
+        for v in entry["configs"][c]["parts"]["dev"]["vs_base"].values():
+            if v:
+                worst = min(worst, v["diff"])
+    return worst
+
+
 def select(result, base):
-    """M1: per fix the variant with the best pooled dev gain (room recall@10
-    plus room MRR@10), then its test numbers and the M0 rule."""
+    """M1: per fix, among the variants that keep the M0 constraint on the dev
+    part too (no set loses more than 0.01), the one with the best pooled dev
+    gain (room recall@10 plus room MRR@10); if none keeps it, the best gain.
+    Then its test numbers and the M0 rule."""
     configs = list(next(iter(result["sets"].values()))["configs"])
     picks = {}
     for group, variants in groups_of(configs, base).items():
         def dev_gain(c):
             p = result["pooled"][c]["dev"]
             return p["r@10"]["diff"] + p["mrr@10"]["diff"]
-        best = max(variants, key=lambda c: (dev_gain(c), c))
+        fair = [c for c in variants if dev_worst(result, c) >= -0.01] or variants
+        best = max(fair, key=lambda c: (dev_gain(c), c))
         picks[group] = {"variant": best, "variants": variants, "dev_gain": dev_gain(best),
+                        "dev_worst_set": dev_worst(result, best),
                         "test": result["pooled"][best]["test"], **result["accepted"][best]}
     return picks
 

@@ -721,7 +721,7 @@ async fn rank_argument_sets_collapse_and_ask_confidence() {
     let file = dir.join("minta.kapu");
     std::fs::copy(root().join("tests/vectors/minta.kapu"), &file).unwrap();
     let f = file.to_str().unwrap();
-    let plain = connect(&dir).await;
+    let plain = connect_with(&dir, &["--rank", r#"{"collapse": 0}"#]).await;
     let (_, before) = call(&plain, "kapu_search", json!({"file": f, "query": "gomb"})).await;
     assert!(!before.contains(" in this room: "), "{before}");
     plain.cancel().await.unwrap();

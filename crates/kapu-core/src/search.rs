@@ -105,9 +105,10 @@ pub enum Fusion {
     Convex,
 }
 
-/// The ranking switches of plan v2. The default is the ranking of 0.2.1,
-/// bit for bit (rule 5); `kapu bench --config` sets them for the ablation
-/// (M0).
+/// The ranking switches of plan v2. The default keeps the fixes that passed
+/// the M0 rule (D158: `collapse = 1`); [`RankOptions::v021`] is the ranking of
+/// 0.2.1, bit for bit (rule 5). `kapu bench --config` sets them for the
+/// ablation (M0).
 #[derive(Debug, Clone, PartialEq)]
 pub struct RankOptions {
     /// Stems looked up for each query word.
@@ -158,6 +159,17 @@ pub struct RankOptions {
 
 impl Default for RankOptions {
     fn default() -> Self {
+        Self {
+            collapse: 1,
+            ..Self::v021()
+        }
+    }
+}
+
+impl RankOptions {
+    /// Every switch off: the ranking of 0.2.1 (plan v2 rule 5).
+    #[must_use]
+    pub const fn v021() -> Self {
         Self {
             stemming: Stemming::Both,
             split_avgdl: false,

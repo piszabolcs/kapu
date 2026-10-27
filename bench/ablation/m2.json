@@ -1,0 +1,6 @@
+[
+  {"name": "base", "collapse": 1},
+  {"name": "rrf-b1.5-v1-k20", "collapse": 1, "w_bm25": 1.5, "rrf_k": 20},
+  {"name": "rrf-b1.5-v1-k20-adaptive-2", "collapse": 1, "w_bm25": 1.5, "rrf_k": 20, "adaptive": 2.0},
+  {"name": "rrf-b1.5-v1-k20-adaptive-3", "collapse": 1, "w_bm25": 1.5, "rrf_k": 20, "adaptive": 3.0}
+]

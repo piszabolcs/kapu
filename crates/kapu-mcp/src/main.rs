@@ -1284,7 +1284,7 @@ impl KapuServer {
             idempotent_hint = true,
             open_world_hint = false
         ),
-        description = "Keyword and meaning search: ranked doors (id, title, price, score, source), each with an excerpt line."
+        description = "Keyword and meaning search: one hit per room (id, title, price, score, source), each with an excerpt line."
     )]
     async fn kapu_search(
         &self,

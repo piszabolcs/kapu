@@ -366,7 +366,10 @@ fn golden_lines(options: &SearchOptions) -> String {
 #[test]
 fn rankings_with_every_switch_off_are_those_of_0_2_1() {
     let path = root().join("tests/vectors/rankings-0.2.1.tsv");
-    let now = golden_lines(&SearchOptions::default());
+    let now = golden_lines(&SearchOptions {
+        rank: kapu_core::search::RankOptions::v021(),
+        ..SearchOptions::default()
+    });
     if std::env::var_os("KAPU_BLESS").is_some() {
         std::fs::write(&path, &now).unwrap();
     }
@@ -380,6 +383,12 @@ fn rank_options_come_from_json_and_reject_typos() {
     use kapu_core::search::{Fusion, RankOptions, Stemming};
     let empty = RankOptions::from_json(&serde_json::json!({"name": "base"})).unwrap();
     assert_eq!(empty, RankOptions::default());
+    // D158: the default collapses; every switch off is the ranking of 0.2.1
+    assert_eq!(RankOptions::default().collapse, 1);
+    assert_eq!(
+        RankOptions::from_json(&serde_json::json!({"collapse": 0})).unwrap(),
+        RankOptions::v021()
+    );
     let r = RankOptions::from_json(&serde_json::json!({
         "stemming": "en", "collapse": 1, "room_beta": 0.1, "fusion": "convex",
         "w_bm25": 2.0, "split_avgdl": true, "parent": 0.25, "rescore_bm25": 50,
@@ -407,7 +416,11 @@ fn rank_options_come_from_json_and_reject_typos() {
 fn collapse_keeps_one_door_per_room_and_names_the_others() {
     // J1: the room and its section match; collapsed, the room is one hit
     let data = std::fs::read(root().join("tests/vectors/minta.kapu")).unwrap();
-    let plain = search(&data, "gomb", &SearchOptions::default(), None).unwrap();
+    let off = SearchOptions {
+        rank: kapu_core::search::RankOptions::v021(),
+        ..SearchOptions::default()
+    };
+    let plain = search(&data, "gomb", &off, None).unwrap();
     let rooms = |hits: &[kapu_core::search::SearchHit]| {
         hits.iter()
             .map(|h| kapu_core::search::room_of(&h.id).to_owned())
