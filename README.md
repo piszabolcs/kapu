@@ -35,17 +35,24 @@ The same 12 questions about the PixelLab documentation (third-party, not publish
 | **KAPU** (map, search, open) | **4,104** | **12** |
 | One Markdown file, grep and line reads | 8,280 | 12 |
 | The same text as a PDF, search and page reads | 8,207 | 11 |
-| The whole file pasted into the context | 206,899 | – |
+| The whole file pasted into the context | 206,899 | - |
 
 On public documentation with real Stack Overflow questions (format 1.2 with the search vectors in the file, one Windows 11 machine, release build, medians over the MCP server):
 
-| Corpus | Knowledge | `.kapu` file | Search | Open a section | Retrieval: KAPU / chunked BM25 |
+| Corpus | Knowledge | `.kapu` file | Search | Open a section | Retrieval: KAPU 0.3 / chunks, BM25 / chunks, hybrid |
 |---|---:|---:|---:|---:|---:|
-| Rust book | 0.3 M tokens | 2.4 MB | 32 ms | 4 ms | 0.49 / 0.49 |
-| Kubernetes docs | 3.9 M tokens | 28 MB | 50 ms | 8 ms | 0.46 / 0.45 |
-| MDN Web Docs | 13.0 M tokens | 139 MB | 282 ms | 48 ms | 0.28 / 0.30 |
+| Rust book | 0.3 M tokens | 2.4 MB | 32 ms | 4 ms | 0.51 / 0.51 / 0.54 |
+| Kubernetes docs | 3.9 M tokens | 28 MB | 50 ms | 8 ms | 0.45 / 0.48 / 0.47 |
+| MDN Web Docs | 13.0 M tokens | 139 MB | 282 ms | 48 ms | 0.29 / 0.32 / 0.36 |
 
-Retrieval is room-level recall@10: the page the accepted answer links to is among the first 10 hits. On a corpus of 244 skills and frontend notes with 77 English questions it is 0.96, and `kapu_ask` opens the right room in its single reply for 83% of the questions. Full results with charts, method and limits: **[results page](https://piszabolcs.github.io/kapu/results/)** ([source](docs/results/index.html); as PDF in [English](docs/results/kapu-measurements-en.pdf) and [Hungarian](docs/results/kapu-measurements-hu.pdf)) and [bench/RESULTS.md](bench/RESULTS.md); raw numbers in [bench/results/](bench/results/).
+Retrieval is room-level recall@10 on the test part of the questions (60%, fixed by a hash): the page the accepted answer links to is among the first 10 hits. The chunk baselines cut every page into 512-token chunks and count a page once, the fair comparison with KAPU's room level; until 0.2.1 this table compared with chunks counted per chunk, which flattered KAPU. KAPU matches chunked BM25 on the Rust book and is behind it on Kubernetes and MDN. Of every ranking change measured for 0.3.0, only one hit per room passed the acceptance rule (+0.022 recall@10 over 0.2.1, [chapter 12](bench/RESULTS.md#12-plan-v2-phases-1-to-3-ablation-one-fix-that-holds-honest-baselines)). On a corpus of 244 skills and frontend notes with English questions it is 0.98, and `kapu_ask` opens the right room in its single reply for 96% of the questions.
+
+**Knowledge a model does not have.** On public PLC manuals of six vendors (Beckhoff, Rexroth, Mitsubishi, Omron, Siemens, Emerson), Claude Sonnet answered:
+- with the KAPU tools, **92%** correct;
+- with the right page pasted into the prompt, 97%;
+- with no knowledge file, 28%.
+
+For questions the manuals do not answer, the KAPU agent said so for **23 of 24**; the model alone made an answer up for 11 of 24. Full results with charts, method and limits: **[results page](https://piszabolcs.github.io/kapu/results/)** ([source](docs/results/index.html); as PDF in [English](docs/results/kapu-measurements-en.pdf) and [Hungarian](docs/results/kapu-measurements-hu.pdf)) and [bench/RESULTS.md](bench/RESULTS.md); raw numbers in [bench/results/](bench/results/).
 
 **Finding skills.** 12 development tasks with 39 relevant skills fixed in advance, Claude Opus, a prompt that asks for the skills ([chapter 11](bench/RESULTS.md#11-finding-skills-native-skills-one-kapu-file-a-markdown-folder)):
 
@@ -58,7 +65,7 @@ Retrieval is room-level recall@10: the page the accepted answer links to is amon
 
 With the catalog of tools 0.2.1 (`kapu_map kind=skill`: every skill with its description in one reply) the KAPU file finds as many skills as before in 5 calls instead of 9, with about the native skills' tokens; it costs less per task because it opens the first 2,000 tokens of each skill instead of the whole skill, and its fixed cost per session is a third of the native list's. The native skills still find one more and load nothing wrong.
 
-What one session costs, whatever the size of the file: the six tools' descriptions and input schemas are 798 tokens, a map reply at most 1,000, ten search hits with an excerpt each at most 600 (format 1.2, measured on a 3,000-room file and the corpora above).
+What one session costs, whatever the size of the file: the six tools' descriptions and input schemas are 799 tokens, a map reply at most 1,000, ten search hits with an excerpt each at most 600 (format 1.2, measured on a 3,000-room file and the corpora above).
 
 ## Why
 
@@ -142,7 +149,7 @@ Then ask, for example: "Use `notes.kapu` to answer: how do we deploy the staging
 |---|---|
 | `kapu_map` | the map: groups, rooms and their token prices, the content language and kinds, the guide on first use; `kind=` gives a catalog of one kind (every skill with its description, in one reply) |
 | `kapu_search` | the best sections for a query, each with its price and the line that matched; `kind=` filters |
-| `kapu_ask` | search and open in one call: the best section's text, more whole sections if they fit, and the other matches |
+| `kapu_ask` | search and open in one call: the start of the best section of each of the first 5 rooms, within the budget, and the other matches |
 | `kapu_describe` | the description and tags of a section, without opening it |
 | `kapu_open` | the text of sections, framed so it cannot pose as instructions; several in one call share the budget; long sections in parts |
 | `kapu_write` | adds a room from Markdown (a project card, for example), rebuilds the file and reports what the content scan found |
@@ -295,6 +302,8 @@ KAPU is a working pre-release: the format, the command line, the MCP server and 
 - [x] Prebuilt binaries for Windows, Linux and macOS from the release workflow (v0.2.0)
 - [ ] A local model tried end to end, with measurements (the Codex CLI and VS Code configurations above stay untried)
 - [x] Finding skills: native skills, a KAPU file and a Markdown folder at 45 and 91 skills
+- [x] Plan v2, phases 1 to 3: every ranking change measured on a fixed dev/test split, fair chunk baselines, oracle and abstention runs (0.3.0)
+- [ ] Plan v2, phases 4 to 7: document and query expansion, smaller vector windows, a re-ranker, the filtered catalog, task runs with agents, repeated runs
 - [ ] The same at 250 skills, and with a prompt that does not mention skills
 - [ ] The specification in English
 - [ ] Better search when the question and the text are in different languages without translation (a Hungarian question on English text: 0.55 recall@10; translated by the agent: 0.78)
@@ -319,9 +328,9 @@ Egy 207 ezer tokenes, a modell számára ismeretlen kézikönyvön a KAPU-t hasz
 | **KAPU** (térkép, keresés, kinyitás) | **4 104** | **12** |
 | Egy Markdown-fájl, grep és sorolvasás | 8 280 | 12 |
 | Ugyanez PDF-ként, keresés és oldalolvasás | 8 207 | 11 |
-| Az egész fájl bemásolva | 206 899 | – |
+| Az egész fájl bemásolva | 206 899 | - |
 
-A nyilvános dokumentációkon (Rust Book, Kubernetes, MDN) a keresés 32–282 ms, egy fejezet kinyitása 4–48 ms; a visszakeresés a két kisebb korpuszon a darabolós BM25 szintjén vagy fölötte van, a legnagyobbon kicsit alatta. Egy munkamenet fix ára a fájl méretétől függetlenül 798 token (a hat eszköz leírása), egy térképválasz legfeljebb 1000, tíz találat kivonattal legfeljebb 600 token. A skillek megtalálásában a 0.2.1-es katalógussal (`kapu_map kind=skill`) a KAPU 91 skillből a 39 releváns közül 38-at talál meg, feladatonként 5 hívásban és 0,099 dollárból; a natív Claude Code skillek 39-et, 4 hívásban, 0,236 dollárból. A teljes eredmény diagramokkal, angolul és magyarul: **[eredményoldal](https://piszabolcs.github.io/kapu/results/)**, PDF-ben: [magyar](docs/results/kapu-measurements-hu.pdf), [angol](docs/results/kapu-measurements-en.pdf).
+A nyilvános dokumentációkon (Rust Book, Kubernetes, MDN) a keresés 32-282 ms, egy fejezet kinyitása 4-48 ms. A visszakeresés a Rust könyvön a darabolós BM25 szintjén van, a Kubernetesen és az MDN-en alatta. A darabos alapvonalat oldalanként egyszer számoljuk, ez a tisztességes összevetés; a 0.2.1-ig itt szereplő szám darabonként számolt, és a KAPU-nak kedvezett. A 0.3.0-hoz mért összes rangsorolási változtatásból csak a szobánként egy találat ment át az elfogadási szabályon. Nyilvános PLC-kézikönyveken (hat gyártó) a Claude Sonnet a KAPU-eszközökkel a kérdések 92%-ára válaszolt helyesen, a jó oldallal a promptban 97%-ára, tudásfájl nélkül 28%-ára. A kézikönyvekben nem szereplő kérdéseknél a KAPU-s ügynök 24-ből 23-szor mondta ki, hogy nincs benne; a modell egymagában 24-ből 11-szer talált ki választ. Egy munkamenet fix ára a fájl méretétől függetlenül 799 token (a hat eszköz leírása), egy térképválasz legfeljebb 1000, tíz találat kivonattal legfeljebb 600 token. A skillek megtalálásában a 0.2.1-es katalógussal (`kapu_map kind=skill`) a KAPU 91 skillből a 39 releváns közül 38-at talál meg, feladatonként 5 hívásban és 0,099 dollárból; a natív Claude Code skillek 39-et, 4 hívásban, 0,236 dollárból. A teljes eredmény diagramokkal, angolul és magyarul: **[eredményoldal](https://piszabolcs.github.io/kapu/results/)**, PDF-ben: [magyar](docs/results/kapu-measurements-hu.pdf), [angol](docs/results/kapu-measurements-en.pdf).
 
 **Amire nem való:** kicsi, jól szétszedett Markdown-mappára (ott a grep is olcsó), naponta változó csapatos dokumentációra (a git diff zajos, ilyenkor a Markdown a forrás), és futtatandó skillekre (a KAPU a tudást adja, a szkriptet nem futtatja).
 

@@ -128,6 +128,53 @@ def v12_block(r):
             "requirements": requirements, "corpora": corpora, "retrieval": retrieval}
 
 
+V2_SETS = ["s", "m", "l", "en", "hu-en", "hu", "plc"]
+V2_CONFIGS = ["base", "collapse-1", "chunk_bm25", "chunk_vector", "chunk_hybrid"]
+
+
+def v2_metrics(m):
+    return {"r1": m["r@1"], "r10": m["r@10"], "r100": m["r@100"], "mrr": m["mrr@10"], "ndcg": m["ndcg@10"]}
+
+
+def v2_block(r):
+    """Plan v2, phases 1 and 2 (D156-D166): the fixes and the M0 rule, retrieval
+    against the deduplicated chunk baselines, the error classes, the `kapu_ask` modes."""
+    sets = [x for x in V2_SETS if x in r["sets"]]
+    retrieval = []
+    for x in sets:
+        for c in V2_CONFIGS:
+            row = next((y for y in r["retrieval"] if y["set"] == x and y["config"] == c), None)
+            if row:
+                retrieval.append({"set": x, "config": c, "n": row["n"], **v2_metrics(row["hybrid_room"]),
+                                  "strict_r10": row.get("hybrid_strict", {}).get("r@10")})
+    ask = []
+    for x in sets:
+        for mode, parts in (r.get("ask", {}).get("sets", {}).get(x) or {}).items():
+            t = parts["test"]
+            ask.append({"set": x, "mode": mode, "answered": t["answered"], "tokens": round(t["tokens_median"]),
+                        "wasted": round(t["wasted_tokens_per_ask"]), "hits": round(t["search_hits_mean"], 1),
+                        "search_tokens": round(t["search_tokens_median"]),
+                        "high": t.get("high_share")})
+    groups = []
+    for x, g in (r.get("groups") or {}).items():
+        d = g["depth2"]
+        groups.append({"set": x, "rooms": g["rooms"], "groups": g["groups"], "truth": d["truth_groups"],
+                       "file_ari": d["file_groups"]["ari"], "file_nmi": d["file_groups"]["nmi"],
+                       "random_nmi": d["random_same_sizes"]["nmi"], "kmeans_ari": d["kmeans_room_vectors"]["ari"],
+                       "sim_ari": d["edges"]["sim"]["ari"], "term_ari": d["edges"]["term"]["ari"],
+                       "largest_rooms": g["largest_group_rooms"], "largest_tokens": g["largest_group_tokens"]})
+    nb = r.get("neighbours") or {}
+    tot = nb.get("total", {})
+    neighbours = {"later": tot.get("later_open_calls"), "followed": tot.get("later_calls_following_a_neighbour"),
+                  "rate": nb.get("follow_rate"), "tokens_per_door": nb.get("neighbour_tokens_per_door"),
+                  **{f"shown_{k}": tot.get(f"shown_{k}", 0) for k in ("link", "term", "sim")},
+                  **{f"followed_{k}": tot.get(f"followed_{k}", 0) for k in ("link", "term", "sim")}}
+    return {"date": r["date"], "version": r.get("version", "tools 0.3.0"), "sets": {x: r["sets"][x] for x in sets},
+            "fixes": r["fixes"], "retrieval": retrieval, "errors": [e for e in r["errors"] if e["set"] in sets],
+            "ask": ask, "groups": groups, "neighbours": neighbours,
+            "title_weight": {w: v["test"] for w, v in (r.get("title_weight") or {}).get("pooled", {}).items()}}
+
+
 def skill_row(s, form):
     return {"skills": s["set_size"], "form": form, "loaded": s["gold_loaded"], "gold": s["gold"],
             "recall": s["recall_loaded"], "all_gold": s["tasks_all_gold_loaded"], "runs": s["runs"],
@@ -149,8 +196,9 @@ def skills_block(r, before=None):
 
 
 def main(results: Path, out: Path, v12_results: Path | None = None, skills_results: Path | None = None,
-         skills_before: Path | None = None):
+         skills_before: Path | None = None, v2_results: Path | None = None):
     r = json.loads(results.read_text(encoding="utf-8"))
+    v2 = v2_block(json.loads(v2_results.read_text(encoding="utf-8"))) if v2_results else None
     v12 = v12_block(json.loads(v12_results.read_text(encoding="utf-8"))) if v12_results else None
     before = json.loads(skills_before.read_text(encoding="utf-8")) if skills_before else None
     skills = skills_block(json.loads(skills_results.read_text(encoding="utf-8")), before) if skills_results else None
@@ -210,6 +258,7 @@ def main(results: Path, out: Path, v12_results: Path | None = None, skills_resul
         "spec": v12["version"] if v12 else "specification " + v11.get("specification"),
         "v12": v12,
         "skills": skills,
+        "v2": v2,
         "knowledge_tokens": px["full_file_in_context_tokens_per_request"],
         "pixellab1": [form_row(f, px["result"][f]) for f in ("kapu", "md", "pdf")],
         "pixellab2": [form_row("kapu", v104["pixellab_same_prompt"]["k104"]), form_row("md", v104["pixellab_same_prompt"]["md"]),
@@ -232,4 +281,4 @@ def main(results: Path, out: Path, v12_results: Path | None = None, skills_resul
 
 
 if __name__ == "__main__":
-    main(Path(sys.argv[1]), Path(sys.argv[2]), *(Path(a) for a in sys.argv[3:6]))
+    main(Path(sys.argv[1]), Path(sys.argv[2]), *(Path(a) for a in sys.argv[3:7]))

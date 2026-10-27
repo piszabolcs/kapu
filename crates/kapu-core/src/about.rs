@@ -58,7 +58,7 @@ pub const REPOSITORIES: [(&str, &str); 4] = [
     ("tauri-apps/tauri", "https://github.com/tauri-apps/tauri"),
 ];
 
-/// The version line that follows the program name: `0.2.1 (KAPU format 1.2)`.
+/// The version line that follows the program name: `0.3.0 (KAPU format 1.2)`.
 #[must_use]
 pub fn version_line() -> String {
     format!("{VERSION} (KAPU format {FORMAT_VERSION})")

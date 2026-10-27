@@ -1,6 +1,6 @@
 # KAPU measurements
 
-English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file; chapter 9 measures it again with file format 1.1, chapter 10 with format 1.2 ([results/2026-10-26-format-1.2.json](results/2026-10-26-format-1.2.json)), and chapter 11 compares native skills, a KAPU file and a Markdown folder at finding skills ([results/2026-10-26-skill-finding.json](results/2026-10-26-skill-finding.json), and after the catalog of tools 0.2.1 [results/2026-10-26-skill-finding-0.2.1.json](results/2026-10-26-skill-finding-0.2.1.json)). The [results page](../docs/results/index.html) shows the pilot, formats 1.1 and 1.2 and the skill finding with charts and tables; printed as PDF in [English](../docs/results/kapu-measurements-en.pdf) and [Hungarian](../docs/results/kapu-measurements-hu.pdf) (`tools/study/results_pdf.py`).
+English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file; chapter 9 measures it again with file format 1.1, chapter 10 with format 1.2 ([results/2026-10-26-format-1.2.json](results/2026-10-26-format-1.2.json)), chapter 11 compares native skills, a KAPU file and a Markdown folder at finding skills ([results/2026-10-26-skill-finding.json](results/2026-10-26-skill-finding.json), and after the catalog of tools 0.2.1 [results/2026-10-26-skill-finding-0.2.1.json](results/2026-10-26-skill-finding-0.2.1.json)), and chapter 12 measures every ranking change of plan v2 on a fixed dev/test split, against fair chunk baselines and with agents on a new corpus of PLC manuals ([results/2026-10-27-plan-v2.json](results/2026-10-27-plan-v2.json)). The [results page](../docs/results/index.html) shows the pilot, formats 1.1 and 1.2 and the skill finding with charts and tables; printed as PDF in [English](../docs/results/kapu-measurements-en.pdf) and [Hungarian](../docs/results/kapu-measurements-hu.pdf) (`tools/study/results_pdf.py`).
 
 - **Date:** 2026-10-23
 - **Version:** tools 0.1.0 with specification v1.0.2 (chapters 1-8); chapters 9 and 10 name their own
@@ -253,7 +253,7 @@ Three changes after the pilot (D139-D141, specification chapters 18 and 19), mea
 | Opening a door over MCP (ms, median) | 17 → 2.4 | 216 → 4.9 | 1,040 → 44.1 |
 | Map over MCP (ms, median) | 18 → 3.0 | 253 → 46.6 | 1,400 → 390.9 |
 | First search of a session (s) | 1.1 → 1.1 | 1.7 → 1.0 | 4.3 → 1.3 |
-| `kapu bench` run time (s) | – → 1 | 187 → 8 | 1,774 → 127 |
+| `kapu bench` run time (s) | - → 1 | 187 → 8 | 1,774 → 127 |
 
 \* MDN with v1.0.4: an experimental build with a 64 MiB line limit, and its import time was not measured on an idle machine. The import now includes the window vectors.
 
@@ -296,7 +296,7 @@ Retrieval, room-level recall@10 of the hybrid ranking (MRR@10 in brackets):
 
 | | Rust book, 68 questions | Kubernetes, 201 | MDN, 395 | Skills, 77 English | Skills, 60 Hungarian | Skills, the 60 translated |
 |---|---:|---:|---:|---:|---:|---:|
-| v1.1, float vectors from the cache | 0.485 (0.281) | 0.458 (0.245) | 0.271 (0.128) | 0.948 (0.851) | 0.633 (0.464) | – |
+| v1.1, float vectors from the cache | 0.485 (0.281) | 0.458 (0.245) | 0.271 (0.128) | 0.948 (0.851) | 0.633 (0.464) | - |
 | v1.2, sign bits alone | 0.500 (0.288) | 0.458 (0.263) | 0.246 (0.116) | 0.922 (0.783) | 0.583 (0.442) | 0.833 (0.735) |
 | **v1.2, sign bits and float rescoring** | **0.485 (0.281)** | **0.458 (0.243)** | **0.278 (0.131)** | **0.961 (0.841)** | **0.633 (0.453)** | **0.833 (0.750)** |
 
@@ -349,7 +349,195 @@ The KAPU agents above looked at the map two to four times and opened the skills 
 - **Cost per task**, as Claude Code reports it at API list prices: the KAPU file now costs less than the native skills. The usage of one task (t03, 91 skills) shows why: the native run wrote 24,280 tokens to the prompt cache and read 15,767, the KAPU run wrote 6,465 and read 66,022; a cache write costs twice the input price, a read a tenth. The Skill tool loads a whole skill (`mcp-builder`: 6,901 tokens), `kapu_open` the first part of each, up to 2,000 tokens, with the rest on request.
 - The six tools' descriptions and schemas are 798 tokens (K-01: at most 800).
 
-## 12. Reproduce
+## 12. Plan v2, phases 1 to 3: ablation, one fix that holds, honest baselines
+
+Measured on 2026-10-27 with tools 0.3.0 (specification v1.2.2, file format 1.2), on one Windows 11 machine, after the user's plan v2 ([results/2026-10-27-plan-v2.json](results/2026-10-27-plan-v2.json); per-question ranks in [results/2026-10-27-plan-v2-ranks.json](results/2026-10-27-plan-v2-ranks.json), by question hash).
+
+**How it was measured.**
+- **Every change is a switch** (`RankOptions`; `kapu bench --config`, `kapu-mcp --rank`), off by default. Off, the ranking is bit for bit that of 0.2.1 (`tests/vectors/rankings-0.2.1.tsv`).
+- **A fixed split** (`bench/splits/`): each question set is cut once, by a hash of the question, into a dev part (40%) and a test part (60%). The variant of a fix is chosen on the dev part, and only the test part is reported.
+- **Seven question sets:** the Stack Overflow questions of chapter 8 on the Rust book (41 test questions), Kubernetes (122) and MDN (236); the skills corpus of chapter 10 in English (46), translated from Hungarian (42) and in Hungarian (42); and a new corpus of PLC manuals (48, below).
+- **The M0 rule**, fixed before the runs: a fix is kept when, on the test part with all sets pooled, room-level recall@10 or MRR@10 improves with a 95% paired bootstrap interval above zero; no set loses more than 0.01 in either metric; and search is at most 1.5 times slower. The per-set constraint is also applied on the dev part when the variant is chosen. That step was added during the analysis: the first report chose by the dev gain alone, so the collapse group's pick (`collapse-1-beta-0.1`) failed the constraint on the test part while plain `collapse-1` met it (D158).
+- **The fair baseline** (M2): chunks of 512 tokens with one hit per page (`dedup`). The README compared KAPU's room level with the undeduplicated chunk column until 0.2.1; that was not a fair comparison.
+
+**The new corpus.** The public PLC documentation of six vendors, 623 pages, 1.01 million words, local only (`plc.kapu`, 12 MB):
+- Beckhoff TwinCAT 3 user interface
+- Bosch Rexroth ctrlX PLC
+- Mitsubishi iQ-R, iQ-F and GX Works3
+- Omron Sysmac
+- Siemens S7-1200/1500, SCL and STL
+- Emerson PACSystems
+
+The Nolek TestIT wiki answers scripted requests with a bot check, so it is not in it. The questions are 72 answerable, 24 whose answer is not in the corpus, and 12 that need two pages. An agent wrote them while reading the pages; every quoted piece of evidence is verbatim in its page. Because the writer saw the pages, search is easy on this set; its use is the agent measurement below.
+
+### Ranking fixes
+
+**Phase 2, against 0.2.1 (m0)**
+
+| Fix | Variants | Chosen on dev | Test Δ room recall@10 [95%] | Test Δ room MRR@10 [95%] | Worst set | Kept |
+|---|---:|---|---:|---:|---:|---|
+| stemming | 3 | stem-en | +0.002 [-0.012, +0.016] | -0.005 [-0.014, +0.004] | -0.021 | no |
+| avgdl-split | 1 | avgdl-split | +0.021 [+0.005, +0.036] | +0.016 [+0.003, +0.028] | -0.022 | no |
+| parent | 3 | parent-0.1 | -0.004 [-0.019, +0.012] | -0.009 [-0.018, -0.000] | -0.030 | no |
+| collapse | 4 | collapse-1 | +0.022 [+0.010, +0.035] | +0.011 [+0.008, +0.014] | +0.000 | yes |
+| rescore-bm25 | 1 | rescore-bm25-50 | +0.002 [-0.005, +0.010] | +0.001 [-0.002, +0.005] | -0.021 | no |
+| min-door | 1 | min-door-40 | -0.002 [-0.009, +0.004] | +0.001 [-0.001, +0.004] | -0.009 | no |
+| adaptive | 2 | adaptive-1.5 | +0.002 [-0.005, +0.009] | +0.000 [-0.003, +0.003] | -0.021 | no |
+| rrf | 18 | rrf-b1-v0.7-k60 | +0.009 [-0.005, +0.024] | +0.006 [+0.001, +0.012] | -0.048 | no |
+| convex | 3 | convex-b1-v1 | +0.002 [-0.017, +0.021] | +0.004 [-0.008, +0.016] | -0.024 | no |
+
+**On top of the collapse (m1)**
+
+| Fix | Variants | Chosen on dev | Test Δ room recall@10 [95%] | Test Δ room MRR@10 [95%] | Worst set | Kept |
+|---|---:|---|---:|---:|---:|---|
+| parent | 2 | parent-0.25 | -0.007 [-0.024, +0.010] | -0.010 [-0.022, +0.002] | -0.031 | no |
+| avgdl-split | 1 | avgdl-split | +0.010 [-0.005, +0.026] | +0.011 [-0.000, +0.024] | -0.024 | no |
+| rescore-bm25 | 1 | rescore-bm25-50 | +0.005 [-0.002, +0.014] | +0.002 [-0.001, +0.006] | -0.002 | no |
+| min-door | 1 | min-door-40 | +0.005 [+0.000, +0.012] | +0.002 [-0.001, +0.005] | +0.000 | no |
+| adaptive | 1 | adaptive-2 | +0.007 [+0.000, +0.016] | +0.004 [-0.001, +0.009] | -0.001 | no |
+| rrf | 3 | rrf-b1.5-v1-k20 | +0.028 [+0.009, +0.047] | +0.015 [+0.004, +0.025] | -0.024 | no |
+| graph | 6 | graph-sim-0.05 | +0.010 [-0.004, +0.024] | -0.004 [-0.017, +0.008] | -0.059 | no |
+
+**J4b with J4c on top of the collapse, six sets without MDN (m2)**
+
+| Fix | Variants | Chosen on dev | Test Δ room recall@10 [95%] | Test Δ room MRR@10 [95%] | Worst set | Kept |
+|---|---:|---|---:|---:|---:|---|
+| rrf | 3 | rrf-b1.5-v1-k20-adaptive-3 | +0.032 [+0.006, +0.059] | +0.025 [+0.011, +0.041] | -0.024 | no |
+
+- **One fix holds: one hit per room (J1, D158).** It is the default in 0.3.0. On the test part, pooled: recall@10 +0.022, MRR@10 +0.011, both intervals above zero, and no set worse. Search time is unchanged (`--timing`, each configuration in its own process: Kubernetes p50 27.3 → 27.9 ms, MDN 313.5 → 313.8 ms).
+- **Three changes come close but break the per-set constraint by one question on a small set:**
+  - separate average lengths for rooms and sections (J2a), +0.021 and +0.016;
+  - BM25 weighted 1.5 with k 20 on top of the collapse (J4b), +0.028 and +0.015;
+  - the same with the query-dependent weight (J4b with J4c), +0.032 and +0.025.
+
+  Each loses one question of 42 to 48 on a skills or PLC set, 0.021 to 0.024, while the rule allows 0.01. They stay switches, off. Whether the rule should allow one question on a small set is the user's decision, not one to take after seeing the numbers.
+- **No gain from the others:** stemming with one stemmer or none, a share of the room's score for its sections (J2b), the first BM25 hits in the vector rescoring (J4a), min-max fusion (J4d), sections under 40 tokens only through their room (J10), and title weights 1, 2 and 5 instead of 3 (built with the hidden `--title-weight`, BM25 only, pooled differences between -0.002 and +0.000).
+- **The graph step (J9 variant A, N2b) does not help** on top of the collapse: the best variant on dev (`sim` 0.05) gives recall@10 +0.010 [-0.004, +0.024] and MRR -0.004. Stronger graph weights cost up to 0.058 of MRR. As a ranking signal the graph gives nothing measurable; it is a navigation aid (N13 below).
+
+### Retrieval against the chunk baselines
+
+| Set | Questions | Ranking | recall@1 | recall@10 | recall@100 | MRR@10 | nDCG@10 |
+|---|---:|---|---:|---:|---:|---:|---:|
+| Rust book | 41 | KAPU 0.2.1 | 0.146 | 0.439 | 0.902 | 0.220 | 0.271 |
+| Rust book | 41 | KAPU, collapsed (0.3.0) | 0.146 | 0.512 | 0.902 | 0.252 | 0.314 |
+| Rust book | 41 | Chunks, BM25 | 0.146 | 0.512 | 0.902 | 0.255 | 0.315 |
+| Rust book | 41 | Chunks, vectors | 0.122 | 0.439 | 0.854 | 0.223 | 0.274 |
+| Rust book | 41 | Chunks, hybrid | 0.146 | 0.537 | 0.829 | 0.249 | 0.317 |
+| Kubernetes | 122 | KAPU 0.2.1 | 0.139 | 0.418 | 0.713 | 0.238 | 0.282 |
+| Kubernetes | 122 | KAPU, collapsed (0.3.0) | 0.139 | 0.451 | 0.713 | 0.253 | 0.302 |
+| Kubernetes | 122 | Chunks, BM25 | 0.164 | 0.484 | 0.795 | 0.242 | 0.299 |
+| Kubernetes | 122 | Chunks, vectors | 0.066 | 0.328 | 0.639 | 0.145 | 0.189 |
+| Kubernetes | 122 | Chunks, hybrid | 0.164 | 0.467 | 0.738 | 0.250 | 0.301 |
+| MDN | 236 | KAPU 0.2.1 | 0.076 | 0.271 | 0.525 | 0.127 | 0.161 |
+| MDN | 236 | KAPU, collapsed (0.3.0) | 0.076 | 0.288 | 0.525 | 0.135 | 0.171 |
+| MDN | 236 | Chunks, BM25 | 0.089 | 0.322 | 0.602 | 0.156 | 0.196 |
+| MDN | 236 | Chunks, vectors | 0.064 | 0.203 | 0.517 | 0.095 | 0.120 |
+| MDN | 236 | Chunks, hybrid | 0.064 | 0.356 | 0.631 | 0.145 | 0.195 |
+| Skills, English | 46 | KAPU 0.2.1 | 0.783 | 0.978 | 1.000 | 0.846 | 0.878 |
+| Skills, English | 46 | KAPU, collapsed (0.3.0) | 0.783 | 0.978 | 1.000 | 0.853 | 0.884 |
+| Skills, translated | 42 | KAPU 0.2.1 | 0.714 | 0.833 | 0.833 | 0.756 | 0.775 |
+| Skills, translated | 42 | KAPU, collapsed (0.3.0) | 0.714 | 0.833 | 0.833 | 0.759 | 0.777 |
+| Skills, Hungarian | 42 | KAPU 0.2.1 | 0.405 | 0.619 | 0.762 | 0.487 | 0.520 |
+| Skills, Hungarian | 42 | KAPU, collapsed (0.3.0) | 0.405 | 0.643 | 0.762 | 0.492 | 0.529 |
+| PLC manuals | 48 | KAPU 0.2.1 | 0.625 | 0.917 | 0.979 | 0.720 | 0.767 |
+| PLC manuals | 48 | KAPU, collapsed (0.3.0) | 0.625 | 0.938 | 0.979 | 0.734 | 0.783 |
+| PLC manuals | 48 | Chunks, BM25 | 0.625 | 0.958 | 0.979 | 0.741 | 0.794 |
+| PLC manuals | 48 | Chunks, vectors | 0.458 | 0.792 | 0.896 | 0.571 | 0.625 |
+| PLC manuals | 48 | Chunks, hybrid | 0.583 | 0.938 | 0.979 | 0.686 | 0.746 |
+
+**Why a question is missed (M3), test part**
+
+| Set | Ranking | Missed | Duplication | Fusion | Rescoring | Ranking 11-100 | Vocabulary | Room hit, door missed |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| Rust book | KAPU 0.2.1 | 23 | 3 | 5 | 1 | 10 | 4 | 1 |
+| Rust book | KAPU, collapsed (0.3.0) | 20 | 0 | 5 | 1 | 10 | 4 | 8 |
+| Kubernetes | KAPU 0.2.1 | 71 | 4 | 11 | 6 | 15 | 35 | 9 |
+| Kubernetes | KAPU, collapsed (0.3.0) | 67 | 0 | 11 | 6 | 15 | 35 | 26 |
+| MDN | KAPU 0.2.1 | 172 | 4 | 17 | 15 | 24 | 112 | 8 |
+| MDN | KAPU, collapsed (0.3.0) | 168 | 0 | 17 | 15 | 24 | 112 | 23 |
+| Skills, English | KAPU 0.2.1 | 1 | 0 | 0 | 0 | 1 | 0 | 2 |
+| Skills, English | KAPU, collapsed (0.3.0) | 1 | 0 | 0 | 0 | 1 | 0 | 15 |
+| Skills, translated | KAPU 0.2.1 | 7 | 0 | 0 | 0 | 0 | 7 | 1 |
+| Skills, translated | KAPU, collapsed (0.3.0) | 7 | 0 | 0 | 0 | 0 | 7 | 7 |
+| Skills, Hungarian | KAPU 0.2.1 | 16 | 1 | 1 | 0 | 4 | 10 | 2 |
+| Skills, Hungarian | KAPU, collapsed (0.3.0) | 15 | 0 | 1 | 0 | 4 | 10 | 7 |
+| PLC manuals | KAPU 0.2.1 | 4 | 1 | 1 | 0 | 1 | 1 | 1 |
+| PLC manuals | KAPU, collapsed (0.3.0) | 3 | 0 | 1 | 0 | 1 | 1 | 21 |
+
+- **The deduplicated chunk baselines are still better than KAPU, now on fair terms.** Chunk BM25 beats it on Kubernetes (0.484 against 0.451) and MDN (0.322 against 0.288), and the chunk hybrid is ahead everywhere except PLC. KAPU 0.3.0 reaches chunk BM25 on the Rust book (0.512) and the chunk hybrid on PLC (0.938).
+- **Ceiling (recall@100):** the Rust book reaches 0.90 at 100 but 0.51 at 10, so its misses are mostly ranking. MDN reaches only 0.53 even at 100, so half of its questions use words its pages do not.
+- **Error classes (M3), MDN with the collapse:** 112 of 168 misses are vocabulary (the page is not in any top 100), 24 ranking, 17 fusion, 15 rescoring candidates. Duplication is gone after the collapse. This points at document and query expansion (J7, J8) and smaller vector windows (J3), the next phases of the plan, not at more fusion tuning.
+
+### kapu_ask (J12, D159) and the two-line excerpt (J11)
+
+"Answered" means that a frame of the expected page is among the frames the one reply opens (`ask_eval.py`, test part, default budget 2,000 tokens).
+
+| Set | 0.2.1 (best hit) | 0.3.0 (start of 5 rooms) | Reply tokens, 0.2.1 → 0.3.0 | Tokens per question spent without the page |
+|---|---:|---:|---:|---:|
+| Rust book | 0.146 | 0.415 | 1,653 → 1,224 | 1,315 → 710 |
+| Kubernetes | 0.172 | 0.393 | 1,800 → 1,130 | 1,391 → 678 |
+| MDN | 0.114 | 0.216 | 1,614 → 1,124 | 1,331 → 854 |
+| Skills, English | 0.826 | 0.957 | 1,788 → 1,145 | 295 → 51 |
+| Skills, translated | 0.762 | 0.810 | 1,684 → 1,144 | 384 → 210 |
+
+- **The shared budget wins everywhere.** The paired interval is above zero on every set except the translated one, and the reply is about a third smaller. The start of a room may not hold the answer line, so "answered" is lenient; the agent measurement below checks the answers themselves.
+- **The confidence mode was the plan's proposal:** the best hit alone when it is found by both rankings and scores at least 1.3 times the second, otherwise the spread. It is not better on the dev part, and its signal is not calibrated: where it would say `confidence: high`, the expected room is there for only 11% of the Kubernetes and MDN questions, fewer than when it says low (42% and 22%). So 0.3.0 always spreads and prints no confidence line. The mode stays measurable (`kapu-mcp --rank '{"ask": "confidence"}'`).
+- **The two-line excerpt (J11) costs hits and shows no gain** that this measurement can see. With it, 5.9 to 7.8 hits fit in the 600-token search reply instead of 7.2 to 9.5, and no answer quality was measured. It stays off (`excerpt_lines`).
+- **The collapse in the search reply:** the line naming a room's other matching sections takes tokens, so 7.8 to 9.5 hits fit instead of 9.8 to 10. Every hit is now a different room.
+
+### Search or reading: oracle, KAPU and closed book (N1), and abstention (N4)
+
+On the PLC corpus, with Claude Sonnet through `claude -p` (isolated, no user settings) and Claude Haiku as the judge (`oracle_eval.py`, one run per question):
+- 36 answerable questions, 6 per vendor;
+- the 24 absent ones.
+
+| | Correct | Partly | Wrong | Said not found | Input tokens (median) | $ (median) |
+|---|---:|---:|---:|---:|---:|---:|
+| Oracle: the expected page in the prompt | 97% | 3% | 0% | 0% | 5,461 | 0.015 |
+| **KAPU tools** | **92%** | 8% | 0% | 0% | 12,892 | 0.019 |
+| Closed book: the question alone | 28% | 17% | 8% | 47% | 2,906 | 0.006 |
+
+| Absent questions | Said it is not there | Made an answer up | Input tokens (median) |
+|---|---:|---:|---:|
+| **KAPU tools** | **96%** | 4% (1 of 24) | 57,346 |
+| Closed book | 54% | 46% | 2,895 |
+
+- **Reading, not search, is the small loss here:** `retrieval_gap` (oracle - KAPU) is 0.06, `knowledge_gain` (KAPU - closed book) 0.64. The agent opened the expected room for 94% of the questions. Search is easy on this set, as noted above.
+- **Abstention is KAPU's clearest win:** asked about something the manuals do not say, the model alone made an answer up for almost half of the questions, the KAPU agent for one of 24. A "not found" costs more, a median of 5.5 calls and 57,000 tokens, because the agent keeps searching.
+- The confidence mode gave the same numbers (92% and 89% correct, 96% abstention), so `confidence: low` did not reduce made-up answers.
+- **Limits:** one run per question; the plan asks for at least three (M5). The question writer saw the pages.
+
+### The graph: followed neighbours (N2a) and topic groups (N13)
+
+- **Neighbour lists are rarely followed.** In the logged live runs of chapters 5 and 8 (72 runs, `neighbour_follow.py`, the replies asked again from today's server), 5 of 27 later `kapu_open` calls opened a door from an earlier neighbour list: `link` 2 of 64 shown, `sim` 3 of 64, `term` 0 of 221. A neighbour list costs 70 tokens per opened door on average. This is the data for J16 (phase 4): `term` neighbours can go.
+
+| Set | Rooms | Groups / folders | ARI | NMI (random same sizes) | k-means ARI | sim only | term only | link only | Largest group (rooms / tokens) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Kubernetes | 1,722 | 104 / 73 | 0.159 | 0.416 (0.150) | 0.137 | 0.155 | -0.005 | 0.000 | 166 / 1,509,243 |
+| MDN | 14,719 | 99 / 50 | 0.040 | 0.390 (0.029) | 0.032 | 0.041 | -0.001 | -0.000 | 733 / 1,296,318 |
+
+- **The groups carry structure, and the `sim` edges carry it.** Against the second folder level, the Kubernetes groups score ARI 0.159 and NMI 0.416 (random groups of the same sizes 0.150), about k-means on the room vectors (0.137). On MDN they score ARI 0.040 and NMI 0.390, against 0.029 for random groups and 0.032 for k-means.
+- Leiden on one edge type at a time: `sim` alone gives what all edges give, `term` alone is at or below zero, and `link` edges are too few to form groups.
+- The largest group is 166 rooms (1.5 M tokens) on Kubernetes and 733 rooms (1.3 M tokens) on MDN, which is why a group list does not fit a map reply (G16, J15).
+
+### Found on the way
+- **A memory bound (D157).** The float windows the vector rescoring keeps were bounded by doors only (20,000). The sign bits pick long doors with many windows, so on MDN a long run grew past 20 GB. They are now also bounded by windows (250,000, about 260 MB); a `kapu-mcp` server stays near 850 MB over 200 MDN searches.
+- **Open (A55):** `kapu bench --config` keeps about 2 MB per run on a large file, so `ablation.py run --chunk 50` runs MDN in parts.
+- **Two import problems** showed up while building the PLC corpus:
+  - a file name longer than 64 characters gives an invalid room id (E008);
+  - a control character left by PDF conversion stops the import (E004).
+
+  The corpus was cleaned first; the import itself is unchanged.
+
+### The tool list
+
+With the new `kapu_search` and `kapu_ask` descriptions the six tools cost 799 tokens (K-01: at most 800); the first wording was 802, and a test now prices the list.
+
+### Not done yet
+
+These are phases 4 to 7 of the plan: J2c, J3, J5, J6, J7, J8, J13 to J16, M4, N3, N5 to N12.
+
+## 13. Reproduce
 
 ```bash
 python tools/collect_skills.py bench/korpusz/rooms           # the installed skills as rooms (local only)
@@ -360,4 +548,4 @@ python tools/mcp_probe.py corpus.kapu questions.jsonl        # MCP latency and r
 python tools/kapu_mcp_call.py call kapu_search '{"file": "...", "query": "..."}'
 ```
 
-Chapter 11: `tools/study/skill_pool.py` collects the skills of the machine, `tools/study/skill_eval.py` prepares the three forms (`prepare`), runs the tasks of `tools/study/skill_tasks.json` (`run`), measures the fixed cost (`baseline`) and writes the results file (`report`); it needs a logged-in `claude` CLI. Chapter 10: `tools/study/measure_v12.py` (reply prices, `kapu_ask`, open times over MCP), `tools/study/measure_scale.py` (a file of a given size), `tools/study/translate_hu.py` (the translated questions) and `tools/study/collect_v12.py` (the results file). Chapters 8 and 9 (public documentation): `tools/study/prepare_corpus.py` and `so_questions.py` prepare the corpora and questions, `scale_probe.py` measures a size, `chunk_baseline.py` the chunk baselines, `collect_results.py` writes `results/2026-10-23-study-pilot.json`, and `results_page.py` turns that and the format 1.2 results file into the results page.
+Chapter 12: `tools/study/split_questions.py` (the dev/test split), `ablation.py run` and `report` (the matrices `bench/ablation/m0.json`, `m1.json`, `m2.json`; set `KAPU_MODEL_DIR` for a copied binary, `--chunk 50` for MDN), `chunk_baseline.py` (with `--chunks` in the report), `ask_eval.py` (`bench/ablation/ask-modes*.json`), `title_weight.py`, `neighbour_follow.py`, `group_quality.py`, `oracle_eval.py` (needs a logged-in `claude` CLI), `collect_v2.py` (the results file) and `v2_tables.py` (these tables). Chapter 11: `tools/study/skill_pool.py` collects the skills of the machine, `tools/study/skill_eval.py` prepares the three forms (`prepare`), runs the tasks of `tools/study/skill_tasks.json` (`run`), measures the fixed cost (`baseline`) and writes the results file (`report`); it needs a logged-in `claude` CLI. Chapter 10: `tools/study/measure_v12.py` (reply prices, `kapu_ask`, open times over MCP), `tools/study/measure_scale.py` (a file of a given size), `tools/study/translate_hu.py` (the translated questions) and `tools/study/collect_v12.py` (the results file). Chapters 8 and 9 (public documentation): `tools/study/prepare_corpus.py` and `so_questions.py` prepare the corpora and questions, `scale_probe.py` measures a size, `chunk_baseline.py` the chunk baselines, `collect_results.py` writes `results/2026-10-23-study-pilot.json`, and `results_page.py` turns that and the format 1.2 results file into the results page.

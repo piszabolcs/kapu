@@ -34,13 +34,17 @@ def browser():
 
 def main():
     exe = browser()
-    with tempfile.TemporaryDirectory() as profile:
+    # the browser may still hold its profile lock when the folder goes
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as profile:
         for lang in ("en", "hu"):
             out = PAGE.parent / f"kapu-measurements-{lang}.pdf"
+            out.unlink(missing_ok=True)
             subprocess.run([exe, "--headless=new", "--disable-gpu", "--no-pdf-header-footer",
                             f"--user-data-dir={profile}", "--window-size=1100,800",
                             "--virtual-time-budget=20000", f"--print-to-pdf={out}",
                             f"{PAGE.as_uri()}?lang={lang}"], check=True)
+            if not out.is_file():
+                sys.exit(f"the browser wrote no {out.name}")
             print("written", out, out.stat().st_size, "bytes")
 
 
