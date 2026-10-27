@@ -443,6 +443,38 @@ fn collapse_keeps_one_door_per_room_and_names_the_others() {
 }
 
 #[test]
+fn graph_step_lifts_the_neighbours_of_the_hits() {
+    // J9: two rooms share the rare word `türkiz` (a term edge); a query that
+    // finds only one of them reaches the other through the edge
+    let mk = |id: &str, text: &str| RoomSource {
+        id: id.into(),
+        content: text.into(),
+    };
+    let rooms = vec![
+        mk("a", "# A\nalpha türkiz színkód\n"),
+        mk("b", "# B\nbravo türkiz árnyalat\n"),
+        mk("c", "# C\ncharlie egészen más téma\n"),
+        mk("d", "# D\ndelta negyedik szoba\n"),
+    ];
+    let built = kapu_core::build::build(&rooms).unwrap().bytes;
+    let s = kapu_core::Sections::parse(&built).unwrap();
+    assert!(s.graph.contains("\tterm\t"), "{}", s.graph);
+    let plain = search(&built, "alpha", &SearchOptions::default(), None).unwrap();
+    assert!(plain.hits.iter().all(|h| h.id != "b"), "{:?}", plain.hits);
+    let options = SearchOptions {
+        rank: kapu_core::search::RankOptions {
+            graph_term: 0.5,
+            ..Default::default()
+        },
+        ..SearchOptions::default()
+    };
+    let r = search(&built, "alpha", &options, None).unwrap();
+    let b = r.hits.iter().find(|h| h.id == "b").expect("b by the edge");
+    assert_eq!(b.source, Source::Graph);
+    assert_eq!(r.hits[0].id, "a");
+}
+
+#[test]
 fn two_line_excerpt_adds_the_neighbouring_line() {
     // J11: the best line and the line next to it, joined by " / "
     let rooms = vec![RoomSource {

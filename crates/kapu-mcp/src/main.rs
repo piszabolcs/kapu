@@ -253,7 +253,7 @@ const ASK_OTHERS: usize = 8;
 const ASK_SPREAD: usize = 5;
 const ASK_RATIO: f64 = 1.3;
 /// J1: at most this many other matching sections are named under a hit.
-const MAX_ALSO: usize = 3;
+const MAX_ALSO: usize = 2;
 
 /// Edge types in the order `kapu_open` lists them: written links first.
 fn kind_rank(kind: &str) -> u8 {
@@ -606,18 +606,25 @@ fn sure(r: &SearchResult, ratio: f64) -> bool {
 }
 
 /// J1: the other matching sections of a hit's room, at most [`MAX_ALSO`] named.
+/// A section is named by the part of its id after the room, the room itself
+/// by `/`, so the line stays short.
 fn also_line(hit: &kapu_core::search::SearchHit) -> String {
     if hit.also.is_empty() {
         return String::new();
     }
-    let named: Vec<&str> = hit.also.iter().take(MAX_ALSO).map(String::as_str).collect();
+    let named: Vec<&str> = hit
+        .also
+        .iter()
+        .take(MAX_ALSO)
+        .map(|id| id.split_once('/').map_or("/", |(_, section)| section))
+        .collect();
     let more = if hit.also.len() > named.len() {
         ", ..."
     } else {
         ""
     };
     format!(
-        "  +{} matching in this room: {}{more}\n",
+        "  +{} in this room: {}{more}\n",
         hit.also.len(),
         named.join(", ")
     )

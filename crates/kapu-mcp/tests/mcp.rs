@@ -723,12 +723,12 @@ async fn rank_argument_sets_collapse_and_ask_confidence() {
     let f = file.to_str().unwrap();
     let plain = connect(&dir).await;
     let (_, before) = call(&plain, "kapu_search", json!({"file": f, "query": "gomb"})).await;
-    assert!(!before.contains("matching in this room"), "{before}");
+    assert!(!before.contains(" in this room: "), "{before}");
     plain.cancel().await.unwrap();
     let client = connect_with(&dir, &["--rank", r#"{"collapse": 1, "ask": "confidence"}"#]).await;
     let (err, after) = call(&client, "kapu_search", json!({"file": f, "query": "gomb"})).await;
     assert!(!err, "{after}");
-    assert!(after.contains("matching in this room: "), "{after}");
+    assert!(after.contains(" in this room: "), "{after}");
     let (err, ask) = call(&client, "kapu_ask", json!({"file": f, "query": "gomb"})).await;
     assert!(!err, "{ask}");
     assert!(
