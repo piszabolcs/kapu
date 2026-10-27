@@ -24,6 +24,7 @@ SETS = {
     "l": "questions-l.jsonl",
     "en": "en-questions.jsonl",
     "hu": "q-hu.jsonl",
+    "plc": "plc/questions/answerable.jsonl",
 }
 PAIRED = {"hu-en": ("q-hu-en.jsonl", "hu")}
 

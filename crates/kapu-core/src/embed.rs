@@ -672,19 +672,26 @@ pub fn file_vectors(text: &str, doors: usize) -> Result<Arc<SignVectors>> {
 
 /// How many doors' rescoring windows stay in memory for the process (D143).
 const RESCORE_MEMO_DOORS: usize = 20_000;
+/// D157 (plan v2): and at most this many windows in all, about 260 MB of
+/// 256-component vectors. The sign bits favour long doors, whose windows
+/// are many: bounded by doors alone, the memo of an MDN-sized file grew past
+/// 20 GB.
+const RESCORE_MEMO_WINDOWS: usize = 250_000;
 
 /// What a door's rescoring windows depend on: the model, the door's stored
 /// bytes (its text follows from them) and whether it is a sub-door.
 type RescoreKey = ([u8; 32], [u8; 32], bool);
 
-/// Rescoring windows by key, and the keys in the order they came.
+/// Rescoring windows by key, the keys in the order they came, and the
+/// number of windows held.
 type RescoreMemo = (
     BTreeMap<RescoreKey, Arc<Vec<Vec<f32>>>>,
     std::collections::VecDeque<RescoreKey>,
+    usize,
 );
 
 static RESCORE_MEMO: Mutex<RescoreMemo> =
-    Mutex::new((BTreeMap::new(), std::collections::VecDeque::new()));
+    Mutex::new((BTreeMap::new(), std::collections::VecDeque::new(), 0));
 
 /// D143: the float window vectors of `entries` for rescoring the candidates
 /// of the sign bits: from the process memo, or computed from `texts` (the
@@ -717,13 +724,18 @@ pub fn rescore_windows(
         }
         if let Ok(mut memo) = RESCORE_MEMO.lock() {
             for (key, windows) in fresh {
+                let count = windows.len();
                 if memo.0.insert(key, windows).is_none() {
                     memo.1.push_back(key);
+                    memo.2 += count;
                 }
             }
-            while memo.1.len() > RESCORE_MEMO_DOORS {
-                if let Some(old) = memo.1.pop_front() {
-                    memo.0.remove(&old);
+            while memo.1.len() > RESCORE_MEMO_DOORS || memo.2 > RESCORE_MEMO_WINDOWS {
+                let Some(old) = memo.1.pop_front() else {
+                    break;
+                };
+                if let Some(gone) = memo.0.remove(&old) {
+                    memo.2 = memo.2.saturating_sub(gone.len());
                 }
             }
         }

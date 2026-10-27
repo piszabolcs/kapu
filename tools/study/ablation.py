@@ -45,6 +45,13 @@ def room(door):
 def run(argv):
     force = "--force" in argv
     argv = [a for a in argv if a != "--force"]
+    chunk = 0
+    if "--chunk" in argv:
+        # A40-like: `kapu bench --config` keeps about 2 MB per run of a large
+        # file, so MDN runs in parts of this many questions, one process each
+        i = argv.index("--chunk")
+        chunk = int(argv[i + 1])
+        del argv[i:i + 2]
     kapu, matrix, work = str(Path(argv[0]).resolve()), Path(argv[1]), Path(argv[2])
     work.mkdir(parents=True, exist_ok=True)
     for spec in argv[3:]:
@@ -55,13 +62,41 @@ def run(argv):
             print(f"{name}: already run")
             continue
         print(f"{name}: {kfile}", flush=True)
-        out = subprocess.run([kapu, "--json", "bench", kfile, questions, "--config", str(matrix),
-                              "--rankings", str(ranks)], capture_output=True, check=True)
-        doc = json.loads(out.stdout)
-        if doc["emb"] != "none" and not doc["vector"]:
-            # a copied binary finds no packaged model: set KAPU_MODEL_DIR
-            sys.exit(f"{name}: the file has vectors ({doc['emb']}) but kapu found no model")
-        bench.write_bytes(out.stdout)
+        lines = Path(questions).read_text(encoding="utf-8").splitlines()
+        lines = [l for l in lines if l.strip()]
+        size = chunk or len(lines)
+        docs, rows = [], []
+        for start in range(0, len(lines), size):
+            part_q = work / f"{name}.part.jsonl"
+            part_r = work / f"{name}.part.rankings.jsonl"
+            part_q.write_text("\n".join(lines[start:start + size]) + "\n", encoding="utf-8")
+            out = subprocess.run([kapu, "--json", "bench", kfile, str(part_q), "--config", str(matrix),
+                                  "--rankings", str(part_r)], capture_output=True, check=True)
+            doc = json.loads(out.stdout)
+            if doc["emb"] != "none" and not doc["vector"]:
+                # a copied binary finds no packaged model: set KAPU_MODEL_DIR
+                sys.exit(f"{name}: the file has vectors ({doc['emb']}) but kapu found no model")
+            docs.append(doc)
+            for line in part_r.read_text(encoding="utf-8").splitlines():
+                row = json.loads(line)
+                row["q"] += start
+                rows.append(row)
+            part_q.unlink()
+            part_r.unlink()
+            if chunk:
+                print(f"  {min(start + size, len(lines))}/{len(lines)}", flush=True)
+        doc = docs[0]
+        doc["questions"] = len(lines)
+        for c in doc["configs"]:
+            ms = sorted(r["ms"] for r in rows if r["config"] == c["name"])
+            c["ms_p50"] = ms[round((len(ms) - 1) * 0.5)]
+            c["ms_p95"] = ms[round((len(ms) - 1) * 0.95)]
+        if len(docs) > 1:
+            doc["parts"] = len(docs)
+        with open(ranks, "w", encoding="utf-8") as f:
+            for row in sorted(rows, key=lambda r: (r["config"], r["q"])):
+                f.write(json.dumps(row) + "\n")
+        bench.write_text(json.dumps(doc), encoding="utf-8")
 
 
 def rank_of(lst, hit):
@@ -289,7 +324,7 @@ def groups_of(configs, base):
     `-<value>` part (`parent-0.25` -> `parent`), the fusion grids by kind."""
     out = {}
     for c in configs:
-        if c == base:
+        if c == base or c.startswith("ref-"):
             continue
         if c.startswith("rrf-"):
             key = "rrf"
@@ -299,6 +334,8 @@ def groups_of(configs, base):
             key = "collapse"
         elif c.startswith("stem-"):
             key = "stemming"
+        elif c.startswith("graph-"):
+            key = "graph"
         else:
             key = c.rsplit("-", 1)[0] if c[-1].isdigit() else c
         out.setdefault(key, []).append(c)

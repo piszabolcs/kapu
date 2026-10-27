@@ -1,0 +1,7 @@
+[
+  {"name": "top", "rank": {"collapse": 1}},
+  {"name": "top-0.2.1", "rank": {"collapse": 0}},
+  {"name": "spread", "rank": {"collapse": 1, "ask": "spread"}},
+  {"name": "confidence-1.3", "rank": {"collapse": 1, "ask": "confidence", "ask_ratio": 1.3}},
+  {"name": "excerpt-2-lines", "rank": {"collapse": 1, "excerpt_lines": 2}}
+]
