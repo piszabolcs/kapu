@@ -6,7 +6,8 @@ use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use crate::build::{
-    Built, RoomSource, Warning, build, new_room_id, normalize_newlines, parse_body,
+    Built, RoomSource, Warning, build, new_room_id, normalize_newlines, parse_body, strip_controls,
+    unique_id,
 };
 use crate::error::{Error, ErrorCode, Result};
 use crate::sections::{BodyLength, Limits, Sections};
@@ -86,17 +87,12 @@ pub fn import_dir(dir: &Path) -> Result<Built> {
         })?;
         let text = text.strip_prefix('\u{FEFF}').unwrap_or(&text);
         let content = normalize_newlines(&name, text, &mut warnings);
+        let content = strip_controls(&name, &content, &mut warnings);
         let stem = path
             .file_stem()
             .map(|s| s.to_string_lossy().into_owned())
             .unwrap_or_default();
-        let base = slug(&stem);
-        let mut id = base.clone();
-        let mut n = 2;
-        while used.contains(&id) {
-            id = format!("{base}-{n}");
-            n += 1;
-        }
+        let id = unique_id(&slug(&stem), &used);
         used.insert(id.clone());
         rooms.push(RoomSource { id, content });
     }
@@ -202,6 +198,30 @@ mod tests {
             rooms_of(&built.bytes).unwrap()[0].content,
             crate::build::TEMPLATE
         );
+    }
+
+    #[test]
+    fn long_file_names_and_control_characters_import() {
+        // plan v3 F1: two names whose first 64 characters agree; F2: an ESC
+        // left by a PDF conversion and a bidirectional control
+        let src = temp_dir("f1f2");
+        let long = "siemens-s7-1500-programming-guideline-for-safety-and-standard-blocks";
+        std::fs::write(src.join(format!("{long}-part-one.md")), "# One\nfirst\n").unwrap();
+        std::fs::write(src.join(format!("{long}-part-two.md")), "# Two\nsecond\n").unwrap();
+        std::fs::write(
+            src.join("ctl.md"),
+            "# Ctl\nvalue\u{1b}[0m set\u{202e} here\n",
+        )
+        .unwrap();
+        let built = import_dir(&src).unwrap();
+        crate::validate(&built.bytes, crate::Level::Full).unwrap();
+        let rooms = rooms_of(&built.bytes).unwrap();
+        let ids: Vec<&str> = rooms.iter().map(|r| r.id.as_str()).collect();
+        assert_eq!(ids.len(), 3, "{ids:?}");
+        assert!(ids.iter().all(|id| id.len() <= 64), "{ids:?}");
+        assert!(built.warnings.iter().any(|w| w.code == "W010"));
+        let ctl = rooms.iter().find(|r| r.id == "ctl").unwrap();
+        assert_eq!(ctl.content, "# Ctl\nvalue[0m set here\n");
     }
 
     #[test]

@@ -114,7 +114,8 @@ pub struct RoomSource {
 pub struct Warning {
     /// `W002` invisible character, `W003` link to a missing door,
     /// `W004` CRLF normalised (D83), `W006` unknown kind, `W007` project
-    /// card above 600 tokens (D144), `W008` file above 50 MiB (D148).
+    /// card above 600 tokens (D144), `W008` file above 50 MiB (D148), `W009`
+    /// skill file left out, `W010` control characters removed (plan v3 F2).
     pub code: &'static str,
     /// Where and what.
     pub message: String,
@@ -1134,14 +1135,44 @@ pub fn rebuild_with(file: &[u8], model: Option<&Model>) -> Result<Built> {
 /// `-2`, `-3`... on collision.
 #[must_use]
 pub fn new_room_id(content: &str, used: &BTreeSet<String>) -> String {
-    let base = slug(&heading_title(content));
-    let mut id = base.clone();
+    unique_id(&slug(&heading_title(content)), used)
+}
+
+/// FR-04/4: `base` (a slug), or with `-2`, `-3`... on a collision, the base
+/// shortened so the id stays within 64 characters (FR-04/3). Before plan v3
+/// F1 a 64-character base with a suffix was an invalid id (E008).
+#[must_use]
+pub fn unique_id(base: &str, used: &BTreeSet<String>) -> String {
+    let mut id = base.to_owned();
     let mut n = 2;
     while used.contains(&id) {
-        id = format!("{base}-{n}");
+        let suffix = format!("-{n}");
+        let head: String = base.chars().take(64 - suffix.len()).collect();
+        id = format!("{}{suffix}", head.trim_end_matches('-'));
         n += 1;
     }
     id
+}
+
+/// Plan v3 F2: the characters FR-02 forbids in a body (C0 controls other
+/// than TAB and LF, a lone CR, the bidirectional controls) are removed from
+/// imported text, with a W010 warning, instead of stopping the import (E004).
+#[must_use]
+pub fn strip_controls(name: &str, text: &str, warnings: &mut Vec<Warning>) -> String {
+    let forbidden = |c: char| {
+        (c.is_ascii_control() && c != '\t' && c != '\n' && c != '\u{7f}')
+            || ('\u{202a}'..='\u{202e}').contains(&c)
+            || ('\u{2066}'..='\u{2069}').contains(&c)
+    };
+    let removed = text.chars().filter(|c| forbidden(*c)).count();
+    if removed == 0 {
+        return text.to_owned();
+    }
+    warnings.push(Warning {
+        code: "W010",
+        message: format!("{name}: {removed} control characters removed"),
+    });
+    text.chars().filter(|c| !forbidden(*c)).collect()
 }
 
 /// FR-18/2: writes `<path>.tmp` in the same directory, then renames it over

@@ -15,7 +15,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use crate::build::{Built, RoomSource, Warning, build, normalize_newlines};
+use crate::build::{
+    Built, RoomSource, Warning, build, normalize_newlines, strip_controls, unique_id,
+};
 use crate::error::{Error, ErrorCode, Result};
 use crate::text::slug;
 
@@ -184,15 +186,7 @@ fn relative(path: &Path, base: &Path) -> String {
 
 /// A free id from `base` (FR-04/4 slug, `-2`, `-3`... on collision).
 fn free_id(base: &str, used: &mut BTreeSet<String>) -> String {
-    let base = slug(base);
-    let mut id = base.clone();
-    let mut n = 2;
-    while used.contains(&id) {
-        let suffix = format!("-{n}");
-        let head: String = base.chars().take(64 - suffix.len()).collect();
-        id = format!("{}{suffix}", head.trim_end_matches('-'));
-        n += 1;
-    }
+    let id = unique_id(&slug(base), used);
     used.insert(id.clone());
     id
 }
@@ -202,7 +196,8 @@ fn read_text(path: &Path, shown: &str, warnings: &mut Vec<Warning>) -> Result<Op
     let bytes = std::fs::read(path).map_err(|e| io_err(path, &e))?;
     if let Ok(text) = String::from_utf8(bytes) {
         let text = text.strip_prefix('\u{FEFF}').unwrap_or(&text).to_owned();
-        Ok(Some(normalize_newlines(shown, &text, warnings)))
+        let text = normalize_newlines(shown, &text, warnings);
+        Ok(Some(strip_controls(shown, &text, warnings)))
     } else {
         warnings.push(Warning {
             code: "W009",
@@ -235,6 +230,7 @@ fn scripts_section(
             continue;
         };
         let code = normalize_newlines(&relative(path, dir), &code, warnings);
+        let code = strip_controls(&relative(path, dir), &code, warnings);
         let fence = fence_for(&code);
         let _ = write!(
             out,
