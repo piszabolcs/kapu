@@ -1,0 +1,8 @@
+[
+  {"name": "base", "collapse": 1},
+  {"name": "passage-prefix-3", "collapse": 1, "passage": true, "passage_prefix": 3.0},
+  {"name": "passage-prefix-3-en", "collapse": 1, "passage": true, "passage_prefix": 3.0, "stemming": "en"},
+  {"name": "passage-prefix-3-surface", "collapse": 1, "passage": true, "passage_prefix": 3.0, "stemming": "surface"},
+  {"name": "passage-en", "collapse": 1, "passage": true, "stemming": "en"},
+  {"name": "rooms-vp-passage-prefix-3-en", "collapse": 1, "passage": true, "passage_prefix": 3.0, "stemming": "en", "fuse_rooms": true, "vec_prefix": true}
+]

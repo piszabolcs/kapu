@@ -171,6 +171,13 @@ pub struct RankOptions {
     pub vec_prefix: bool,
     /// Plan v3 P3b: the rankings are fused per room, not per door.
     pub fuse_rooms: bool,
+    /// Plan v3 E1: this many feedback words join the query for a second
+    /// BM25 round (0 = off).
+    pub prf_terms: usize,
+    /// Plan v3 E1: the feedback words come from this many first hits.
+    pub prf_docs: usize,
+    /// Plan v3 E1: the weight of the best feedback word.
+    pub prf_weight: f64,
 }
 
 impl Default for RankOptions {
@@ -210,6 +217,9 @@ impl RankOptions {
             vec_leaf: false,
             vec_prefix: false,
             fuse_rooms: false,
+            prf_terms: 0,
+            prf_docs: 3,
+            prf_weight: 0.3,
         }
     }
 }
@@ -296,6 +306,16 @@ impl RankOptions {
                 "vec_leaf" => value.as_bool().map(|x| r.vec_leaf = x).is_some(),
                 "vec_prefix" => value.as_bool().map(|x| r.vec_prefix = x).is_some(),
                 "fuse_rooms" => value.as_bool().map(|x| r.fuse_rooms = x).is_some(),
+                "prf_terms" => count()
+                    .and_then(|x| usize::try_from(x).ok())
+                    .map(|x| r.prf_terms = x)
+                    .is_some(),
+                "prf_docs" => count()
+                    .and_then(|x| usize::try_from(x).ok())
+                    .filter(|x| *x > 0)
+                    .map(|x| r.prf_docs = x)
+                    .is_some(),
+                "prf_weight" => num().map(|x| r.prf_weight = x).is_some(),
                 _ => false,
             };
             if !ok {
@@ -332,6 +352,9 @@ impl RankOptions {
             "vec_leaf": self.vec_leaf,
             "vec_prefix": self.vec_prefix,
             "fuse_rooms": self.fuse_rooms,
+            "prf_terms": self.prf_terms,
+            "prf_docs": self.prf_docs,
+            "prf_weight": self.prf_weight,
         })
     }
 }
@@ -387,7 +410,8 @@ pub fn bm25(file: &[u8], query: &str) -> Result<Vec<Hit>> {
 /// # Errors
 /// A broken `#DOCS`.
 pub fn bm25_in(s: &Sections<'_>, query: &str) -> Result<Vec<Hit>> {
-    bm25_where(s, query, &|_| true, &RankOptions::default(), TOP_N)
+    let rank = RankOptions::default();
+    bm25_where(s, &weighted(query, &rank), &|_| true, &rank, TOP_N)
 }
 
 /// Mean `dl` of `lens`, at least the smallest positive number.
@@ -398,11 +422,21 @@ fn mean_length(lens: impl Iterator<Item = u64>) -> f64 {
     mean.max(f64::MIN_POSITIVE)
 }
 
+/// The query terms of `query`, each with weight 1 (plan v3 E1 adds feedback
+/// terms with a smaller weight).
+fn weighted(query: &str, rank: &RankOptions) -> BTreeMap<String, f64> {
+    query_terms_with(query, rank.stemming)
+        .into_iter()
+        .map(|t| (t, 1.0))
+        .collect()
+}
+
 /// [`bm25_in`] over the doors `allowed` keeps: the filter runs before the
-/// first `depth` are taken (D96, D144).
+/// first `depth` are taken (D96, D144). Each term's part is multiplied by its
+/// weight.
 fn bm25_where(
     s: &Sections<'_>,
-    query: &str,
+    terms: &BTreeMap<String, f64>,
     allowed: &dyn Fn(&str) -> bool,
     rank: &RankOptions,
     depth: usize,
@@ -425,11 +459,9 @@ fn bm25_where(
     } else {
         (avgdl, avgdl)
     };
-    let wanted = query_terms_with(query, rank.stemming);
-
     let mut scores: BTreeMap<&str, f64> = BTreeMap::new();
     // in byte order of the entries, as the index lines, so the sums are the same
-    for term in &wanted {
+    for (term, weight) in terms {
         let Some(line) = index_line(s.index, term) else {
             continue;
         };
@@ -454,7 +486,7 @@ fn bm25_where(
                 room_avgdl
             };
             let part = idf * tf * (K1 + 1.0) / (tf + K1 * (1.0 - B + B * len / avg));
-            *scores.entry(id).or_insert(0.0) += part;
+            *scores.entry(id).or_insert(0.0) += weight * part;
         }
     }
     // J2b: a section scores a share of its room, which it belongs to
@@ -799,11 +831,83 @@ fn keyword_ranking(
     rank: &RankOptions,
 ) -> Result<Vec<Hit>> {
     let depth = rank.depth.max(BENCH_DEPTH);
-    if rank.passage {
-        crate::passage::bm25(s, query, allowed, rank, depth)
-    } else {
-        bm25_where(s, query, allowed, rank, depth)
+    let run = |terms: &BTreeMap<String, f64>| {
+        if rank.passage {
+            crate::passage::bm25(s, terms, allowed, rank, depth)
+        } else {
+            bm25_where(s, terms, allowed, rank, depth)
+        }
+    };
+    let terms = weighted(query, rank);
+    let first = run(&terms)?;
+    if rank.prf_terms == 0 {
+        return Ok(first);
     }
+    let mut expanded = terms.clone();
+    for (term, weight) in feedback_terms(s, &first, &terms, rank)? {
+        expanded.entry(term).or_insert(weight);
+    }
+    run(&expanded)
+}
+
+/// Plan v3 E1: pseudo-relevance feedback, RM3-like. Each word of the first
+/// `prf_docs` hits weighs `sum tf / len` over them times its `idf` over the
+/// doors of `#INDEX`; the best `prf_terms` words that are no query term, occur
+/// in at least two doors and are neither short nor numbers join the query, the
+/// best with `prf_weight` and the others in proportion.
+fn feedback_terms(
+    s: &Sections<'_>,
+    hits: &[Hit],
+    query: &BTreeMap<String, f64>,
+    rank: &RankOptions,
+) -> Result<Vec<(String, f64)>> {
+    let entries = s.doc_entries()?;
+    #[allow(clippy::cast_precision_loss)]
+    let n = entries.len() as f64;
+    let (hu, en) = rank.stemming.stemmers();
+    let mut weight: BTreeMap<String, f64> = BTreeMap::new();
+    for hit in hits.iter().take(rank.prf_docs) {
+        let found = entries.binary_search_by(|e| e.id.as_bytes().cmp(hit.id.as_bytes()));
+        let Some(entry) = found.ok().and_then(|i| entries.get(i)) else {
+            continue;
+        };
+        let text = crate::text::indexed_text(&crate::docs::served_text(s.stored(entry)?)?);
+        let mut tf: BTreeMap<String, f64> = BTreeMap::new();
+        let mut len = 0f64;
+        for word in index_tokens(&text) {
+            len += 1.0;
+            for t in stems_of(&word, hu, en) {
+                *tf.entry(t).or_insert(0.0) += 1.0;
+            }
+        }
+        for (t, f) in tf {
+            *weight.entry(t).or_insert(0.0) += f / len.max(1.0);
+        }
+    }
+    let mut scored: Vec<(String, f64)> = weight
+        .into_iter()
+        .filter(|(t, _)| {
+            !query.contains_key(t)
+                && t.chars().count() >= 3
+                && !t.chars().all(|c| c.is_ascii_digit())
+        })
+        .filter_map(|(t, w)| {
+            let line = index_line(s.index, &t)?;
+            #[allow(clippy::cast_precision_loss)]
+            let df = line.split('\t').nth(1).and_then(parse_decimal)? as f64;
+            (df >= 2.0).then(|| {
+                let idf = libm::log((n - df + 0.5) / (df + 0.5) + 1.0);
+                (t, w * idf)
+            })
+        })
+        .collect();
+    scored.sort_by(|a, b| b.1.total_cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+    scored.truncate(rank.prf_terms);
+    let top = scored.first().map_or(1.0, |x| x.1).max(f64::MIN_POSITIVE);
+    Ok(scored
+        .into_iter()
+        .map(|(t, w)| (t, rank.prf_weight * w / top))
+        .collect())
 }
 
 /// J9 (plan v2, variant A): one step of score diffusion on `#GRAPH`. The

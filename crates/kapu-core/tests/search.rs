@@ -392,7 +392,7 @@ fn rank_options_come_from_json_and_reject_typos() {
     let r = RankOptions::from_json(&serde_json::json!({
         "stemming": "en", "collapse": 1, "room_beta": 0.1, "fusion": "convex",
         "w_bm25": 2.0, "split_avgdl": true, "parent": 0.25, "rescore_bm25": 50,
-        "passage": true, "passage_prefix": 1.0, "passage_chars": 1000, "vec_leaf": true, "vec_prefix": true, "fuse_rooms": true,
+        "passage": true, "passage_prefix": 1.0, "passage_chars": 1000, "vec_leaf": true, "vec_prefix": true, "fuse_rooms": true, "prf_terms": 8, "prf_docs": 2, "prf_weight": 0.5,
     }))
     .unwrap();
     assert_eq!(r.stemming, Stemming::English);
@@ -497,6 +497,40 @@ fn passages_make_the_matching_section_the_hit() {
     assert_eq!(prefixed.hits[0].id, "guide/install", "{:?}", prefixed.hits);
     // without the head only the introduction has `guide`
     assert_eq!(plain.hits[0].id, "guide", "{:?}", plain.hits);
+}
+
+#[test]
+fn feedback_words_find_a_room_without_the_query_word() {
+    // plan v3 E1: `alpha` is only in `a`; `a` shares `gamma` and `delta`
+    // with `b`, so the second round finds `b`
+    let mk = |id: &str, text: &str| RoomSource {
+        id: id.into(),
+        content: text.into(),
+    };
+    let rooms = vec![
+        mk("a", "# A\nalpha gamma delta words\n"),
+        mk("b", "# B\ngamma delta other\n"),
+        mk("c", "# C\nentirely unrelated text\n"),
+        mk("d", "# D\nfourth room here\n"),
+    ];
+    let built = kapu_core::build::build(&rooms).unwrap().bytes;
+    let ids = |prf_terms: usize| {
+        let options = SearchOptions {
+            rank: kapu_core::search::RankOptions {
+                prf_terms,
+                ..Default::default()
+            },
+            ..SearchOptions::default()
+        };
+        search(&built, "alpha", &options, None)
+            .unwrap()
+            .hits
+            .into_iter()
+            .map(|h| h.id)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(ids(0), vec!["a"]);
+    assert_eq!(ids(5), vec!["a", "b"]);
 }
 
 #[test]

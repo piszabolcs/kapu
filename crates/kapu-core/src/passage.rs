@@ -21,7 +21,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::error::Result;
 use crate::header::Hash;
-use crate::search::{B, Hit, K1, RankOptions, query_terms_with, room_of};
+use crate::search::{B, Hit, K1, RankOptions, room_of};
 use crate::sections::Sections;
 use crate::terms::{index_tokens, stems};
 
@@ -233,14 +233,15 @@ pub fn index_for(s: &Sections<'_>, chars: usize) -> Result<Arc<PassageIndex>> {
     Ok(ix)
 }
 
-/// P1: BM25 over the passages, a door scored by its best passage, best
-/// first, ties by id, at most `depth`, only doors `allowed` keeps.
+/// P1: BM25 over the passages for the weighted `terms`, a door scored by its
+/// best passage, best first, ties by id, at most `depth`, only doors
+/// `allowed` keeps.
 ///
 /// # Errors
 /// As [`index_for`].
 pub fn bm25(
     s: &Sections<'_>,
-    query: &str,
+    terms: &BTreeMap<String, f64>,
     allowed: &dyn Fn(&str) -> bool,
     rank: &RankOptions,
     depth: usize,
@@ -261,8 +262,8 @@ pub fn bm25(
     let mut score: HashMap<u32, f64> = HashMap::new();
     let mut tf: HashMap<u32, f64> = HashMap::new();
     // in byte order of the query terms, so every passage sums them in one order
-    for term in query_terms_with(query, rank.stemming) {
-        let Some(&id) = ix.terms.get(&term) else {
+    for (term, weight) in terms {
+        let Some(&id) = ix.terms.get(term) else {
             continue;
         };
         tf.clear();
@@ -284,7 +285,7 @@ pub fn bm25(
         for (&p, &f) in &tf {
             let len = ix.len.get(p as usize).map_or(0.0, |l| f64::from(*l)) + w * head_len(p);
             let part = idf * f * (K1 + 1.0) / (f + K1 * (1.0 - B + B * len / avg));
-            *score.entry(p).or_insert(0.0) += part;
+            *score.entry(p).or_insert(0.0) += weight * part;
         }
     }
     // MaxP: a door scores its best passage

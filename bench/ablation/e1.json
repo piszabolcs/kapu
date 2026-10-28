@@ -1,0 +1,8 @@
+[
+  {"name": "base", "collapse": 1},
+  {"name": "prf-5-w0.3", "collapse": 1, "prf_terms": 5, "prf_weight": 0.3},
+  {"name": "prf-10-w0.3", "collapse": 1, "prf_terms": 10, "prf_weight": 0.3},
+  {"name": "prf-10-w0.5", "collapse": 1, "prf_terms": 10, "prf_weight": 0.5},
+  {"name": "prf-10-w0.3-d5", "collapse": 1, "prf_terms": 10, "prf_weight": 0.3, "prf_docs": 5},
+  {"name": "passage-prefix-3-prf-10-w0.3", "collapse": 1, "passage": true, "passage_prefix": 3.0, "prf_terms": 10, "prf_weight": 0.3}
+]
