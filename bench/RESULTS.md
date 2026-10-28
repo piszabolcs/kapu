@@ -1,6 +1,6 @@
 # KAPU measurements
 
-English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file; chapter 9 measures it again with file format 1.1, chapter 10 with format 1.2 ([results/2026-10-26-format-1.2.json](results/2026-10-26-format-1.2.json)), chapter 11 compares native skills, a KAPU file and a Markdown folder at finding skills ([results/2026-10-26-skill-finding.json](results/2026-10-26-skill-finding.json), and after the catalog of tools 0.2.1 [results/2026-10-26-skill-finding-0.2.1.json](results/2026-10-26-skill-finding-0.2.1.json)), and chapter 12 measures every ranking change of plan v2 on a fixed dev/test split, against fair chunk baselines and with agents on a new corpus of PLC manuals ([results/2026-10-27-plan-v2.json](results/2026-10-27-plan-v2.json)). The [results page](../docs/results/index.html) shows the pilot, formats 1.1 and 1.2 and the skill finding with charts and tables; printed as PDF in [English](../docs/results/kapu-measurements-en.pdf) and [Hungarian](../docs/results/kapu-measurements-hu.pdf) (`tools/study/results_pdf.py`).
+English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file; chapter 9 measures it again with file format 1.1, chapter 10 with format 1.2 ([results/2026-10-26-format-1.2.json](results/2026-10-26-format-1.2.json)), chapter 11 compares native skills, a KAPU file and a Markdown folder at finding skills ([results/2026-10-26-skill-finding.json](results/2026-10-26-skill-finding.json), and after the catalog of tools 0.2.1 [results/2026-10-26-skill-finding-0.2.1.json](results/2026-10-26-skill-finding-0.2.1.json)), chapter 12 measures every ranking change of plan v2 on a fixed dev/test split, against fair chunk baselines and with agents on a new corpus of PLC manuals ([results/2026-10-27-plan-v2.json](results/2026-10-27-plan-v2.json)), and chapter 13 the vector model of 0.5.0, a contextual encoder in plain Rust ([results/2026-10-28-plan-v3.json](results/2026-10-28-plan-v3.json)). The [results page](../docs/results/index.html) shows the pilot, formats 1.1 and 1.2 and the skill finding with charts and tables; printed as PDF in [English](../docs/results/kapu-measurements-en.pdf) and [Hungarian](../docs/results/kapu-measurements-hu.pdf) (`tools/study/results_pdf.py`).
 
 - **Date:** 2026-10-23
 - **Version:** tools 0.1.0 with specification v1.0.2 (chapters 1-8); chapters 9 and 10 name their own
@@ -538,15 +538,101 @@ With the new `kapu_search` and `kapu_ask` descriptions the six tools cost 799 to
 
 These are phases 4 to 7 of the plan: J2c, J3, J5, J6, J7, J8, J13 to J16, M4, N3, N5 to N12.
 
-## 13. Reproduce
+## 13. Plan v3: a contextual model in plain Rust (0.5.0)
+
+Measured on 2026-10-28 with tools 0.5.0 (specification v1.3, file format 1.3), on the machine of chapter 12, after the user's plan v3 ([results/2026-10-28-plan-v3.json](results/2026-10-28-plan-v3.json); per-question ranks in [results/2026-10-28-plan-v3-ranks.json](results/2026-10-28-plan-v3-ranks.json), by question hash). The method is that of chapter 12: seven question sets, the fixed dev/test split, the test part reported, a paired bootstrap with 10,000 draws, and the M0 rule.
+
+**What was tried before the model.** Passage BM25 with a heading prefix, room-level fusion and a vector prefix (D168), and pseudo-relevance feedback (D169) are switches, off by default: none passes M0. Passage BM25 with English stemming brings KAPU's BM25 to the level of chunked BM25 (Rust book 0.390 to 0.537, Kubernetes 0.443 to 0.492), but the hybrid does not improve, because the static model's vectors limit it.
+
+### The candidates on the same chunks (V1, D170)
+
+Three models on the 512-token chunks of chapter 12, in Python: the vectors alone, the chunked hybrid, and KAPU's own BM25 ranking fused with the model's vectors at room level (what a model swap in KAPU could give). Difference to the packaged static model on the test part, pooled:
+
+| Model | Ranking | Δ recall@10 [95%] | Δ MRR@10 [95%] |
+|---|---|---:|---:|
+| potion-retrieval-32M | vectors alone | +0.021 [-0.017, +0.059] | +0.016 [-0.010, +0.042] |
+| potion-retrieval-32M | chunked hybrid | -0.007 [-0.033, +0.019] | +0.002 [-0.019, +0.023] |
+| potion-retrieval-32M | KAPU BM25 + vectors | +0.003 [-0.026, +0.033] | +0.009 [-0.013, +0.032] |
+| multilingual-e5-small-qint8 | vectors alone | +0.123 [+0.083, +0.163] | +0.072 [+0.042, +0.102] |
+| multilingual-e5-small-qint8 | chunked hybrid | +0.064 [+0.036, +0.092] | +0.039 [+0.016, +0.062] |
+| multilingual-e5-small-qint8 | KAPU BM25 + vectors | +0.071 [+0.040, +0.102] | +0.039 [+0.016, +0.063] |
+
+`potion-retrieval-32M` helps in English but breaks down on Hungarian questions (its vocabulary is English only). `multilingual-e5-small` is the first change of the plan whose pooled interval is above zero in both metrics.
+
+### The encoder (V2, D171)
+
+The user chose a pure Rust runtime with nothing more to download. `multilingual-e5-small` in the int8 form of ONNX Runtime's dynamic quantization uses only standard operations, so KAPU runs it with its own code (`crates/kapu-core/src/bert.rs`), with no new dependency: every matrix product is exact in integers, every float sum has a fixed order, and `exp` and `erf` are fixed formulas. A vector therefore has the same bits on SSE2, AVX2 and AVX-512 builds (a golden test, also run by the release build on every platform), and the D46 rule stays. Agreement with ONNX Runtime: cosine 0.998 to 1.000 on short texts, 0.9993 on 512 tokens; every activation is rounded to 8 bits, so one last-bit difference can move a value to the next step, and ONNX Runtime differs as much between machines. One 512-token window takes 0.45 s on one thread built for AVX-512, 1.3 s with the baseline (SSE2) build.
+
+### Storing the vectors
+
+A transformer's windows cannot be computed when a file is read (MDN would take half an hour), so they are stored. The storage forms simulated on the chunk vectors, KAPU BM25 + vectors, difference to the float vectors on the test part:
+
+| Form | Bytes per window | Δ recall@10 [95%] |
+|---|---:|---:|
+| float, centred | 1536 | -0.021 [-0.042, +0.000] |
+| sign bits, the best 200 by 8 bits | 432 | -0.121 [-0.154, -0.088] |
+| 8 bits | 384 | +0.002 [+0.000, +0.005] |
+| sign bits, the best 200 by 4 bits | 240 | -0.127 [-0.159, -0.095] |
+| centred sign bits, then 4 bits | 240 | -0.012 [-0.033, +0.009] |
+| 4 bits of the residual from the mean | 194 | -0.009 [-0.023, +0.005] |
+| 4 bits | 192 | -0.012 [-0.028, +0.003] |
+| 4 bits, centred | 192 | -0.017 [-0.038, +0.003] |
+| 3 steps, centred | 144 | -0.019 [-0.040, +0.002] |
+| -1, 0, +1 of the residual | 98 | -0.035 [-0.055, -0.014] |
+| -1, 0, +1, centred | 96 | -0.021 [-0.043, +0.002] |
+| sign bits of the residual | 50 | -0.080 [-0.109, -0.052] |
+| sign bits | 48 | -0.203 [-0.239, -0.168] |
+| sign bits, centred | 48 | -0.033 [-0.055, -0.010] |
+
+The sign bits that carry the static model (D143) lose 0.20 with this model: its vectors share one direction. In KAPU itself 4 bits measured as good as 8, so a contextual model stores 4 bits a component (`#VEC` `bits=4`, format 1.3); the reader scores every window from the file, with no rescoring. A room with sub-doors has windows of its own text only, so no text is computed twice. The build computes on every core and keeps each window in a log in the cache folder: an interrupted build goes on where it stopped, and a rebuild computes only new windows (Kubernetes 12 s instead of 15 minutes).
+
+### In KAPU's own search
+
+The set files rebuilt with the model, `kapu bench`, against the static model of 0.3 (default ranking), test part pooled:
+
+| Model | Bits | Ranking | Δ recall@10 [95%] | Δ MRR@10 [95%] | Worst set | p50 ratio |
+|---|---:|---|---:|---:|---:|---:|
+| multilingual-e5-small | 8 | default ranking | +0.062 [+0.035, +0.090] | +0.027 [+0.005, +0.049] | -0.065 | 14.9 |
+| multilingual-e5-small | 4 | default ranking | +0.062 [+0.035, +0.090] | +0.028 [+0.006, +0.052] | -0.056 | 14.9 |
+| multilingual-e5-small | 4 | passage BM25 | +0.069 [+0.038, +0.101] | +0.038 [+0.014, +0.062] | -0.070 | 14.6 |
+| multilingual-e5-small | 4 | passage BM25 and room fusion | +0.075 [+0.045, +0.106] | +0.038 [+0.014, +0.063] | -0.085 | 14.5 |
+
+Per set, default ranking, 4 bits (search time: median of `kapu bench`, the query's vector built for AVX-512, and with the baseline SSE2 build of the release):
+
+| Set | Test questions | recall@10, 0.3 | recall@10, e5 | MRR@10, 0.3 | MRR@10, e5 | Search, 0.3 | e5 | e5, SSE2 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Rust book | 41 | 0.512 | 0.585 | 0.252 | 0.263 | 0.8 ms | 12.6 ms | 35.0 ms |
+| Kubernetes | 122 | 0.451 | 0.582 | 0.253 | 0.271 | 27.1 ms | 25.7 ms | 48.4 ms |
+| MDN | 236 | 0.288 | 0.360 | 0.135 | 0.195 | 408.5 ms | 155.9 ms | 320.4 ms |
+| Skills, English | 46 | 0.978 | 0.978 | 0.853 | 0.868 | 10.1 ms | 17.2 ms | 43.1 ms |
+| Skills, translated | 42 | 0.833 | 0.833 | 0.759 | 0.770 | 12.7 ms | 17.6 ms | - |
+| Skills, Hungarian | 42 | 0.643 | 0.643 | 0.492 | 0.436 | 10.7 ms | 18.9 ms | - |
+| PLC manuals | 48 | 0.938 | 0.938 | 0.734 | 0.751 | 29.7 ms | 30.1 ms | - |
+
+| File | Today | With e5, 4 bits | Growth | With 8 bits | First build |
+|---|---:|---:|---:|---:|---:|
+| Rust book | 2.4 MB | 2.6 MB | +9% | +20% | 71 s |
+| Kubernetes | 28.1 MB | 31.4 MB | +12% | +25% | 922 s |
+| MDN | 139.0 MB | 160.7 MB | +16% | +34% | 2986 s |
+| Skills, English | 5.9 MB | 6.5 MB | +10% | +21% | 124 s |
+| PLC manuals | 12.3 MB | 13.4 MB | +9% | +20% | 321 s |
+
+- **The model is the lever.** Recall@10 +0.062 with the default ranking, +0.075 with passage BM25 and room fusion, both intervals above zero; Kubernetes 0.451 to 0.582, MDN 0.288 to 0.360, the exact PLC section 0.500 to 0.812.
+- **It does not pass M0.** Hungarian questions on the English skills lose MRR (0.492 to 0.436: in this language pair the small e5 is weaker than the static model, as the chunk measurement showed), and a small file is searched about 12 ms (AVX-512) to 35 ms (SSE2) slower, the query's vector. A large file is faster: MDN 408 to 156 ms (AVX-512), 320 ms (SSE2), because nothing is rescored. The user accepted the trade (D172): 0.5.0 ships the model, the ranking switches stay off.
+- **The strict metric** falls on the Stack Overflow sets (Rust book 0.317 to 0.049), because the vectors now give a section as the hit, while there the expected hit is the whole page (chapter 12); on the PLC manuals, which expect the section, it rises.
+- **With the same model** the chunked hybrid is 0.585 on the Rust book, 0.533 on Kubernetes and 0.449 on MDN (chunks of chapter 12): level with KAPU, behind it and ahead of it. KAPU's advantage stays the section hit with its token price, in one file with no server.
+- **The file grows by 9-16%**, above the 3% of K-11, which the user accepted for the model; the 8-bit form would be 20-34%.
+
+
+## 14. Reproduce
 
 ```bash
 python tools/collect_skills.py bench/korpusz/rooms           # the installed skills as rooms (local only)
-kapu import <rooms folder> corpus.kapu --model models/potion-multilingual-128M-i8
+kapu import <rooms folder> corpus.kapu --model models/multilingual-e5-small-q8
 kapu validate corpus.kapu --full
 kapu bench corpus.kapu questions.jsonl --json                # recall@5/10, MRR@10 per mode
 python tools/mcp_probe.py corpus.kapu questions.jsonl        # MCP latency and response sizes
 python tools/kapu_mcp_call.py call kapu_search '{"file": "...", "query": "..."}'
 ```
 
-Chapter 12: `tools/study/split_questions.py` (the dev/test split), `ablation.py run` and `report` (the matrices `bench/ablation/m0.json`, `m1.json`, `m2.json`; set `KAPU_MODEL_DIR` for a copied binary, `--chunk 50` for MDN), `chunk_baseline.py` (with `--chunks` in the report), `ask_eval.py` (`bench/ablation/ask-modes*.json`), `title_weight.py`, `neighbour_follow.py`, `group_quality.py`, `oracle_eval.py` (needs a logged-in `claude` CLI), `collect_v2.py` (the results file) and `v2_tables.py` (these tables). Chapter 11: `tools/study/skill_pool.py` collects the skills of the machine, `tools/study/skill_eval.py` prepares the three forms (`prepare`), runs the tasks of `tools/study/skill_tasks.json` (`run`), measures the fixed cost (`baseline`) and writes the results file (`report`); it needs a logged-in `claude` CLI. Chapter 10: `tools/study/measure_v12.py` (reply prices, `kapu_ask`, open times over MCP), `tools/study/measure_scale.py` (a file of a given size), `tools/study/translate_hu.py` (the translated questions) and `tools/study/collect_v12.py` (the results file). Chapters 8 and 9 (public documentation): `tools/study/prepare_corpus.py` and `so_questions.py` prepare the corpora and questions, `scale_probe.py` measures a size, `chunk_baseline.py` the chunk baselines, `collect_results.py` writes `results/2026-10-23-study-pilot.json`, and `results_page.py` turns that and the format 1.2 results file into the results page.
+Chapter 13: `tools/study/model_candidates.py` (`run` per set, `@<form>` for the storage forms, `report`), `tools/onnx_to_kapu.py` (the model folder), `kapu --model <folder> build` on a copy of each set file, `ablation.py run` with the matrix `bench/ablation/v1.json` (`KAPU_MODEL_DIR` and `KAPU_CACHE_DIR` set), `ablation.py report` with `--base ml-base` on the runs of both models side by side, and `collect_v3.py` (the results file). Chapter 12: `tools/study/split_questions.py` (the dev/test split), `ablation.py run` and `report` (the matrices `bench/ablation/m0.json`, `m1.json`, `m2.json`; set `KAPU_MODEL_DIR` for a copied binary, `--chunk 50` for MDN), `chunk_baseline.py` (with `--chunks` in the report), `ask_eval.py` (`bench/ablation/ask-modes*.json`), `title_weight.py`, `neighbour_follow.py`, `group_quality.py`, `oracle_eval.py` (needs a logged-in `claude` CLI), `collect_v2.py` (the results file) and `v2_tables.py` (these tables). Chapter 11: `tools/study/skill_pool.py` collects the skills of the machine, `tools/study/skill_eval.py` prepares the three forms (`prepare`), runs the tasks of `tools/study/skill_tasks.json` (`run`), measures the fixed cost (`baseline`) and writes the results file (`report`); it needs a logged-in `claude` CLI. Chapter 10: `tools/study/measure_v12.py` (reply prices, `kapu_ask`, open times over MCP), `tools/study/measure_scale.py` (a file of a given size), `tools/study/translate_hu.py` (the translated questions) and `tools/study/collect_v12.py` (the results file). Chapters 8 and 9 (public documentation): `tools/study/prepare_corpus.py` and `so_questions.py` prepare the corpora and questions, `scale_probe.py` measures a size, `chunk_baseline.py` the chunk baselines, `collect_results.py` writes `results/2026-10-23-study-pilot.json`, and `results_page.py` turns that and the format 1.2 results file into the results page.

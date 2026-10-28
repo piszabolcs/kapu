@@ -111,6 +111,39 @@ a{color:var(--accent)}
     </div>
   </header>
 
+  <section id="v3" hidden>
+    <h2 data-t="v3_h"></h2>
+    <p class="note" id="v3-note"></p>
+    <div class="card">
+      <h3 data-t="v3_pool_card"></h3>
+      <p data-t="v3_pool_note"></p>
+      <div class="tablewrap"><table id="tb-v3pool"></table></div>
+    </div>
+    <div class="card">
+      <h3 data-t="v3_set_card"></h3>
+      <p data-t="v3_set_note"></p>
+      <div class="legend" id="lg-v3set"></div>
+      <div class="chart" id="ch-v3set"></div>
+      <div class="tablewrap"><table id="tb-v3set"></table></div>
+    </div>
+    <div class="card">
+      <h3 data-t="v3_cost_card"></h3>
+      <p data-t="v3_cost_note"></p>
+      <div class="tablewrap"><table id="tb-v3cost"></table></div>
+    </div>
+    <div class="card">
+      <h3 data-t="v3_store_card"></h3>
+      <p data-t="v3_store_note"></p>
+      <div class="tablewrap"><table id="tb-v3store"></table></div>
+    </div>
+    <div class="card">
+      <h3 data-t="v3_cand_card"></h3>
+      <p data-t="v3_cand_note"></p>
+      <div class="tablewrap"><table id="tb-v3cand"></table></div>
+    </div>
+    <ul id="v3-findings"></ul>
+  </section>
+
   <section id="v2" hidden>
     <h2 data-t="v2_h"></h2>
     <p class="note" id="v2-note"></p>
@@ -290,6 +323,33 @@ const I18N = {
       "The Markdown folder found every skill, but also read {md_wrong} skills the tasks did not need (with 91 skills) and cost the most ({md_cost} per task).",
       "The fixed cost of a session: {kapu_fixed} tokens with the KAPU tools whatever the number of skills, against {nat_fixed_s} with 45 and {nat_fixed_l} with 91 native skills. 250 skills were not measured: the test machine has only 91. Only the KAPU runs were repeated; the native and Markdown runs are those of the first round."
     ],
+    v3_h: "Plan v3: a contextual model in plain Rust (0.5.0)",
+    v3_note: "Measured {date} with {version}, on the seven question sets and the dev/test split of plan v2 ({tests} test questions), the test part reported. The static model of 0.3 limited the hybrid search, so plan v3 measured other embedding models and built the winner, multilingual-e5-small, into KAPU: its own Rust code runs the model with exact integer products, so a vector has the same bits on every machine, and the file stores every vector at 4 bits a component.",
+    v3_pool_card: "The model swap in KAPU's own search",
+    v3_pool_note: "Difference to the static model of 0.3 with its default ranking, test part, all sets pooled, 95% paired bootstrap interval. Worst set: the largest loss of one set in either metric; p50 ratio: the slowest set's median search time against 0.3. The swap does not pass the M0 rule of 0.3.0 (worst set at most -0.01, at most 1.5 times slower); it was accepted for 0.5.0 with these costs.",
+    v3_set_card: "Per set: 0.3, 0.5 and the chunked hybrid with the same model",
+    v3_set_note: "Room-level recall@10 on the test part, default ranking, 4 bits. Search time: the median of kapu bench, with the query's vector built for AVX-512, and with the baseline (SSE2) build of the release.",
+    v3_cost_card: "What it costs: file size and build time",
+    v3_cost_note: "The first build with the model on 12 threads (AVX-512 build). A rebuild takes the computed windows from a log in the cache folder and computes only new text.",
+    v3_store_card: "How to store a vector (simulated on the chunks)",
+    v3_store_note: "KAPU BM25 fused with the chunk vectors, difference to float vectors. Centred: the mean of all vectors taken off first; residual: the code of the vector minus the mean, scored with the original cosine. The sign bits of 0.3 break down with this model, 4 bits cost nothing measurable in KAPU itself.",
+    v3_cand_card: "The candidates on the same chunks (V1)",
+    v3_cand_note: "Three models on the 512-token chunks, in Python, difference to the static model of 0.3: the vectors alone, the usual chunked hybrid, and KAPU's BM25 ranking fused with the model's vectors at room level.",
+    v3c_model: "Model", v3c_bits: "Bits", v3c_rank: "Ranking", v3c_p50x: "p50 ratio", v3c_p50: "Search, 0.3", v3c_p50e5: "Search, 0.5", v3c_sse: "0.5, SSE2",
+    v3c_r10a: "recall@10, 0.3", v3c_r10b: "recall@10, 0.5", v3c_mrra: "MRR@10, 0.3", v3c_mrrb: "MRR@10, 0.5", v3c_file: "File",
+    v3c_today: "Size, 0.3", v3c_size4: "Size, 0.5", v3c_growth: "Growth", v3c_growth8: "With 8 bits", v3c_build: "First build", v3c_form: "Storage", v3c_bytes: "Bytes per window", v3c_method: "Ranking",
+    v3rank_base: "Default ranking", v3rank_passage: "Passage BM25", "v3rank_passage+rooms": "Passage BM25 and room fusion",
+    v3ser_static: "KAPU 0.3", v3ser_e5: "KAPU 0.5 (e5)", v3ser_chunk: "Chunks, hybrid, e5",
+    v3meth_vector: "Vectors alone", v3meth_chunk_hybrid: "Chunked hybrid", "v3meth_kapu_bm25+vec:base": "KAPU BM25 + vectors", "v3meth_kapu_bm25+vec:passage-prefix-3-en": "KAPU passage BM25 + vectors",
+    v3form_float: "float", v3form_cfloat: "float, centred", v3form_int8: "8 bits", v3form_int4: "4 bits", v3form_rint4: "4 bits, residual", v3form_cint4: "4 bits, centred", v3form_cint3: "3 steps, centred",
+    v3form_ctern: "-1/0/+1, centred", v3form_rtern: "-1/0/+1, residual", v3form_csign: "sign bits, centred", v3form_rsign: "sign bits, residual", v3form_sign: "sign bits (as in 0.3)",
+    "v3form_sign+int8": "sign bits, then 8 bits", "v3form_sign+int4": "sign bits, then 4 bits", "v3form_csign+cint4": "centred sign bits, then 4 bits",
+    v3_findings: [
+      "The model is the lever: with multilingual-e5-small, room recall@10 improves by {d_base} with the default ranking and by {d_best} with passage BM25 and room fusion, both intervals above zero. Kubernetes {m_a} to {m_b}, MDN {l_a} to {l_b}.",
+      "It costs: Hungarian questions on English skills lose MRR ({hu_a} to {hu_b}), a small file is searched {s_e5} instead of {s_a} (the query's vector; {s_sse} with the baseline build), and the files grow by 9-16%. A large file is faster ({l_pa} to {l_pb}), because nothing is rescored when it is read.",
+      "With the same model, the usual chunked hybrid is {ch_s} on the Rust book, {ch_m} on Kubernetes and {ch_l} on MDN: level with KAPU 0.5, behind it and ahead of it. KAPU's advantage stays the section hit with its token price, in one file with no server.",
+      "The encoder is KAPU's own Rust code, with no new dependency and nothing to download at run time: integer products, fixed-order float sums and its own exp and erf, so the SSE2, AVX2 and AVX-512 builds write the same bytes. It agrees with ONNX Runtime to a cosine of 0.998-1.000; one 512-token window takes {w_avx} s on one thread (AVX-512), {w_sse} s with the baseline build."
+    ],
     v2_h: "Plan v2, phases 1 to 3: an ablation framework, one fix that holds, honest baselines",
     v2_note: "Measured {date} with {version}. Every ranking change of plan v2 is a switch that is off by default; off, the ranking is bit for bit that of 0.2.1. The questions of each set are split once by a hash of the question into a dev part (40%, {devs} questions in all) and a test part (60%, {tests}): the variant of each fix is chosen on the dev part, and only the test part is reported. A fix is kept when on the test part room recall@10 or room MRR@10 improves with a 95% paired bootstrap interval above zero (all sets pooled), no set loses more than 0.01 and search does not slow down by more than 1.5x.",
     v2_fix_card: "Which fixes pass",
@@ -413,6 +473,33 @@ const I18N = {
       "A natív skillek továbbra is a legtöbbet találják meg (91 skillnél {gold}-ből {nat}), és semmit nem töltenek be tévesen. A KAPU fájl egy feladatnál {kapu_wrong} fölösleges skillt is betöltött, és egyet nem talált meg (frontend-expert a Figma-feladatnál; 45 skillnél a natív sem). A korábban kimaradt magyar nyelvű skillt most a katalógusból megtalálja.",
       "A Markdown-mappa minden skillt megtalált, de 91 skillnél {md_wrong} olyat is elolvasott, ami nem kellett, és ez a legdrágább ({md_cost} feladatonként).",
       "Egy munkamenet fix költsége: a KAPU-eszközökkel {kapu_fixed} token, akárhány skill van, a natív lista 45 skillnél {nat_fixed_s}, 91-nél {nat_fixed_l}. 250 skillt nem mértünk: a tesztgépen csak 91 van. Csak a KAPU-futások ismétlődtek; a natív és a Markdown-futások az első körből valók."
+    ],
+    v3_h: "A v3-as terv: kontextuális modell tiszta Rustban (0.5.0)",
+    v3_note: "Mérve {date}, {version}, a v2-es terv hét kérdéshalmazán és dev/teszt felosztásán ({tests} teszt-kérdés), a teszt rész eredményével. A 0.3 statikus modellje korlátozta a hibrid keresést, ezért a v3-as terv más beágyazó modelleket mért, és a nyertest, a multilingual-e5-small-t beépítette a KAPU-ba: a saját Rust kódja pontos egész szorzatokkal futtatja a modellt, így egy vektor minden gépen ugyanazokból a bitekből áll, és a fájl minden vektort komponensenként 4 biten tárol.",
+    v3_pool_card: "A modellcsere a KAPU saját keresőjében",
+    v3_pool_note: "Eltérés a 0.3 statikus modelljétől az alap rangsorral, teszt rész, a halmazok összevonva, 95%-os páros bootstrap intervallum. Legrosszabb halmaz: egy halmaz legnagyobb vesztesége bármelyik mérőszámban; p50 arány: a leglassabb halmaz medián keresési ideje a 0.3-hoz képest. A csere nem megy át a 0.3.0 M0 szabályán (legrosszabb halmaz legfeljebb -0,01, legfeljebb 1,5-szer lassabb); a 0.5.0-hoz ezekkel az árakkal elfogadtuk.",
+    v3_set_card: "Halmazonként: 0.3, 0.5 és a darabolós hibrid ugyanazzal a modellel",
+    v3_set_note: "Szobaszintű recall@10 a teszt részen, alap rangsor, 4 bit. Keresési idő: a kapu bench mediánja, a kérdés vektora AVX-512-re fordítva, és a kiadás alap (SSE2) fordításával.",
+    v3_cost_card: "Mibe kerül: fájlméret és build-idő",
+    v3_cost_note: "Az első build a modellel 12 szálon (AVX-512 fordítás). Egy újraépítés a kiszámolt ablakokat a gyorsítótár naplójából veszi, és csak az új szöveget számolja.",
+    v3_store_card: "Hogyan tároljunk egy vektort (a darabokon szimulálva)",
+    v3_store_note: "A KAPU BM25 a darabok vektoraival összefésülve, eltérés a lebegőpontos vektortól. Középre tolt: előbb minden vektorból levonjuk az átlagukat; maradék: a vektor és az átlag különbségének kódja, az eredeti koszinusszal pontozva. A 0.3 előjelbitjei ezzel a modellel összeomlanak, a 4 bit a KAPU-ban mérve semmibe sem kerül.",
+    v3_cand_card: "A jelöltek ugyanazokon a darabokon (V1)",
+    v3_cand_note: "Három modell az 512 tokenes darabokon, Pythonban, eltérés a 0.3 statikus modelljétől: csak a vektorok, a szokásos darabolós hibrid, és a KAPU BM25-rangsora szobaszinten összefésülve a modell vektoraival.",
+    v3c_model: "Modell", v3c_bits: "Bit", v3c_rank: "Rangsor", v3c_p50x: "p50 arány", v3c_p50: "Keresés, 0.3", v3c_p50e5: "Keresés, 0.5", v3c_sse: "0.5, SSE2",
+    v3c_r10a: "recall@10, 0.3", v3c_r10b: "recall@10, 0.5", v3c_mrra: "MRR@10, 0.3", v3c_mrrb: "MRR@10, 0.5", v3c_file: "Fájl",
+    v3c_today: "Méret, 0.3", v3c_size4: "Méret, 0.5", v3c_growth: "Növekedés", v3c_growth8: "8 bittel", v3c_build: "Első build", v3c_form: "Tárolás", v3c_bytes: "Bájt ablakonként", v3c_method: "Rangsor",
+    v3rank_base: "Alap rangsor", v3rank_passage: "Passzus-BM25", "v3rank_passage+rooms": "Passzus-BM25 és szobafúzió",
+    v3ser_static: "KAPU 0.3", v3ser_e5: "KAPU 0.5 (e5)", v3ser_chunk: "Darabok, hibrid, e5",
+    v3meth_vector: "Csak vektor", v3meth_chunk_hybrid: "Darabolós hibrid", "v3meth_kapu_bm25+vec:base": "KAPU BM25 + vektor", "v3meth_kapu_bm25+vec:passage-prefix-3-en": "KAPU passzus-BM25 + vektor",
+    v3form_float: "lebegőpontos", v3form_cfloat: "lebegőpontos, középre tolt", v3form_int8: "8 bit", v3form_int4: "4 bit", v3form_rint4: "4 bit, maradék", v3form_cint4: "4 bit, középre tolt", v3form_cint3: "3 lépcső, középre tolt",
+    v3form_ctern: "-1/0/+1, középre tolt", v3form_rtern: "-1/0/+1, maradék", v3form_csign: "előjelbit, középre tolt", v3form_rsign: "előjelbit, maradék", v3form_sign: "előjelbit (mint a 0.3-ban)",
+    "v3form_sign+int8": "előjelbit, utána 8 bit", "v3form_sign+int4": "előjelbit, utána 4 bit", "v3form_csign+cint4": "középre tolt előjelbit, utána 4 bit",
+    v3_findings: [
+      "A modell a kulcs: a multilingual-e5-small-lal a szobaszintű recall@10 az alap rangsorral {d_base}, passzus-BM25-tel és szobafúzióval {d_best} értékkel javul, mindkét intervallum nulla fölött. Kubernetes {m_a} helyett {m_b}, MDN {l_a} helyett {l_b}.",
+      "Ára: a magyar kérdések az angol skilleken MRR-t veszítenek ({hu_a} helyett {hu_b}), egy kis fájlban a keresés {s_a} helyett {s_e5} (a kérdés vektora; alap fordítással {s_sse}), és a fájlok 9-16%-kal nőnek. Egy nagy fájl gyorsabb ({l_pa} helyett {l_pb}), mert olvasáskor semmi sem pontozódik újra.",
+      "Ugyanazzal a modellel a szokásos darabolós hibrid a Rust könyvön {ch_s}, a Kubernetesen {ch_m}, az MDN-en {ch_l}: egy szinten van a KAPU 0.5-tel, alatta, illetve fölötte. A KAPU előnye továbbra is a szakaszos találat a tokenárával, egy fájlban, szerver nélkül.",
+      "A kódoló a KAPU saját Rust kódja, új függőség és futás közbeni letöltés nélkül: egész szorzatok, rögzített sorrendű lebegőpontos összegek, saját exp és erf, így az SSE2, AVX2 és AVX-512 fordítás ugyanazokat a bájtokat írja. Az ONNX Runtime-mal 0,998-1,000 koszinusszal egyezik; egy 512 tokenes ablak egy szálon {w_avx} s (AVX-512), alap fordítással {w_sse} s."
     ],
     v2_h: "A v2-es terv 1-3. fázisa: ablációs keret, egy javítás, amely megáll, tisztességes alapvonalak",
     v2_note: "Mérve {date}, {version}. A v2-es terv minden rangsorolási változtatása kapcsoló, alapból kikapcsolva; kikapcsolva a rangsor bitre a 0.2.1-esé. Minden kérdéssor egyszer, a kérdés hash-e szerint két részre oszlik: dev (40%, összesen {devs} kérdés) és teszt (60%, {tests}); a javítások változatát a dev részen választottuk, és csak a teszt rész eredménye szerepel. Egy javítás akkor marad, ha a teszt részen a szobaszintű recall@10 vagy MRR@10 javul, a 95%-os páros bootstrap intervallum nulla fölött van (a halmazok összevonva), egyik halmaz sem romlik 0,01-nél többet, és a keresés legfeljebb 1,5-szer lassabb.",
@@ -751,6 +838,7 @@ function render() {
     { label: "col_read", key: "read_tokens_median" }, { label: "col_cq", key: "calls_median" }, { label: "col_all", key: "agent_tokens_per_q" }
   ], DATA.agents);
 
+  renderV3(L, int);
   renderV2(L, int);
   renderV12(L, int);
   renderSkills(L, int);
@@ -798,6 +886,80 @@ function renderSkills(L, int) {
   const ul = document.getElementById("sk-findings");
   ul.innerHTML = "";
   for (const line of t("sk_findings")) { const li = document.createElement("li"); li.textContent = fill(line, vars); ul.appendChild(li); }
+}
+
+function renderV3(L, int) {
+  const v = DATA.v3;
+  document.getElementById("v3").hidden = !v;
+  if (!v) return;
+  const r3 = L.format(".3f"), sgn = L.format("+.3f"), pct = L.format(".0%"), ms = x => L.format(",.1f")(x) + " ms";
+  const mb = x => L.format(",.1f")(x / 1e6) + " MB";
+  const ci = d => `${sgn(d.diff)} [${sgn(d.lo)}, ${sgn(d.hi)}]`;
+  const setName = s => t("v2set_" + s);
+  document.getElementById("v3-note").textContent = fill(t("v3_note"), {
+    date: v.date, version: v.version, tests: int(d3.sum(v.sets, s => s.test))
+  });
+  table("tb-v3pool", [
+    { label: "v3c_model", get: r => "multilingual-e5-small", raw: true },
+    { label: "v3c_bits", key: "bits" },
+    { label: "v3c_rank", get: r => t("v3rank_" + r.rank), raw: true },
+    { label: "v2c_dr10", get: r => ci(r.r10), raw: true, better: r => r.r10.lo > 0, worse: r => r.r10.hi < 0 },
+    { label: "v2c_dmrr", get: r => ci(r.mrr), raw: true, better: r => r.mrr.lo > 0, worse: r => r.mrr.hi < 0 },
+    { label: "v2c_worst", get: r => sgn(r.worst_set), raw: true, worse: r => r.worst_set < -0.01 },
+    { label: "v3c_p50x", get: r => L.format(",.1f")(r.p50_ratio) + "×", raw: true, worse: r => r.p50_ratio > 1.5 }
+  ], v.pooled);
+  const series = [{ field: "static", label: t("v3ser_static") }, { field: "e5", label: t("v3ser_e5") }, { field: "chunk", label: t("v3ser_chunk") }];
+  legend("lg-v3set", series);
+  grouped(document.getElementById("ch-v3set"), v.sets.map(s => ({
+    key: s.set, label: setName(s.set), title: `${setName(s.set)}: ${s.test} ${t("q")}, recall@10`,
+    values: { static: s.configs["ml-base"].r10, e5: s.configs["e5b4-base"].r10, chunk: s.chunk_hybrid_r10.e5 }
+  })), series, L.format(".2f"));
+  table("tb-v3set", [
+    { label: "col_set", get: r => setName(r.set), raw: true }, { label: "col_n", key: "test" },
+    { label: "v3c_r10a", get: r => r3(r.configs["ml-base"].r10), raw: true },
+    { label: "v3c_r10b", get: r => r3(r.configs["e5b4-base"].r10), raw: true,
+      better: r => r.configs["e5b4-base"].r10 > r.configs["ml-base"].r10, worse: r => r.configs["e5b4-base"].r10 < r.configs["ml-base"].r10 },
+    { label: "v3c_mrra", get: r => r3(r.configs["ml-base"].mrr), raw: true },
+    { label: "v3c_mrrb", get: r => r3(r.configs["e5b4-base"].mrr), raw: true,
+      better: r => r.configs["e5b4-base"].mrr > r.configs["ml-base"].mrr, worse: r => r.configs["e5b4-base"].mrr < r.configs["ml-base"].mrr },
+    { label: "v3c_p50", get: r => ms(r.configs["ml-base"].p50_ms), raw: true },
+    { label: "v3c_p50e5", get: r => ms(r.configs["e5b4-base"].p50_ms), raw: true },
+    { label: "v3c_sse", get: r => r.e5b4_p50_sse2_ms == null ? "—" : ms(r.e5b4_p50_sse2_ms), raw: true }
+  ], v.sets);
+  table("tb-v3cost", [
+    { label: "v3c_file", get: r => setName(r.set), raw: true },
+    { label: "v3c_today", get: r => mb(r.today_bytes), raw: true }, { label: "v3c_size4", get: r => mb(r.e5_4bit_bytes), raw: true },
+    { label: "v3c_growth", get: r => "+" + pct(r.e5_4bit_bytes / r.today_bytes - 1), raw: true },
+    { label: "v3c_growth8", get: r => "+" + pct(r.e5_8bit_bytes / r.today_bytes - 1), raw: true },
+    { label: "v3c_build", get: r => int(r.build_s) + " s", raw: true }
+  ], v.sizes);
+  table("tb-v3store", [
+    { label: "v3c_form", get: r => t("v3form_" + r.form), raw: true },
+    { label: "v3c_bytes", get: r => r.bytes == null ? "—" : int(r.bytes), raw: true },
+    { label: "v2c_dr10", get: r => ci(r.r10), raw: true, better: r => r.r10.lo > 0, worse: r => r.r10.hi < 0 },
+    { label: "v2c_dmrr", get: r => ci(r.mrr), raw: true, better: r => r.mrr.lo > 0, worse: r => r.mrr.hi < 0 }
+  ], v.storage);
+  table("tb-v3cand", [
+    { label: "v3c_model", key: "model", raw: true },
+    { label: "v3c_method", get: r => t("v3meth_" + r.method), raw: true },
+    { label: "v2c_dr10", get: r => ci(r.r10), raw: true, better: r => r.r10.lo > 0, worse: r => r.r10.hi < 0 },
+    { label: "v2c_dmrr", get: r => ci(r.mrr), raw: true, better: r => r.mrr.lo > 0, worse: r => r.mrr.hi < 0 }
+  ], v.candidates);
+  const set = k => v.sets.find(s => s.set === k);
+  const pick = rank => v.pooled.find(p => p.bits === 4 && p.rank === rank);
+  const vars = {
+    d_base: sgn(pick("base").r10.diff), d_best: sgn(pick("passage+rooms").r10.diff),
+    m_a: r3(set("m").configs["ml-base"].r10), m_b: r3(set("m").configs["e5b4-base"].r10),
+    l_a: r3(set("l").configs["ml-base"].r10), l_b: r3(set("l").configs["e5b4-base"].r10),
+    hu_a: r3(set("hu").configs["ml-base"].mrr), hu_b: r3(set("hu").configs["e5b4-base"].mrr),
+    s_a: ms(set("s").configs["ml-base"].p50_ms), s_e5: ms(set("s").configs["e5b4-base"].p50_ms), s_sse: ms(set("s").e5b4_p50_sse2_ms),
+    l_pa: ms(set("l").configs["ml-base"].p50_ms), l_pb: ms(set("l").configs["e5b4-base"].p50_ms),
+    ch_s: r3(set("s").chunk_hybrid_r10.e5), ch_m: r3(set("m").chunk_hybrid_r10.e5), ch_l: r3(set("l").chunk_hybrid_r10.e5),
+    w_avx: L.format(",.2f")(v.encoder.window_512_s_avx512), w_sse: L.format(",.1f")(v.encoder.window_512_s_sse2)
+  };
+  const ul = document.getElementById("v3-findings");
+  ul.innerHTML = "";
+  for (const line of t("v3_findings")) { const li = document.createElement("li"); li.textContent = fill(line, vars); ul.appendChild(li); }
 }
 
 function renderV2(L, int) {

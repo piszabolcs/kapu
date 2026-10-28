@@ -8,7 +8,8 @@ The page is one self-contained HTML file (English and Hungarian, d3 from
 cdnjs). Every number on it comes from the results files; the template is
 `results_template.html` next to this script. The third to fifth arguments,
 the format 1.2 results, the skill-finding results and the skill-finding
-results before the catalog (D154), are optional.
+results before the catalog (D154), are optional, and so are the sixth and
+seventh, the plan v2 and the plan v3 results.
 """
 
 import json
@@ -175,6 +176,12 @@ def v2_block(r):
             "title_weight": {w: v["test"] for w, v in (r.get("title_weight") or {}).get("pooled", {}).items()}}
 
 
+def v3_block(r):
+    """Plan v3 (D168-D172): the model candidates, the storage forms, the e5
+    model in KAPU's own search, its cost."""
+    return {k: r[k] for k in ("date", "version", "candidates", "storage", "pooled", "sets", "sizes", "encoder")}
+
+
 def skill_row(s, form):
     return {"skills": s["set_size"], "form": form, "loaded": s["gold_loaded"], "gold": s["gold"],
             "recall": s["recall_loaded"], "all_gold": s["tasks_all_gold_loaded"], "runs": s["runs"],
@@ -196,8 +203,9 @@ def skills_block(r, before=None):
 
 
 def main(results: Path, out: Path, v12_results: Path | None = None, skills_results: Path | None = None,
-         skills_before: Path | None = None, v2_results: Path | None = None):
+         skills_before: Path | None = None, v2_results: Path | None = None, v3_results: Path | None = None):
     r = json.loads(results.read_text(encoding="utf-8"))
+    v3 = v3_block(json.loads(v3_results.read_text(encoding="utf-8"))) if v3_results else None
     v2 = v2_block(json.loads(v2_results.read_text(encoding="utf-8"))) if v2_results else None
     v12 = v12_block(json.loads(v12_results.read_text(encoding="utf-8"))) if v12_results else None
     before = json.loads(skills_before.read_text(encoding="utf-8")) if skills_before else None
@@ -254,11 +262,12 @@ def main(results: Path, out: Path, v12_results: Path | None = None, skills_resul
     ]
 
     data = {
-        "date": v12["date"] if v12 else v11.get("date"),
-        "spec": v12["version"] if v12 else "specification " + v11.get("specification"),
+        "date": v3["date"] if v3 else v12["date"] if v12 else v11.get("date"),
+        "spec": v3["version"] if v3 else v12["version"] if v12 else "specification " + v11.get("specification"),
         "v12": v12,
         "skills": skills,
         "v2": v2,
+        "v3": v3,
         "knowledge_tokens": px["full_file_in_context_tokens_per_request"],
         "pixellab1": [form_row(f, px["result"][f]) for f in ("kapu", "md", "pdf")],
         "pixellab2": [form_row("kapu", v104["pixellab_same_prompt"]["k104"]), form_row("md", v104["pixellab_same_prompt"]["md"]),
@@ -281,4 +290,4 @@ def main(results: Path, out: Path, v12_results: Path | None = None, skills_resul
 
 
 if __name__ == "__main__":
-    main(Path(sys.argv[1]), Path(sys.argv[2]), *(Path(a) for a in sys.argv[3:7]))
+    main(Path(sys.argv[1]), Path(sys.argv[2]), *(Path(a) for a in sys.argv[3:8]))

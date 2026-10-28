@@ -19,7 +19,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
-use kapu_core::embed::{DEFAULT_MODEL, FALLBACK_MODEL, Model, VectorCache, find_model_dir};
+use kapu_core::embed::{DEFAULT_MODEL, FALLBACK_MODELS, Model, VectorCache, find_model_dir};
 use kapu_core::search::{RankOptions, SearchOptions, SearchResult, Source, VectorStatus};
 use kapu_core::view::GUIDE_STD1_EN;
 use kapu_core::{CheckedFile, Error, OpenedDoor, Part};
@@ -1228,11 +1228,17 @@ impl KapuServer {
         let data = file.bytes();
         let sections = file.sections();
         let header = &sections.header;
-        let model = if header.emb == kapu_core::build::NO_MODEL {
+        // D172: the file's own model; if this reader does not have it (a file
+        // of an older release), the packaged one, so a write never drops the
+        // file's vectors
+        let default = || {
             self.model(DEFAULT_MODEL)
-                .or_else(|| self.model(FALLBACK_MODEL))
+                .or_else(|| FALLBACK_MODELS.iter().find_map(|name| self.model(name)))
+        };
+        let model = if header.emb == kapu_core::build::NO_MODEL {
+            default()
         } else {
-            self.model(&header.emb)
+            self.model(&header.emb).or_else(default)
         };
         let (added, id) =
             kapu_core::edit::add_room(data, "kapu_write", &args.markdown, args.id.as_deref())?;

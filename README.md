@@ -72,7 +72,7 @@ cd kapu
 cargo build --release -p kapu-cli -p kapu-mcp
 ```
 
-Search by meaning is optional. For it, download [`minishlab/potion-multilingual-128M`](https://huggingface.co/minishlab/potion-multilingual-128M) (`config.json`, `README.md`, `tokenizer.json`, `model.safetensors`) into `models/potion-multilingual-128M` and make the int8 copy the tools look for: `python tools/quantize.py models/potion-multilingual-128M`. The release archives include that copy already. Without the model, keyword search (BM25) still works.
+Search by meaning is optional. For it, download the int8 ONNX form of [`intfloat/multilingual-e5-small`](https://huggingface.co/intfloat/multilingual-e5-small) (`onnx/model_qint8_avx512_vnni.onnx`, `onnx/tokenizer.json`, `onnx/config.json`) into `models/multilingual-e5-small-qint8` and convert it to the folder the tools look for: `python tools/onnx_to_kapu.py models/multilingual-e5-small-qint8 models/multilingual-e5-small-q8` (needs numpy). The release archives include the converted model already. Without the model, keyword search (BM25) still works.
 
 </details>
 
@@ -87,7 +87,7 @@ The skill import keeps every skill's name as the title and its description as th
 | 24 questions those manuals do not answer | the model alone made up 11 answers | made up **1** |
 | 91 agent skills, 12 development tasks | native Claude Code skills: $0.236 per task, 14,081 tokens fixed per session, 39 of 39 found | **$0.099** per task, **4,775** tokens fixed, 38 of 39 found |
 
-Not every number favours KAPU: on public documentation with Stack Overflow questions its search is level with page-deduplicated chunked BM25 on the Rust book and behind it on Kubernetes and MDN, and the native skills find one more skill than the KAPU file. The details, the method and every limit are below and on the **[results page](https://piszabolcs.github.io/kapu/results/)** ([source](docs/results/index.html); PDF in [English](docs/results/kapu-measurements-en.pdf) and [Hungarian](docs/results/kapu-measurements-hu.pdf)).
+Not every number favours KAPU: on public documentation with Stack Overflow questions the usual chunked hybrid search with the same embedding model is level with KAPU on the Rust book and ahead of it on MDN, and the native skills find one more skill than the KAPU file. The details, the method and every limit are below and on the **[results page](https://piszabolcs.github.io/kapu/results/)** ([source](docs/results/index.html); PDF in [English](docs/results/kapu-measurements-en.pdf) and [Hungarian](docs/results/kapu-measurements-hu.pdf)).
 
 <details>
 <summary>Full benchmarks and method</summary>
@@ -101,15 +101,15 @@ The same 12 questions about the PixelLab documentation (third-party, not publish
 | The same text as a PDF, search and page reads | 8,207 | 11 |
 | The whole file pasted into the context | 206,899 | - |
 
-On public documentation with real Stack Overflow questions (format 1.2 with the search vectors in the file, one Windows 11 machine, release build, medians over the MCP server):
+On public documentation with real Stack Overflow questions (format 1.3 with the search vectors in the file, one Windows 11 machine, release build; search is the median of `kapu bench`, opening a section the median over the MCP server):
 
-| Corpus | Knowledge | `.kapu` file | Search | Open a section | Retrieval: KAPU 0.3 / chunks, BM25 / chunks, hybrid |
+| Corpus | Knowledge | `.kapu` file | Search | Open a section | Retrieval: KAPU 0.5 / 0.3 / chunks, BM25 / chunks, hybrid (0.3 model / e5) |
 |---|---:|---:|---:|---:|---:|
-| Rust book | 0.3 M tokens | 2.4 MB | 32 ms | 4 ms | 0.51 / 0.51 / 0.54 |
-| Kubernetes docs | 3.9 M tokens | 28 MB | 50 ms | 8 ms | 0.45 / 0.48 / 0.47 |
-| MDN Web Docs | 13.0 M tokens | 139 MB | 282 ms | 48 ms | 0.29 / 0.32 / 0.36 |
+| Rust book | 0.3 M tokens | 2.6 MB | 35 ms | 4 ms | 0.59 / 0.51 / 0.51 / 0.54 / 0.59 |
+| Kubernetes docs | 3.9 M tokens | 31 MB | 48 ms | 8 ms | 0.58 / 0.45 / 0.48 / 0.47 / 0.53 |
+| MDN Web Docs | 13.0 M tokens | 161 MB | 320 ms | 48 ms | 0.36 / 0.29 / 0.32 / 0.36 / 0.45 |
 
-Retrieval is room-level recall@10 on the test part of the questions (60%, fixed by a hash): the page the accepted answer links to is among the first 10 hits. The chunk baselines cut every page into 512-token chunks and count a page once, the fair comparison with KAPU's room level; until 0.2.1 this table compared with chunks counted per chunk, which flattered KAPU. KAPU matches chunked BM25 on the Rust book and is behind it on Kubernetes and MDN. Of every ranking change measured for 0.3.0, only one hit per room passed the acceptance rule (+0.022 recall@10 over 0.2.1, [chapter 12](bench/RESULTS.md#12-plan-v2-phases-1-to-3-ablation-one-fix-that-holds-honest-baselines)). On a corpus of 244 skills and frontend notes with English questions it is 0.98, and `kapu_ask` opens the right room in its single reply for 96% of the questions.
+Retrieval is room-level recall@10 on the test part of the questions (60%, fixed by a hash): the page the accepted answer links to is among the first 10 hits. The chunk baselines cut every page into 512-token chunks and count a page once, the fair comparison with KAPU's room level; until 0.2.1 this table compared with chunks counted per chunk, which flattered KAPU. 0.5.0 replaces the static embedding model with `multilingual-e5-small`, run in plain Rust and stored in the file (4 bits a component): on the test part of seven question sets recall@10 +0.062 (95% interval +0.035 to +0.090) and MRR@10 +0.028 over 0.3 ([chapter 13](bench/RESULTS.md#13-plan-v3-a-contextual-model-in-plain-rust-050)). It does not pass the acceptance rule of 0.3.0: Hungarian questions on English skills lose MRR (0.49 to 0.44), and a small file is searched about 35 ms slower, for the query's vector; MDN is faster (408 to 320 ms). The trade was accepted. With the same model the chunked hybrid is level on the Rust book, behind KAPU on Kubernetes and ahead of it on MDN. Of the ranking changes measured for 0.3.0, only one hit per room passed the acceptance rule ([chapter 12](bench/RESULTS.md#12-plan-v2-phases-1-to-3-ablation-one-fix-that-holds-honest-baselines)). On a corpus of 244 skills and frontend notes with English questions it is 0.98, and `kapu_ask` opens the right room in its single reply for 96% of the questions.
 
 **Knowledge a model does not have.** On public PLC manuals of six vendors (Beckhoff, Rexroth, Mitsubishi, Omron, Siemens, Emerson), Claude Sonnet answered:
 - with the KAPU tools, **92%** correct;
@@ -138,18 +138,18 @@ What one session costs, whatever the size of the file: the six tools' descriptio
 A `.kapu` file is plain UTF-8 text. The Markdown body is the single source of truth; every other section is rebuilt from it, byte for byte, by `kapu build`.
 
 ```text
-%KAPU 1.2          512-byte header: where each section starts, fingerprints, counts
+%KAPU 1.3          512-byte header: where each section starts, fingerprints, counts
 #MAP    ... #END   groups and doors (rooms and their sections) with token prices and kinds
 #DESC   ... #END   one-line descriptions and tags
 #GRAPH  ... #END   links, shared rare terms and similar meaning between doors
 #INDEX  ... #END   BM25 index; postings are positions in #DOCS, not ids
 #DOCS   ... #END   byte offset, length, BLAKE3 fingerprint and word count of every door
-#VEC    ... #END   the sign bits of every search vector, base64 (with a model only)
+#VEC    ... #END   every search vector, 4 bits a component, base64 (with a model only)
 #BODY              the Markdown rooms, one after the other
 ```
 
 - **Map first.** The map reply stays within 1,000 tokens even for 13 million tokens of documentation: the guide, a totals line and the groups (Leiden clusters named by their keywords); a group lists its rooms with prices.
-- **Hybrid search.** BM25 with English and Hungarian stemming, plus a static multilingual embedding model with one vector per 512-token window of a section, merged with reciprocal rank fusion. The file keeps one sign bit per vector component (2-3% of the file); those pick 200 candidates, and the model's float vectors order them.
+- **Hybrid search.** BM25 with English and Hungarian stemming, plus a multilingual sentence encoder (`multilingual-e5-small`, int8) with one vector per window of up to 512 of its tokens, merged with reciprocal rank fusion. The encoder runs in plain Rust with exact integer products, so a vector has the same bits on every machine. The file keeps every vector at 4 bits a component (9-16% of the file), so a search reads them from the file and computes only the query's vector.
 - **Opening is a seek.** The reader jumps to the byte offset in `#DOCS`, checks the section's fingerprint and returns its text. A section longer than the budget comes in parts, cut at headings or blank lines.
 - **Edits stay safe.** If someone edits the body by hand, the fingerprints no longer match; the reader notices, rebuilds the positions from the room markers and reports a stale index until the next build.
 - **Content scan.** Writing a room warns about text that tries to override an agent's instructions, hidden characters, long encoded blocks and unexpected download commands. It warns, it does not block.
@@ -183,7 +183,7 @@ KAPU keeps the Markdown as it is and adds, in the same file, a map of every sect
 
 | | A folder of Markdown | Vector database / RAG | KAPU |
 |---|---|---|---|
-| What you run | nothing | a database and an embedding service | one binary; the 124 MB embedding model is optional and offline |
+| What you run | nothing | a database and an embedding service | one binary; the 135 MB embedding model is optional and offline |
 | What the agent sees first | file names | nothing until it queries | a map with every section and its token price |
 | What the agent reads | whole files, or grep lines without context | chunks cut at a fixed size | whole sections it picks, within a token budget |
 | Structure | files and headings | lost in the chunks | rooms, sections, links, kinds and topic groups |
@@ -278,7 +278,7 @@ Or keep the Markdown in git (`kapu export notes.kapu ./notes`) and build the fil
 flowchart LR
   subgraph Input
     MD["Markdown files or skills"]
-    MOD["potion-multilingual-128M (int8, optional)"]
+    MOD["multilingual-e5-small (int8, optional)"]
   end
   subgraph Core["kapu-core"]
     B["Builder: index, prices, graph, groups, vectors"]
@@ -364,7 +364,7 @@ Egy 207 ezer tokenes, a modell számára ismeretlen kézikönyvön a KAPU-t hasz
 | Ugyanez PDF-ként, keresés és oldalolvasás | 8 207 | 11 |
 | Az egész fájl bemásolva | 206 899 | - |
 
-A nyilvános dokumentációkon (Rust Book, Kubernetes, MDN) a keresés 32-282 ms, egy fejezet kinyitása 4-48 ms. A visszakeresés a Rust könyvön a darabolós BM25 szintjén van, a Kubernetesen és az MDN-en alatta. A darabos alapvonalat oldalanként egyszer számoljuk, ez a tisztességes összevetés; a 0.2.1-ig itt szereplő szám darabonként számolt, és a KAPU-nak kedvezett. A 0.3.0-hoz mért összes rangsorolási változtatásból csak a szobánként egy találat ment át az elfogadási szabályon. Nyilvános PLC-kézikönyveken (hat gyártó) a Claude Sonnet a KAPU-eszközökkel a kérdések 92%-ára válaszolt helyesen, a jó oldallal a promptban 97%-ára, tudásfájl nélkül 28%-ára. A kézikönyvekben nem szereplő kérdéseknél a KAPU-s ügynök 24-ből 23-szor mondta ki, hogy nincs benne; a modell egymagában 24-ből 11-szer talált ki választ. Egy munkamenet fix ára a fájl méretétől függetlenül 799 token (a hat eszköz leírása), egy térképválasz legfeljebb 1000, tíz találat kivonattal legfeljebb 600 token. A skillek megtalálásában a 0.2.1-es katalógussal (`kapu_map kind=skill`) a KAPU 91 skillből a 39 releváns közül 38-at talál meg, feladatonként 5 hívásban és 0,099 dollárból; a natív Claude Code skillek 39-et, 4 hívásban, 0,236 dollárból. A teljes eredmény diagramokkal, angolul és magyarul: **[eredményoldal](https://piszabolcs.github.io/kapu/results/)**, PDF-ben: [magyar](docs/results/kapu-measurements-hu.pdf), [angol](docs/results/kapu-measurements-en.pdf).
+A nyilvános dokumentációkon (Rust Book, Kubernetes, MDN) a keresés 35-320 ms, egy fejezet kinyitása 4-48 ms. A 0.5.0 a statikus beágyazó modellt a `multilingual-e5-small`-ra cseréli, amely tiszta Rustban fut, és a vektorai a fájlban vannak (komponensenként 4 bit): hét kérdéshalmaz teszt részén a recall@10 +0,062 (95%-os intervallum +0,035 és +0,090 között), az MRR@10 +0,028 a 0.3-hoz képest. A visszakeresés így a Rust könyvön 0,51 helyett 0,59, a Kubernetesen 0,45 helyett 0,58, az MDN-en 0,29 helyett 0,36, mindhárom a darabolós BM25 fölött. Ugyanazzal a modellel a szokásos darabolós hibrid a Rust könyvön egy szinten van a KAPU-val, a Kubernetesen alatta, az MDN-en fölötte. A 0.3.0 elfogadási szabályán ez nem megy át: a magyar kérdések az angol skilleken MRR-t veszítenek (0,49 helyett 0,44), és egy kis fájlban a keresés kb. 35 ms-mal lassabb a kérdés vektora miatt; a cserét ezzel együtt elfogadtuk. A darabos alapvonalat oldalanként egyszer számoljuk, ez a tisztességes összevetés. Nyilvános PLC-kézikönyveken (hat gyártó) a Claude Sonnet a KAPU-eszközökkel a kérdések 92%-ára válaszolt helyesen, a jó oldallal a promptban 97%-ára, tudásfájl nélkül 28%-ára. A kézikönyvekben nem szereplő kérdéseknél a KAPU-s ügynök 24-ből 23-szor mondta ki, hogy nincs benne; a modell egymagában 24-ből 11-szer talált ki választ. Egy munkamenet fix ára a fájl méretétől függetlenül 799 token (a hat eszköz leírása), egy térképválasz legfeljebb 1000, tíz találat kivonattal legfeljebb 600 token. A skillek megtalálásában a 0.2.1-es katalógussal (`kapu_map kind=skill`) a KAPU 91 skillből a 39 releváns közül 38-at talál meg, feladatonként 5 hívásban és 0,099 dollárból; a natív Claude Code skillek 39-et, 4 hívásban, 0,236 dollárból. A teljes eredmény diagramokkal, angolul és magyarul: **[eredményoldal](https://piszabolcs.github.io/kapu/results/)**, PDF-ben: [magyar](docs/results/kapu-measurements-hu.pdf), [angol](docs/results/kapu-measurements-en.pdf).
 
 **Amire nem való:** kicsi, jól szétszedett Markdown-mappára (ott a grep is olcsó), naponta változó csapatos dokumentációra (a git diff zajos, ilyenkor a Markdown a forrás), és futtatandó skillekre (a KAPU a tudást adja, a szkriptet nem futtatja).
 

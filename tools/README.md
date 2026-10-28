@@ -8,7 +8,12 @@
 - `blake3_ref.py`: pure-Python BLAKE3 reference used by the script.
 - `crosscheck.py`: builds a Markdown folder with the reference and compares it,
   section by section, with the Rust build.
-- `quantize.py`: makes the int8 copy of the vector model the tools look for.
+- `onnx_to_kapu.py`: converts the int8 ONNX file of `intfloat/multilingual-e5-small`
+  into the model folder the tools look for, `models/multilingual-e5-small-q8`
+  (the bundled model since 0.5.0, D172).
+- `e5_reference.py`: reference vectors from ONNX Runtime and a NumPy
+  re-implementation for the Rust encoder's test (`tests/model/e5_reference.json`).
+- `quantize.py`: makes the int8 copy of the static model of the releases before 0.5.0.
 - `make_examples.py`: rebuilds `examples/kapu-docs.kapu` (this documentation)
   and `examples/kapu-spec.kapu` (the specification, via `split_spec.py`).
 - `make_social.py`: writes `docs/assets/social-preview.png`, the repository's
@@ -22,6 +27,8 @@
   Plan v2 (bench/RESULTS.md chapter 12): `study/split_questions.py`, `study/ablation.py`, `study/ask_eval.py`,
   `study/title_weight.py`, `study/neighbour_follow.py`, `study/group_quality.py`, `study/oracle_eval.py`,
   `study/collect_v2.py` and `study/v2_tables.py`.
+  Plan v3 (bench/RESULTS.md chapter 13): `study/model_candidates.py` (model candidates and storage forms)
+  and `study/collect_v3.py` (the results file).
 - `mcp_probe.py`, `mcp_eval.py`, `kapu_mcp_call.py`: MCP latency, isolated
   agent runs and a logged one-call client for agents.
 

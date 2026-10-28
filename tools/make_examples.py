@@ -7,7 +7,7 @@ the README (without its Hungarian part and the HTML image blocks),
 bench/RESULTS.md, CHANGELOG.md and the READMEs of tests/vectors, tools and fuzz.
 examples/kapu-spec.kapu: SPEC-KAPU.md split by tools/split_spec.py.
 
-Both are built with the vector model in models/potion-multilingual-128M-i8 and
+Both are built with the vector model in models/multilingual-e5-small-q8 and
 checked with `kapu validate --full`. Run it after changing any of these files.
 """
 
@@ -18,7 +18,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-MODEL = ROOT / "models" / "potion-multilingual-128M-i8"
+MODEL = ROOT / "models" / "multilingual-e5-small-q8"
 
 DOCS = [
     ("overview.md", "README.md"),

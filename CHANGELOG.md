@@ -1,11 +1,18 @@
 # Changelog
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning: [SemVer](https://semver.org/).
-The file format has its own version (`%KAPU 1.2`, see `SPEC-KAPU.md`); the tools below are versioned separately.
+The file format has its own version (`%KAPU 1.3`, see `SPEC-KAPU.md`); the tools below are versioned separately.
 
 ## [Unreleased]
 
-Specification v1.3: a file whose `#VEC` holds 4- or 8-bit integers is format 1.3, every other file stays 1.2. Plan v3 (D168-D171); the bundled model and the default ranking do not change yet.
+## [0.5.0] - 2026-10-28
+
+Specification v1.3: a file whose `#VEC` holds 4- or 8-bit integers is format 1.3, every other file stays 1.2. Plan v3 (D168-D172): the bundled vector model is now `multilingual-e5-small`, a contextual encoder run in plain Rust (`bench/RESULTS.md` chapter 13, `bench/results/2026-10-28-plan-v3.json`, the results page with a new section and its PDFs). There is no 0.4.0.
+
+### Changed
+- The bundled vector model is `multilingual-e5-small` in its int8 form (`models/multilingual-e5-small-q8`, 135 MB) instead of `potion-multilingual-128M` (D172). The release workflow downloads the int8 ONNX file at a fixed commit, checks its SHA-256, converts it with `tools/onnx_to_kapu.py` and checks the converted weights, so every platform has the same `embhash`; it also runs the encoder's golden test on Windows, Linux and macOS.
+- A file built with the static model of the earlier releases keeps its vector search as long as that model is installed (the installers leave it in place); otherwise its search is BM25 only, and the reply says that `kapu build` rebuilds it with the new model. `kapu_write` on such a file rebuilds it with the bundled model instead of dropping its vectors. A first build with the new model takes minutes on a large file (Kubernetes 15 minutes, MDN 50 minutes on 12 threads), a rebuild only computes new text.
+- The trade, measured and accepted (D171, D172): room-level recall@10 +0.062 and MRR@10 +0.028 on the test part of seven question sets; Hungarian questions on English skills lose MRR (0.49 to 0.44), a small file is searched about 35 ms slower (the query's vector, release build), a large one faster (MDN 408 to 320 ms), and files are 9 to 16% larger.
 
 ### Added
 - A contextual vector model (D171): `multilingual-e5-small` in the int8 form of ONNX Runtime's dynamic quantization, run in plain Rust (`kapu --model <folder>`), with no new dependency and no download at run time. `tools/onnx_to_kapu.py` makes the model folder from the ONNX file. Every product is exact in integers and every float sum has a fixed order, so a vector has the same bits on SSE2, AVX2 and AVX-512 builds. Its windows are stored whole in `#VEC`, 4 bits a component, and scored without read-time rescoring. On the test part of seven question sets, against the bundled model: room-level recall@10 +0.062 (95% interval +0.035 to +0.090), MRR@10 +0.028; Hungarian questions on English skills lose MRR (0.49 to 0.44), a small file is searched 12 to 35 ms slower (the query's vector), MDN faster (408 to 156 ms), and the file is 9 to 16% larger.

@@ -41,7 +41,7 @@ pub const BUILT_WITH: [&str; 4] = [
     "Rust",
     "blake3, tiktoken-rs, tokenizers, rust-stemmers, rmcp, clap",
     "Tauri 2, pulldown-cmark; HTML, CSS and JavaScript without a build step",
-    "static embeddings: potion-multilingual-128M (int8)",
+    "embeddings: multilingual-e5-small (int8, run in plain Rust)",
 ];
 
 /// The project repository and the third-party repositories it is built on.
@@ -52,13 +52,13 @@ pub const REPOSITORIES: [(&str, &str); 4] = [
         "https://github.com/modelcontextprotocol/rust-sdk",
     ),
     (
-        "MinishLab/model2vec",
-        "https://github.com/MinishLab/model2vec",
+        "intfloat/multilingual-e5-small",
+        "https://huggingface.co/intfloat/multilingual-e5-small",
     ),
     ("tauri-apps/tauri", "https://github.com/tauri-apps/tauri"),
 ];
 
-/// The version line that follows the program name: `0.3.0 (KAPU format 1.2)`.
+/// The version line that follows the program name: `0.5.0 (KAPU format 1.3)`.
 #[must_use]
 pub fn version_line() -> String {
     format!("{VERSION} (KAPU format {FORMAT_VERSION})")

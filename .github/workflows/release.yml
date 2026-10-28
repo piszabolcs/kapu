@@ -1,7 +1,8 @@
 # M9: portable packages for Windows, Linux and macOS (NFR-06), on a version tag.
-# Each package: kapu, kapu-mcp, kapu-gui, models/potion-multilingual-128M-i8
-# (downloaded from Hugging Face and quantized with tools/quantize.py), the demo
-# file examples/kapu-spec.kapu, licences, README, spec.
+# Each package: kapu, kapu-mcp, kapu-gui, models/multilingual-e5-small-q8
+# (the int8 ONNX file of intfloat/multilingual-e5-small, downloaded from Hugging
+# Face at a fixed commit and converted with tools/onnx_to_kapu.py, D172), the
+# demo files in examples/, licences, README, spec.
 # The packages are attached to a draft release; publishing it is a manual step.
 name: Release
 
@@ -58,28 +59,36 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: model (download, verify, quantize)
+      - name: model (download, verify, convert)
         shell: bash
         run: |
           set -euo pipefail
-          m=models/potion-multilingual-128M
-          mkdir -p "$m"
-          for f in config.json README.md tokenizer.json model.safetensors; do
-            curl -sSfL -o "$m/$f" "https://huggingface.co/minishlab/potion-multilingual-128M/resolve/main/$f"
-          done
-          python -c "import hashlib,sys; h=hashlib.sha256(open('$m/model.safetensors','rb').read()).hexdigest(); sys.exit(h!='14b5eb39cb4ce5666da8ad1f3dc6be4346e9b2d601c073302fa0a31bf7943397')"
+          src=models/multilingual-e5-small-qint8
+          hub=https://huggingface.co/intfloat/multilingual-e5-small/resolve/614241f622f53c4eeff9890bdc4f31cfecc418b3
+          mkdir -p "$src"
+          curl -sSfL -o "$src/model.onnx" "$hub/onnx/model_qint8_avx512_vnni.onnx"
+          curl -sSfL -o "$src/tokenizer.json" "$hub/onnx/tokenizer.json"
+          curl -sSfL -o "$src/config.json" "$hub/onnx/config.json"
+          check() { python -c "import hashlib,sys; sys.exit(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest()!=sys.argv[2])" "$1" "$2"; }
+          check "$src/model.onnx" dd476dd0c2514e9b9be83aeb3853fac0763e0bdf4a71645407587d77c48a2d88
+          check "$src/tokenizer.json" 0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39
+          check "$src/config.json" bbb7c1333fc4b3e27fbc9cd5d2070aabcc1d4dfb99917c3633e772f97545a6b6
           pip install numpy
-          python tools/quantize.py "$m"
+          python tools/onnx_to_kapu.py "$src" models/multilingual-e5-small-q8
+          # the same weights on every platform, so every file has the same embhash
+          check models/multilingual-e5-small-q8/model.safetensors f8d8ddf5f56f8e3b68b49674cc9471f1f1a8201e0677b3172ba519444367b938
+      # D46, D171: the encoder gives the same file bits on every platform (golden hash)
+      - run: cargo test --release --locked -p kapu-core --test bert
       - name: package
         shell: bash
         run: |
           set -euo pipefail
           v="${GITHUB_REF_NAME#v}"
           name="kapu-$v-${{ matrix.target }}"
-          mkdir -p "dist/$name/models/potion-multilingual-128M-i8"
+          mkdir -p "dist/$name/models/multilingual-e5-small-q8"
           cp "target/release/kapu${{ matrix.exe }}" "target/release/kapu-mcp${{ matrix.exe }}" "target/release/kapu-gui${{ matrix.exe }}" "dist/$name/"
           mkdir -p "dist/$name/examples" && cp examples/kapu-spec.kapu examples/kapu-docs.kapu "dist/$name/examples/"
-          cp models/potion-multilingual-128M-i8/* "dist/$name/models/potion-multilingual-128M-i8/"
+          cp models/multilingual-e5-small-q8/* "dist/$name/models/multilingual-e5-small-q8/"
           cp LICENSE README.md SPEC-KAPU.md SPEC-KAPU.hu.md THIRD-PARTY.md "dist/$name/"
           printf 'SPEC-KAPU.md, SPEC-KAPU.hu.md: CC BY 4.0, https://creativecommons.org/licenses/by/4.0/\n' > "dist/$name/LICENSE-SPEC.txt"
           "dist/$name/kapu${{ matrix.exe }}" new "dist/smoke.kapu"

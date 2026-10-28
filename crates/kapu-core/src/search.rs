@@ -979,7 +979,7 @@ fn vector_status(s: &Sections<'_>, cache: Option<&crate::embed::VectorCache<'_>>
         None => VectorStatus::Unavailable("no vector model".to_owned()),
         Some(m) if m.name() != s.header.emb || m.hash() != s.header.embhash => {
             VectorStatus::Unavailable(format!(
-                "the file was built with `{}`, the reader has `{}`",
+                "the file was built with `{}`, the reader has `{}`; `kapu build` rebuilds it with the reader's model",
                 s.header.emb,
                 m.name()
             ))

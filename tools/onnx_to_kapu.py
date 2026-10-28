@@ -127,6 +127,18 @@ def read_onnx(path: pathlib.Path) -> tuple[list[dict], dict[str, np.ndarray]]:
     return nodes, init
 
 
+README = """# {source}, int8, for KAPU
+
+The weights of `{source}` (https://huggingface.co/{source}) in the int8 form
+of ONNX Runtime's dynamic quantization (`onnx/model_qint8_avx512_vnni.onnx`),
+converted to safetensors by `tools/onnx_to_kapu.py` of KAPU; `tokenizer.json`
+is unchanged. KAPU runs it in plain Rust (`crates/kapu-core/src/bert.rs`).
+
+Licence: MIT, as the source model. Paper: Liang Wang, Nan Yang, Xiaolong Huang,
+Linjun Yang, Rangan Majumder, Furu Wei, "Multilingual E5 Text Embeddings: A
+Technical Report", arXiv:2402.05672 (2024).
+"""
+
 # --- mapping ----------------------------------------------------------------
 
 LINEAR = {
@@ -235,6 +247,7 @@ def convert(src: pathlib.Path, dst: pathlib.Path) -> None:
     }
     (dst / "config.json").write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8", newline="\n")
     shutil.copyfile(src / "tokenizer.json", dst / "tokenizer.json")
+    (dst / "README.md").write_text(README.format(source=config["source"]), encoding="utf-8", newline="\n")
     size = (dst / "model.safetensors").stat().st_size
     print(f"{dst}: {len(tensors)} tensors, {size / 2**20:.1f} MiB")
 

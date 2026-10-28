@@ -6,8 +6,10 @@ KAPU code is MIT (`LICENSE`), the specification CC BY 4.0. The binaries `kapu`, 
 
 | Component | Licence | Source |
 |---|---|---|
-| potion-multilingual-128M (Model2Vec static embeddings; shipped as its int8 form, `tools/quantize.py`) | MIT | https://huggingface.co/minishlab/potion-multilingual-128M |
-| tokenizer of BAAI/bge-m3 (`tokenizer.json`, distributed with the model) | MIT | https://huggingface.co/BAAI/bge-m3 |
+| multilingual-e5-small (sentence encoder; its int8 ONNX file converted by `tools/onnx_to_kapu.py`, shipped since 0.5.0, D172) | MIT | https://huggingface.co/intfloat/multilingual-e5-small |
+| tokenizer of multilingual-e5-small (`tokenizer.json`, distributed with the model; XLM-RoBERTa vocabulary) | MIT | https://huggingface.co/intfloat/multilingual-e5-small |
+| potion-multilingual-128M (Model2Vec static embeddings; shipped until 0.4, its int8 form by `tools/quantize.py`; still read) | MIT | https://huggingface.co/minishlab/potion-multilingual-128M |
+| tokenizer of BAAI/bge-m3 (`tokenizer.json`, distributed with potion-multilingual-128M) | MIT | https://huggingface.co/BAAI/bge-m3 |
 
 ## Fonts of the desktop window
 

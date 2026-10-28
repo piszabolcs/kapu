@@ -686,16 +686,20 @@ pub fn find_model_dir(name: &str) -> Option<PathBuf> {
         .find(|d| d.join("model.safetensors").is_file())
 }
 
-/// The packaged model's name: the i8 form of `potion-multilingual-128M`
-/// (D102; a distilled model may replace it after the M8 comparison, D28).
-pub const DEFAULT_MODEL: &str = "potion-multilingual-128M-i8";
-/// Used when the packaged i8 model is not there (D102).
-pub const FALLBACK_MODEL: &str = "potion-multilingual-128M";
+/// The packaged model's name (D172): `multilingual-e5-small` in its int8
+/// form, converted by `tools/onnx_to_kapu.py` (until 0.5.0 the i8 form of
+/// `potion-multilingual-128M`, D102).
+pub const DEFAULT_MODEL: &str = "multilingual-e5-small-q8";
+/// Used when the packaged model is not there: the static model of the
+/// releases before 0.5.0, in its i8 and its f32 form (D102).
+pub const FALLBACK_MODELS: [&str; 2] = ["potion-multilingual-128M-i8", "potion-multilingual-128M"];
 
-/// The default model directory: [`DEFAULT_MODEL`], else [`FALLBACK_MODEL`].
+/// The default model directory: [`DEFAULT_MODEL`], else the first of
+/// [`FALLBACK_MODELS`] that is there.
 #[must_use]
 pub fn find_default_model_dir() -> Option<PathBuf> {
-    find_model_dir(DEFAULT_MODEL).or_else(|| find_model_dir(FALLBACK_MODEL))
+    find_model_dir(DEFAULT_MODEL)
+        .or_else(|| FALLBACK_MODELS.iter().find_map(|name| find_model_dir(name)))
 }
 
 // ---------------------------------------------------------------------------
