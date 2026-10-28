@@ -22,7 +22,8 @@ Writes `model.safetensors` with these tensors (H hidden, V vocabulary):
 
 and a `config.json` that the Rust loader (`crates/kapu-core/src/bert.rs`)
 reads: `"kind": "bert"`, sizes, the layer-norm epsilon, the query and passage
-prefixes, mean pooling. `tokenizer.json` is copied unchanged. The model name,
+prefixes, mean pooling, the minimum cosine of a `sim` edge, and the bits a
+component in `#VEC`. `tokenizer.json` is copied unchanged. The model name,
 and so `emb=` in built files, is the folder name.
 """
 import json
@@ -226,6 +227,11 @@ def convert(src: pathlib.Path, dst: pathlib.Path) -> None:
         "passage_prefix": "passage: ",
         "pooling": "mean",
         "normalize": True,
+        # D171: e5 cosines sit high (nearest room about 0.89 on the Rust book);
+        # 0.85 gives the Rust book as many `sim` edges as the static model at 0.6
+        "sim_threshold": 0.85,
+        # D171: 4 bits a component in `#VEC`, measured as good as 8 at half the size
+        "vec_bits": 4,
     }
     (dst / "config.json").write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8", newline="\n")
     shutil.copyfile(src / "tokenizer.json", dst / "tokenizer.json")

@@ -38,7 +38,8 @@ pub struct Model {
     /// [`crate::build::SIM_THRESHOLD`]).
     sim_threshold: f64,
     /// Bits per component in `#VEC`: 1 for a static model (D143), the
-    /// `vec_bits` of `config.json` (4 or 8, else 8) for a contextual one (D171).
+    /// `vec_bits` of `config.json` (4 or 8, else 4) for a contextual one (D171:
+    /// 4 bits measured as good as 8 at half the size).
     vec_bits: u8,
     /// The cache root of the window log (D171), if not [`cache_root`].
     log_root: Option<PathBuf>,
@@ -202,8 +203,8 @@ impl Model {
                 .map_err(|e| model_err(format!("truncation: {e}")))?;
             let encoder = crate::bert::Encoder::load(dir, &config)?;
             let vec_bits = match config.get("vec_bits").and_then(serde_json::Value::as_u64) {
-                None | Some(8) => 8,
-                Some(4) => 4,
+                None | Some(4) => 4,
+                Some(8) => 8,
                 Some(other) => {
                     return Err(model_err(format!(
                         "config.json: `vec_bits` is {other}, a contextual model stores 4 or 8"

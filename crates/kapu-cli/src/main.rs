@@ -194,7 +194,10 @@ fn rebuild(bytes: &[u8], model: Option<&Model>) -> Result<Built, Error> {
         *last = now;
         let rate = (done - from) as f64 / now.duration_since(since).as_secs_f64().max(1e-9);
         let left = if rate > 0.0 {
-            format!(", about {:.0} min left", (total - done) as f64 / rate / 60.0)
+            format!(
+                ", about {:.0} min left",
+                (total - done) as f64 / rate / 60.0
+            )
         } else {
             String::new()
         };

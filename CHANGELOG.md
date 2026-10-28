@@ -5,6 +5,16 @@ The file format has its own version (`%KAPU 1.2`, see `SPEC-KAPU.md`); the tools
 
 ## [Unreleased]
 
+Specification v1.3: a file whose `#VEC` holds 4- or 8-bit integers is format 1.3, every other file stays 1.2. Plan v3 (D168-D171); the bundled model and the default ranking do not change yet.
+
+### Added
+- A contextual vector model (D171): `multilingual-e5-small` in the int8 form of ONNX Runtime's dynamic quantization, run in plain Rust (`kapu --model <folder>`), with no new dependency and no download at run time. `tools/onnx_to_kapu.py` makes the model folder from the ONNX file. Every product is exact in integers and every float sum has a fixed order, so a vector has the same bits on SSE2, AVX2 and AVX-512 builds. Its windows are stored whole in `#VEC`, 4 bits a component, and scored without read-time rescoring. On the test part of seven question sets, against the bundled model: room-level recall@10 +0.062 (95% interval +0.035 to +0.090), MRR@10 +0.028; Hungarian questions on English skills lose MRR (0.49 to 0.44), a small file is searched 12 to 35 ms slower (the query's vector), MDN faster (408 to 156 ms), and the file is 9 to 16% larger.
+- A contextual model builds on every core, the longest windows first, and keeps the windows it computed in a log in the cache folder, so an interrupted build goes on where it stopped and a rebuild computes only new windows. `kapu` reports the progress. A window that cannot be computed is warning W009, not a failed build.
+- Ranking switches for measurement, off by default: passage BM25 with heading prefix, room-level fusion and vector prefix (D168), pseudo-relevance feedback (D169).
+
+### Fixed
+- Importing a folder no longer stops at a long file name or a control character in a file (F1, F2).
+
 ## [0.3.0] - 2026-10-27
 
 Specification v1.2.2; the file format stays 1.2. Phases 1 to 3 of plan v2: every ranking change was measured as a switch on a fixed dev/test split of the questions, and only what passed the M0 rule became a default (`bench/RESULTS.md` chapter 12, `bench/results/2026-10-27-plan-v2.json`).

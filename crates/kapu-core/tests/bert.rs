@@ -108,7 +108,7 @@ fn long_passages_get_overlapping_windows() {
 }
 
 /// BLAKE3 of the file [`rooms`] gives with `multilingual-e5-small-q8` (D171).
-const GOLDEN: &str = "a9b6d68f2f478024a10f322b84cbe949afb560736f58743d8c56c101e895437a";
+const GOLDEN: &str = "08eaa1ab3581e18a64d8bb1b1db16ff07f3cc08bd7cdd8db9eb6c54dc8c46a00";
 
 fn rooms() -> Vec<kapu_core::build::RoomSource> {
     let room = |id: &str, content: &str| kapu_core::build::RoomSource {
@@ -133,7 +133,7 @@ fn rooms() -> Vec<kapu_core::build::RoomSource> {
 
 #[test]
 fn a_contextual_model_stores_whole_vectors_and_builds_the_same_bytes_twice() {
-    // D171: format 1.3, `#VEC` with 8 bits, a room with sub-doors keeps its own
+    // D171: format 1.3, `#VEC` with 4 bits, a room with sub-doors keeps its own
     // text, the window log makes the second build compute nothing
     let Some(mut model) = model() else { return };
     let cache = std::env::temp_dir().join(format!("kapu-bert-{}", std::process::id()));
@@ -162,7 +162,7 @@ fn a_contextual_model_stores_whole_vectors_and_builds_the_same_bytes_twice() {
     assert!(first.bytes.starts_with(b"%KAPU 1.3\n"));
     let s = kapu_core::Sections::parse(&first.bytes).unwrap();
     let vec = s.vec.unwrap();
-    assert!(vec.starts_with("dim=384 bits=8\n"), "{}", &vec[..20]);
+    assert!(vec.starts_with("dim=384 bits=4\n"), "{}", &vec[..20]);
     let report =
         kapu_core::validate_with(&first.bytes, kapu_core::Level::Full, Some(&model)).unwrap();
     assert!(

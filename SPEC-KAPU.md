@@ -1,4 +1,4 @@
-# KAPU Specification  v1.2.2  (2026-10-27; v1.0: 2026-10-20)
+# KAPU Specification  v1.3  (2026-10-28; v1.0: 2026-10-20)
 
 A navigable, single-file knowledge container for AI agents.
 Author and originator: Szabolcs Pintér. Specification licence: CC BY 4.0. Code licence: MIT.
@@ -59,7 +59,7 @@ The further metrics (recall@k, MRR, modularity, map/file token ratio) are measur
 1. Graphical editor: the window (2.1/7) reads, searches and validates; writing rooms is the job of the CLI and `kapu_write` (v1.2).
 2. PDF/DOCX converter (Python, Docling). KAPU imports a Markdown folder and a skill folder (chapter 7).
 3. Digital signature (D14).
-4. Binary data or images in the file. The vectors for the search are in the `#VEC` section as text, in base64 (FR-10/6, D143, v1.2).
+4. Binary data or images in the file. The vectors for the search are in the `#VEC` section as text, in base64 (FR-10/6-7, D143, D171; v1.2, v1.3).
 5. Executable content, macros, any kind of execution.
 6. Room size limit, automatic room splitting.
 7. References between files.
@@ -110,7 +110,7 @@ The body is the single source of truth of the file. Every other section derives 
 #GRAPH    ... #END   edges
 #INDEX    ... #END   BM25 index
 #DOCS     ... #END   positions, fingerprints, lengths
-#VEC      ... #END   sign bits of the window vectors (only in a file built with a vector model, FR-10/6)
+#VEC      ... #END   window vectors: sign bits or 4- or 8-bit integers (only in a file built with a vector model, FR-10/6-7)
 #BODY                 body to the end of the file
 ```
 
@@ -148,7 +148,7 @@ The body is the single source of truth of the file. Every other section derives 
 | `bodyhash=b3:<64 hex>` | BLAKE3 fingerprint of the whole body |
 | `guide=std-1` | which standard guide the reader supplies (FR-17) |
 
-- Rules: the reader ignores an unknown field. The writer always writes `%KAPU 1.2`; the reader also accepts `%KAPU 1.0` (index entry with the door identifier, FR-09) and `%KAPU 1.1` (without `#VEC`) files, and `kapu build` rewrites them as 1.2 (D140, D143). Any other version: E001.
+- Rules: the reader ignores an unknown field. The writer writes `%KAPU 1.3` for a file whose `#VEC` holds 4- or 8-bit integers (FR-10/7), otherwise `%KAPU 1.2`, so a 1.2 reader still reads every file that needs nothing of 1.3 (v1.3, D171); the reader also accepts `%KAPU 1.0` (index entry with the door identifier, FR-09) and `%KAPU 1.1` (without `#VEC`) files, and `kapu build` rewrites them (D140, D143). Any other version: E001.
 - Acceptance: Given a built file, When the 512 bytes of the header are read, Then every section is reachable with a single further seek.
 
 ### FR-04 Body and rooms
@@ -249,7 +249,8 @@ kind:
   3. For a file without `#VEC` (1.0, 1.1) the reader computes with the same model, and caches the vectors in the user cache folder of the operating system, key: `embhash` + the `bodyhash` of the body; one cache entry is all the door vectors of the file (v1.0.1, D97). For a file with `#VEC` there is no cache: the first search also works from the file, on any machine.
   4. If the fingerprint of the bundled model of the reader differs from the `embhash` field of the header, the semantic search is skipped, and the reply signals the state `vector: unavailable`.
   5. For the search there are several vectors per door: the text of the door is cut into windows no longer than the character limit of the model (512 tokens), each window starting 7/8 of the limit after the previous one; the score of the door is the cosine of the best window. The graph and the groups are built on the vector of the first window (the vector of rule 2). In the cache (rule 3) there is one vector per window, with the BLAKE3 of the text per door; the reader takes over the windows of a door with unchanged text from the latest entry. The command line computes them after writing (D141).
-  6. **`#VEC` (v1.2, D143):** its first line is `dim=<n> bits=1`, then one line per door in the order of `#DOCS`. A line holds the windows of the door (rule 5) in order, each window as `ceil(n/8)` bytes of sign bits in base64 without padding (RFC 4648 base alphabet, 43 characters for `n = 256`): the bit of the `k`-th component is 1 if the component is greater than 0, otherwise 0, at the `7 − k mod 8`-th bit of the `k / 8`-th byte (the first component is the top bit of the first byte). A window with an all-zero vector (a text without a known token) is omitted; the line of a door without a window is empty, and its score is 0. The reader reads a window component by component as ±1 and compares it with the floating-point vector of the query; the cosine is `q·s / (|q| · √n)`, with the sum in component order, in f64. This is the candidate selection: of the doors that pass the filter (`kind`, `max_price`), the reader computes the windows of the best 200 (`RESCORE`; on a tie the identifier decides) with the model in floating point (according to rule 5), and the cosine of these gives the vector ranking (rescoring). It keeps the computed windows in the memory of the process (for at most 20 000 doors), key: the model and the fingerprint of the door in `#DOCS`. For a file of at most 200 doors the ranking is thus exactly that of the floating-point vectors. Only canonical base64 is valid (the unused bits are zero). `n` can be between 1 and 4096 (D151: the scoring table is a sum of `n / 8 · 256`, so its size is not chosen by the file). A different first line, a different number of lines, or a line that does not consist of whole windows: E005. Rationale: the floating-point and the int8 vector would be 13-25% of the file, the sign bits 2-3%; the sign bits alone make the results worse (on the English skill corpus the hybrid room-level MRR 0.85 → 0.78, for a Hungarian question the hybrid r@10 0.55 → 0.45), with rescoring the quality is at the floating-point level (measurement of D143).
+  6. **`#VEC` (v1.2, D143):** its first line is `dim=<n> bits=1` (for `bits=4` and `bits=8` see rule 7), then one line per door in the order of `#DOCS`. A line holds the windows of the door (rule 5) in order, each window as `ceil(n/8)` bytes of sign bits in base64 without padding (RFC 4648 base alphabet, 43 characters for `n = 256`): the bit of the `k`-th component is 1 if the component is greater than 0, otherwise 0, at the `7 − k mod 8`-th bit of the `k / 8`-th byte (the first component is the top bit of the first byte). A window with an all-zero vector (a text without a known token) is omitted; the line of a door without a window is empty, and its score is 0. The reader reads a window component by component as ±1 and compares it with the floating-point vector of the query; the cosine is `q·s / (|q| · √n)`, with the sum in component order, in f64. This is the candidate selection: of the doors that pass the filter (`kind`, `max_price`), the reader computes the windows of the best 200 (`RESCORE`; on a tie the identifier decides) with the model in floating point (according to rule 5), and the cosine of these gives the vector ranking (rescoring). It keeps the computed windows in the memory of the process (for at most 20 000 doors), key: the model and the fingerprint of the door in `#DOCS`. For a file of at most 200 doors the ranking is thus exactly that of the floating-point vectors. Only canonical base64 is valid (the unused bits are zero). `n` can be between 1 and 4096 (D151: the scoring table is a sum of `n / 8 · 256`, so its size is not chosen by the file). A different first line, a different number of lines, or a line that does not consist of whole windows: E005. Rationale: the floating-point and the int8 vector would be 13-25% of the file, the sign bits 2-3%; the sign bits alone make the results worse (on the English skill corpus the hybrid room-level MRR 0.85 → 0.78, for a Hungarian question the hybrid r@10 0.55 → 0.45), with rescoring the quality is at the floating-point level (measurement of D143).
+  7. **Contextual model (v1.3, D171):** a model folder whose `config.json` says `"kind": "bert"` holds a BERT sentence encoder in the int8 form of ONNX Runtime's dynamic quantization (`tools/onnx_to_kapu.py` makes it from the ONNX file; the measured one is `multilingual-e5-small-q8`, from `intfloat/multilingual-e5-small`). The vector of a text: the text with the model's prefix (`query: ` for a search, `passage: ` for a window), tokenized with the special tokens and at most 512 tokens (a longer one keeps its first 511 and its last), through the layers as the ONNX graph has them: every matrix product is `DynamicQuantizeLinear` of its input (one scale per tensor, round half to even) times the i8 weights or the other quantized tensor, in exact integers; layer norm, softmax and the erf GELU in f32, `exp` as Cephes `expf` and `erf` by Abramowitz-Stegun 7.1.26, the softmax sum in 8 lanes; the mean of the token vectors in f64, L2-normalised. So a vector has the same bits on every platform (NFR-02) although the integer products are vectorised. The windows (rule 5) are cut by the model's tokens: at most 512 less the special tokens, the prefix and 4, each starting 7/8 of that after the previous one. A room with sub-doors has windows of its own text only (title, description and the text before its first sub-door); its sub-doors have the rest, so no text is computed twice, and a door scores its own windows. The windows are stored whole: the first line of `#VEC` is `dim=<n> bits=4` (`bits=8` if the `config.json` says `"vec_bits": 8`); a window is its components divided by the largest absolute one, times 127 (with 4 bits 7), rounded half to even, in two's complement, one byte a component (with 4 bits two a byte, the first in the high half; the low half of a last odd one is 0), in base64 as in rule 6 (512 characters for `n = 384` with 8 bits, 256 with 4). The reader scores every window against the query rounded to 16 bits (`32767 /` its largest component): the dot product in integers, divided by both lengths in f64; there is no rescoring and the reader computes no window. The build computes on every core, the longest windows first, and keeps every computed window in an append-only log in the user cache folder (`<embhash>/windows.bin`; key: the BLAKE3 of the window text, each record with an 8-byte check), so an interrupted build goes on where it stopped and a rebuild computes only the new windows. A window or text the tokenizer refuses is left out, with warning W009, and the build goes on. The `sim` edges (FR-11/3) use the `sim_threshold` of the `config.json` instead of 0.6. Rationale: the static model's vectors were the limit of the hybrid search (plan v3, D168-D170); the reader cannot compute a transformer's windows on the fly (MDN would take half an hour), so they are stored. Measurement (`kapu bench`, room-level, test part of 7 question sets, against the static model): hybrid r@10 +0.062 [+0.035, +0.090], MRR +0.028 [+0.006, +0.052], with passage BM25 and room fusion +0.075 [+0.045, +0.106] / +0.038; 4 bits measured as good as 8. Price: the file grows by 9-16% (with 8 bits 20-34%), a query costs about 12 ms (AVX-512) to 35 ms (SSE2) for its vector, the build of MDN 50 minutes on 12 threads; Hungarian questions on English skills lose MRR (0.49 → 0.44). Sign bits alone lose 0.20 with this model (its vectors share one direction), so they are not offered for it (D171).
 - Acceptance: Given a file built with a different model, When search, Then BM25 hits arrive and the reply signals the absence of the vector search.
 
 ### FR-11 Graph
@@ -399,7 +400,7 @@ S <id> | <title> | <token>t
 | E002 | the header is not 512 bytes or does not end in LF |
 | E003 | CR in the file |
 | E004 | forbidden character |
-| E005 | a section overruns, overlaps, or is missing; incorrect `#VEC` (FR-10/6), `#VEC` with `emb=none`, incorrect kind in the `#MAP` (v1.2) |
+| E005 | a section overruns, overlaps, or is missing; incorrect `#VEC` (FR-10/6-7, also a set unused half byte with `bits=4`), `#VEC` with `emb=none`, incorrect kind in the `#MAP` (v1.2, v1.3) |
 | E006 | `bodyhash` mismatch |
 | E007 | door fingerprint mismatch |
 | E008 | duplicate or malformed identifier |
@@ -423,7 +424,7 @@ S <id> | <title> | <token>t
 | Posting | `term`, `df`, `(id, tf)[]` | build |
 | Header | FR-03 fields | build |
 | Room `kind` (v1.2) | kind (FR-06/5), the sixth field of the `R` line of the `#MAP` | body, build |
-| VecWindow (v1.2) | `dim` sign bits per window, one line of the `#VEC` per door | build |
+| VecWindow (v1.2, v1.3) | `dim` sign bits or 4- or 8-bit integers per window, one line of the `#VEC` per door | build |
 | VectorCache (outside the file, only for a file without `#VEC`) | `embhash`, `content_hash`, `vector` (256 × f32) | reader |
 
 Retention: the file durably holds only the body, everything else can be recomputed. The vector cache can be deleted at any time.
@@ -700,3 +701,11 @@ The file format does not change (`%KAPU 1.2`). The first three phases of the v2 
 2. **FR-15 `kapu_ask` (D159, J12):** the beginning of the first 5 rooms in a shared budget instead of the best hit. The expected room in the reply: Rust book 15% → 42%, Kubernetes 17% → 39%, MDN 12% → 22%, with fewer tokens.
 3. **Measured, but not changed:** separate average length for room and section (J2a), leakage of the score of the room into the section (J2b), BM25 candidates in the vector rescoring (J4a), weighted, query-dependent and score-based fusion (J4b-J4d), exclusion of short sections (J10), graph step from the hits (J9), the variants of stemming and title weight. They remain as switches (`RankOptions`), off by default.
 4. **D157:** the memory of the vector rescoring is also bounded in the number of windows (at most 250 000 windows), the ranking does not change.
+
+## 23. Changes v1.2.2 → v1.3 (2026-10-28)
+
+Plan v3, V2 (D171). Format change: a file whose `#VEC` holds 4- or 8-bit integers is `%KAPU 1.3`; every other file stays `%KAPU 1.2`, so a 1.2 reader reads it. The bundled model does not change in this version.
+
+1. **FR-10/7 (D171):** contextual vector model (`"kind": "bert"`): a BERT encoder in the int8 form of ONNX Runtime's dynamic quantization, in plain Rust, with the same bits on every platform; windows by the model's tokens; a room with sub-doors keeps its own text; whole windows of 4 or 8 bits in `#VEC`, scored without rescoring; a parallel build with an append-only window log; W009.
+2. **FR-03:** the writer writes 1.3 only for a file that needs it.
+3. **FR-11/3:** the minimum cosine of a `sim` edge comes from the model (`sim_threshold`).

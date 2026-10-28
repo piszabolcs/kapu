@@ -1,4 +1,4 @@
-# KAPU Specification  v1.2.2  (2026-10-27; v1.0: 2026-10-20)
+# KAPU Specification  v1.3  (2026-10-28; v1.0: 2026-10-20)
 
 Navigálható, egyfájlos tudáskonténer AI ügynököknek.
 Szerző és ötletgazda: Pintér Szabolcs. Specifikáció licence: CC BY 4.0. Kód licence: MIT.
@@ -59,7 +59,7 @@ A további mérőszámokat (recall@k, MRR, modularitás, térkép/fájl tokenar�
 1. Grafikus szerkesztő: az ablak (2.1/7) olvas, keres és ellenőriz, a szobák írása a CLI és a `kapu_write` dolga (v1.2).
 2. PDF/DOCX konverter (Python, Docling). A KAPU Markdown mappát és skill-mappát importál (7. fejezet).
 3. Digitális aláírás (D14).
-4. Bináris adat vagy kép a fájlban. A keresés vektorai szövegként, base64-ben a `#VEC` szakaszban vannak (FR-10/6, D143, v1.2).
+4. Bináris adat vagy kép a fájlban. A keresés vektorai szövegként, base64-ben a `#VEC` szakaszban vannak (FR-10/6-7, D143, D171; v1.2, v1.3).
 5. Futtatható tartalom, makró, bármilyen végrehajtás.
 6. Szobaméret-korlát, automatikus szobafeldarabolás.
 7. Fájlok közötti hivatkozás.
@@ -110,7 +110,7 @@ A törzs a fájl egyetlen igazságforrása. Minden más szakasz a törzsből sz�
 #GRAPH    ... #END   élek
 #INDEX    ... #END   BM25 index
 #DOCS     ... #END   pozíciók, ujjlenyomatok, hosszak
-#VEC      ... #END   ablakvektorok előjelbitjei (csak vektormodellel épített fájlban, FR-10/6)
+#VEC      ... #END   ablakvektorok: előjelbitek vagy 4, 8 bites egészek (csak vektormodellel épített fájlban, FR-10/6-7)
 #BODY                 törzs a fájl végéig
 ```
 
@@ -148,7 +148,7 @@ A törzs a fájl egyetlen igazságforrása. Minden más szakasz a törzsből sz�
 | `bodyhash=b3:<64 hex>` | a teljes törzs BLAKE3 ujjlenyomata |
 | `guide=std-1` | melyik szabványos útmutatót adja az olvasó (FR-17) |
 
-- Rules: ismeretlen mezőt az olvasó figyelmen kívül hagy. Az író mindig `%KAPU 1.2`-t ír; az olvasó a `%KAPU 1.0` (indexbejegyzés ajtóazonosítóval, FR-09) és a `%KAPU 1.1` (`#VEC` nélkül) fájlt is elfogadja, és a `kapu build` 1.2-ként írja újra (D140, D143). Más verzió: E001.
+- Rules: ismeretlen mezőt az olvasó figyelmen kívül hagy. Az író `%KAPU 1.3`-at ír, ha a `#VEC` 4 vagy 8 bites egészeket tart (FR-10/7), különben `%KAPU 1.2`-t, így egy 1.2-es olvasó minden olyan fájlt olvas, amely nem használ 1.3-as elemet (v1.3, D171); az olvasó a `%KAPU 1.0` (indexbejegyzés ajtóazonosítóval, FR-09) és a `%KAPU 1.1` (`#VEC` nélkül) fájlt is elfogadja, és a `kapu build` újraírja (D140, D143). Más verzió: E001.
 - Acceptance: Given egy buildelt fájl, When a fejléc 512 bájtja beolvasásra kerül, Then minden szakasz egyetlen további seekkel elérhető.
 
 ### FR-04 Törzs és szobák
@@ -249,7 +249,8 @@ kind:
   3. `#VEC` nélküli fájlnál (1.0, 1.1) az olvasó ugyanezzel a modellel számol, és a vektorokat gyorsítótárazza az operációs rendszer felhasználói gyorsítótár-mappájában, kulcs: `embhash` + a törzs `bodyhash`-e; egy gyorsítótár-bejegyzés a fájl összes ajtóvektora (v1.0.1, D97). `#VEC`-es fájlnál nincs gyorsítótár: az első keresés is a fájlból dolgozik, bármelyik gépen.
   4. Ha az olvasó csomagolt modelljének ujjlenyomata eltér a fejléc `embhash` mezőjétől, a jelentés szerinti keresés kimarad, és a válasz `vector: unavailable` állapotot jelez.
   5. A kereséshez ajtónként több vektor van: az ajtó szövegét a modell karakterkorlátjánál (512 token) nem hosszabb ablakokra vágjuk, egy ablak a korlát 7/8-ával az előző után kezdődik; az ajtó pontja a legjobb ablak koszinusza. A gráf és a csoportok az első ablak vektorára (a 2. szabály vektorára) épülnek. A gyorsítótárban (3. szabály) ablakonként egy vektor van, ajtónként a szöveg BLAKE3-ával; a változatlan szövegű ajtó ablakait az olvasó a legutóbbi bejegyzésből veszi át. A parancssor írás után kiszámolja őket (D141).
-  6. **`#VEC` (v1.2, D143):** első sora `dim=<n> bits=1`, utána ajtónként egy sor a `#DOCS` sorrendjében. Egy sor az ajtó ablakai (5. szabály) sorban, ablakonként `ceil(n/8)` bájt előjelbit kitöltés nélküli base64-ben (RFC 4648 alapábécé, `n = 256`-nál 43 karakter): a `k`-adik komponens bitje 1, ha a komponens nagyobb 0-nál, különben 0, a `k / 8`-adik bájt `7 − k mod 8`-adik bitjén (az első komponens az első bájt legfelső bitje). A csupa nulla vektorú ablak (ismert token nélküli szöveg) kimarad; ablak nélküli ajtó sora üres, pontja 0. Az olvasó egy ablakot komponensenként ±1-ként olvas, és a lekérdezés lebegőpontos vektorával veti össze; a koszinusz `q·s / (|q| · √n)`, az összeg komponensek sorrendjében, f64-ben. Ez a jelöltválasztás: a szűrőn (`kind`, `max_price`) átjutó ajtók közül a legjobb 200 (`RESCORE`; holtversenyben az azonosító dönt) ablakait az olvasó a modellel lebegőpontosan kiszámolja (az 5. szabály szerint), és ezek koszinusza adja a vektoros rangsort (újrapontozás). A kiszámolt ablakokat a folyamat memóriájában tartja (legfeljebb 20 000 ajtóét), kulcs: a modell és az ajtó `#DOCS`-beli ujjlenyomata. Legfeljebb 200 ajtós fájlon a rangsor így pontosan a lebegőpontos vektoroké. Csak a kanonikus base64 érvényes (a kihasználatlan bitek nullák). Az `n` 1 és 4096 között lehet (D151: a pontozótábla `n / 8 · 256` összeg, a méretét ne a fájl válassza). Más első sor, más sorszám vagy nem egész ablakokból álló sor: E005. Indok: a lebegőpontos és az int8 vektor a fájl 13-25%-a lenne, az előjelbitek 2-3%-a; az előjelbitek egymagukban rontanak (az angol skill-korpuszon a hibrid szobaszintű MRR 0,85 → 0,78, magyar kérdésnél a hibrid r@10 0,55 → 0,45), az újrapontozással a minőség a lebegőpontos szinten van (D143 mérése).
+  6. **`#VEC` (v1.2, D143):** első sora `dim=<n> bits=1` (a `bits=4` és `bits=8` a 7. szabályban), utána ajtónként egy sor a `#DOCS` sorrendjében. Egy sor az ajtó ablakai (5. szabály) sorban, ablakonként `ceil(n/8)` bájt előjelbit kitöltés nélküli base64-ben (RFC 4648 alapábécé, `n = 256`-nál 43 karakter): a `k`-adik komponens bitje 1, ha a komponens nagyobb 0-nál, különben 0, a `k / 8`-adik bájt `7 − k mod 8`-adik bitjén (az első komponens az első bájt legfelső bitje). A csupa nulla vektorú ablak (ismert token nélküli szöveg) kimarad; ablak nélküli ajtó sora üres, pontja 0. Az olvasó egy ablakot komponensenként ±1-ként olvas, és a lekérdezés lebegőpontos vektorával veti össze; a koszinusz `q·s / (|q| · √n)`, az összeg komponensek sorrendjében, f64-ben. Ez a jelöltválasztás: a szűrőn (`kind`, `max_price`) átjutó ajtók közül a legjobb 200 (`RESCORE`; holtversenyben az azonosító dönt) ablakait az olvasó a modellel lebegőpontosan kiszámolja (az 5. szabály szerint), és ezek koszinusza adja a vektoros rangsort (újrapontozás). A kiszámolt ablakokat a folyamat memóriájában tartja (legfeljebb 20 000 ajtóét), kulcs: a modell és az ajtó `#DOCS`-beli ujjlenyomata. Legfeljebb 200 ajtós fájlon a rangsor így pontosan a lebegőpontos vektoroké. Csak a kanonikus base64 érvényes (a kihasználatlan bitek nullák). Az `n` 1 és 4096 között lehet (D151: a pontozótábla `n / 8 · 256` összeg, a méretét ne a fájl válassza). Más első sor, más sorszám vagy nem egész ablakokból álló sor: E005. Indok: a lebegőpontos és az int8 vektor a fájl 13-25%-a lenne, az előjelbitek 2-3%-a; az előjelbitek egymagukban rontanak (az angol skill-korpuszon a hibrid szobaszintű MRR 0,85 → 0,78, magyar kérdésnél a hibrid r@10 0,55 → 0,45), az újrapontozással a minőség a lebegőpontos szinten van (D143 mérése).
+  7. **Kontextuális modell (v1.3, D171):** az a modellmappa, amelynek `config.json`-ja `"kind": "bert"`, egy BERT mondatkódolót tart az ONNX Runtime dinamikus kvantálásának int8-as alakjában (az ONNX-fájlból a `tools/onnx_to_kapu.py` készíti; a mért modell a `multilingual-e5-small-q8`, az `intfloat/multilingual-e5-small`-ból). Egy szöveg vektora: a szöveg a modell előtagjával (kereséshez `query: `, ablakhoz `passage: `), speciális tokenekkel tokenizálva, legfeljebb 512 token (a hosszabbnak az első 511 és az utolsó tokenje marad), az ONNX-gráf rétegein át: minden mátrixszorzat a bemenet `DynamicQuantizeLinear`-je (tenzoronként egy skála, kerekítés párosra) szorozva az i8 súlyokkal vagy a másik kvantált tenzorral, pontos egészekben; a rétegnormalizálás, a softmax és az erf-GELU f32-ben, az `exp` a Cephes `expf`, az `erf` az Abramowitz-Stegun 7.1.26 szerint, a softmax összege 8 sávban; a tokenvektorok átlaga f64-ben, L2-normalizálva. Így egy vektor minden platformon ugyanazokból a bitekből áll (NFR-02), bár az egész szorzatok vektorizáltak. Az ablakokat (5. szabály) a modell tokenjei vágják: legfeljebb 512 mínusz a speciális tokenek, az előtag és 4, mindegyik az előző után ennek 7/8-ával kezdődik. Alajtós szobának csak a saját szövegéből van ablaka (cím, leírás és az első alajtó előtti szöveg); a többi az alajtóié, így egy szöveg sem számolódik kétszer, és egy ajtó a saját ablakaival pontoz. Az ablakok egészben tárolódnak: a `#VEC` első sora `dim=<n> bits=4` (`bits=8`, ha a `config.json` `"vec_bits": 8`); egy ablak a komponensei osztva a legnagyobb abszolút értékűvel, szorozva 127-tel (4 bitnél 7-tel), párosra kerekítve, kettes komplemensben, komponensenként egy bájt (4 bitnél kettő bájtonként, az első a felső felén; egy utolsó páratlan alsó fele 0), base64-ben, mint a 6. szabályban (`n = 384`-nél 8 bittel 512, 4 bittel 256 karakter). Az olvasó minden ablakot a 16 bitre kerekített lekérdezéssel (`32767 /` a legnagyobb komponense) pontoz: a skalárszorzat egészekben, osztva a két hosszal f64-ben; nincs újrapontozás, és az olvasó nem számol ablakot. A build minden magon számol, a leghosszabb ablakokkal kezdve, és minden kiszámolt ablakot egy csak bővülő naplóban tart a felhasználói gyorsítótár-mappában (`<embhash>/windows.bin`; kulcs: az ablakszöveg BLAKE3-ja, rekordonként 8 bájtos ellenőrzéssel), így a megszakított build ott folytatja, ahol abbamaradt, és az újraépítés csak az új ablakokat számolja. A tokenizáló által visszautasított ablak vagy szöveg kimarad, W009 figyelmeztetéssel, és a build megy tovább. A `sim` élek (FR-11/3) a `config.json` `sim_threshold` értékét használják 0,6 helyett. Indok: a hibrid keresés korlátja a statikus modell vektora volt (terv v3, D168-D170); egy transzformer ablakait az olvasó nem tudja menet közben kiszámolni (az MDN-en fél óra lenne), ezért tárolódnak. Mérés (`kapu bench`, szobaszinten, 7 kérdéshalmaz teszt része, a statikus modellhez képest): hibrid r@10 +0,062 [+0,035, +0,090], MRR +0,028 [+0,006, +0,052], passzus-BM25-tel és szobafúzióval +0,075 [+0,045, +0,106] / +0,038; a 4 bit ugyanannyit ad, mint a 8. Ára: a fájl 9-16%-kal nő (8 bittel 20-34%), egy kérdés vektora kb. 12 ms (AVX-512) - 35 ms (SSE2), az MDN buildje 12 szálon 50 perc; a magyar kérdés az angol skilleken MRR-t veszít (0,49 → 0,44). Az előjelbit ezzel a modellel 0,20-at veszít (a vektorai közös irányban állnak), ezért hozzá nem kínált (D171).
 - Acceptance: Given egy más modellel buildelt fájl, When keresés, Then BM25 találatok érkeznek és a válasz jelzi a vektoros keresés hiányát.
 
 ### FR-11 Gráf
@@ -399,7 +400,7 @@ S <id> | <cím> | <token>t
 | E002 | a fejléc nem 512 bájt vagy nem LF-re végződik |
 | E003 | CR a fájlban |
 | E004 | tiltott karakter |
-| E005 | szakasz kilóg, átfed, vagy hiányzik; hibás `#VEC` (FR-10/6), `#VEC` `emb=none` mellett, hibás fajta a `#MAP`-ben (v1.2) |
+| E005 | szakasz kilóg, átfed, vagy hiányzik; hibás `#VEC` (FR-10/6-7, `bits=4`-nél a beállított kihasználatlan félbájt is), `#VEC` `emb=none` mellett, hibás fajta a `#MAP`-ben (v1.2, v1.3) |
 | E006 | `bodyhash` eltérés |
 | E007 | ajtó ujjlenyomat-eltérés |
 | E008 | ismétlődő vagy szabálytalan azonosító |
@@ -423,7 +424,7 @@ S <id> | <cím> | <token>t
 | Posting | `term`, `df`, `(id, tf)[]` | build |
 | Header | FR-03 mezők | build |
 | Room `kind` (v1.2) | fajta (FR-06/5), a `#MAP` `R` sorának hatodik mezője | törzs, build |
-| VecWindow (v1.2) | `dim` előjelbit ablakonként, ajtónként a `#VEC` egy sora | build |
+| VecWindow (v1.2, v1.3) | `dim` előjelbit vagy 4, 8 bites egész ablakonként, ajtónként a `#VEC` egy sora | build |
 | VectorCache (fájlon kívül, csak `#VEC` nélküli fájlhoz) | `embhash`, `content_hash`, `vector` (256 × f32) | olvasó |
 
 Megőrzés: a fájl csak a törzset tartalmazza tartósan, minden más újraszámolható. A vektor-gyorsítótár bármikor törölhető.
@@ -700,3 +701,11 @@ A fájlformátum nem változik (`%KAPU 1.2`). A v2-es javítási és mérési te
 2. **FR-15 `kapu_ask` (D159, J12):** az első 5 szoba eleje megosztott keretben a legjobb találat helyett. A várt szoba a válaszban: Rust könyv 15% → 42%, Kubernetes 17% → 39%, MDN 12% → 22%, kevesebb tokenből.
 3. **Mért, de nem változik:** külön átlaghossz szobára és szakaszra (J2a), a szoba pontszámának átszivárgása a szakaszba (J2b), BM25-jelöltek a vektoros újrapontozásban (J4a), súlyozott, kérdésfüggő és pontszámalapú fúzió (J4b-J4d), rövid szakaszok kizárása (J10), gráflépés a találatokból (J9), a szótövezés és a címsúly változatai. Kapcsolóként megmaradnak (`RankOptions`), alapból kikapcsolva.
 4. **D157:** a vektoros újrapontozás memóriája ablakszámra is korlátos (legfeljebb 250 000 ablak), a rangsor nem változik.
+
+## 23. Változások v1.2.2 → v1.3 (2026-10-28)
+
+Terv v3, V2 (D171). Formátumváltozás: az a fájl, amelynek `#VEC`-je 4 vagy 8 bites egészeket tart, `%KAPU 1.3`; minden más fájl `%KAPU 1.2` marad, így egy 1.2-es olvasó olvassa. A csomagolt modell ebben a változatban nem változik.
+
+1. **FR-10/7 (D171):** kontextuális vektormodell (`"kind": "bert"`): BERT-kódoló az ONNX Runtime dinamikus kvantálásának int8-as alakjában, tiszta Rustban, minden platformon azonos bitekkel; ablakok a modell tokenjei szerint; alajtós szoba a saját szövegével; egész, 4 vagy 8 bites ablakok a `#VEC`-ben, újrapontozás nélkül; párhuzamos build csak bővülő ablaknaplóval; W009.
+2. **FR-03:** az író csak az azt igénylő fájlba ír 1.3-at.
+3. **FR-11/3:** a `sim` él legkisebb koszinusza a modelltől jön (`sim_threshold`).
