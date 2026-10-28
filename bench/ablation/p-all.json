@@ -1,0 +1,9 @@
+[
+  {"name": "base", "collapse": 1},
+  {"name": "passage-prefix-3", "collapse": 1, "passage": true, "passage_prefix": 3.0},
+  {"name": "rooms-vp", "collapse": 1, "fuse_rooms": true, "vec_prefix": true},
+  {"name": "passage-rooms-vp", "collapse": 1, "passage": true, "fuse_rooms": true, "vec_prefix": true},
+  {"name": "passage-prefix-1-rooms-vp", "collapse": 1, "passage": true, "passage_prefix": 1.0, "fuse_rooms": true, "vec_prefix": true},
+  {"name": "passage-prefix-3-rooms-vp", "collapse": 1, "passage": true, "passage_prefix": 3.0, "fuse_rooms": true, "vec_prefix": true},
+  {"name": "passage-prefix-3-rooms-vp-beta-0.1", "collapse": 1, "passage": true, "passage_prefix": 3.0, "fuse_rooms": true, "vec_prefix": true, "room_beta": 0.1}
+]

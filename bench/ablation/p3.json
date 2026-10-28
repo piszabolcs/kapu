@@ -1,0 +1,9 @@
+[
+  {"name": "base", "collapse": 1},
+  {"name": "passage-prefix-3", "collapse": 1, "passage": true, "passage_prefix": 3.0},
+  {"name": "leaf", "collapse": 1, "passage": true, "vec_leaf": true},
+  {"name": "leaf-prefix-1", "collapse": 1, "passage": true, "passage_prefix": 1.0, "vec_leaf": true},
+  {"name": "leaf-prefix-3", "collapse": 1, "passage": true, "passage_prefix": 3.0, "vec_leaf": true},
+  {"name": "leaf-prefix-3-vp", "collapse": 1, "passage": true, "passage_prefix": 3.0, "vec_leaf": true, "vec_prefix": true},
+  {"name": "leaf-prefix-1-vp", "collapse": 1, "passage": true, "passage_prefix": 1.0, "vec_leaf": true, "vec_prefix": true}
+]

@@ -392,6 +392,7 @@ fn rank_options_come_from_json_and_reject_typos() {
     let r = RankOptions::from_json(&serde_json::json!({
         "stemming": "en", "collapse": 1, "room_beta": 0.1, "fusion": "convex",
         "w_bm25": 2.0, "split_avgdl": true, "parent": 0.25, "rescore_bm25": 50,
+        "passage": true, "passage_prefix": 1.0, "passage_chars": 1000, "vec_leaf": true, "vec_prefix": true, "fuse_rooms": true,
     }))
     .unwrap();
     assert_eq!(r.stemming, Stemming::English);
@@ -405,6 +406,7 @@ fn rank_options_come_from_json_and_reject_typos() {
         serde_json::json!({"stemming": "fr"}),
         serde_json::json!({"rrf_k": 0}),
         serde_json::json!({"w_vec": -1}),
+        serde_json::json!({"passage_chars": 10}),
         serde_json::json!([1]),
     ] {
         assert!(RankOptions::from_json(&bad).is_err(), "{bad}");
@@ -453,6 +455,48 @@ fn collapse_keeps_one_door_per_room_and_names_the_others() {
         "{:?}",
         collapsed.hits
     );
+}
+
+#[test]
+fn passages_make_the_matching_section_the_hit() {
+    // plan v3 P1: the room's text holds its sections again; over passages the
+    // section that matches is the hit, not its room (A57). P2: the room title
+    // in every passage lets a section match a word only its room's title has.
+    let mk = |id: &str, text: &str| RoomSource {
+        id: id.into(),
+        content: text.into(),
+    };
+    let rooms = vec![
+        mk(
+            "guide",
+            "# Guide\nAbout the tool.\n\n## Install\ninstall the binary with cargo\n\n\
+             ## Connect an agent\nconnect the agent with the mcp command\n\n## License\nMIT licence text\n",
+        ),
+        mk("other", "# Other\nan agent elsewhere\n"),
+        mk("third", "# Third\nsomething unrelated entirely\n"),
+    ];
+    let built = kapu_core::build::build(&rooms).unwrap().bytes;
+    let with = |passage: bool, prefix: f64| SearchOptions {
+        rank: kapu_core::search::RankOptions {
+            passage,
+            passage_prefix: prefix,
+            ..Default::default()
+        },
+        ..SearchOptions::default()
+    };
+    let r = search(&built, "connect agent", &with(true, 0.0), None).unwrap();
+    assert_eq!(r.hits[0].id, "guide/connect-an-agent", "{:?}", r.hits);
+    assert!(r.hits.iter().all(|h| h.id != "guide"), "{:?}", r.hits);
+
+    let s = kapu_core::Sections::parse(&built).unwrap();
+    let ix = kapu_core::passage::index_for(&s, 2000).unwrap();
+    assert_eq!(ix.passages(), 6); // the introduction and three sections of `guide`, two rooms
+
+    let plain = search(&built, "guide install", &with(true, 0.0), None).unwrap();
+    let prefixed = search(&built, "guide install", &with(true, 1.0), None).unwrap();
+    assert_eq!(prefixed.hits[0].id, "guide/install", "{:?}", prefixed.hits);
+    // without the head only the introduction has `guide`
+    assert_eq!(plain.hits[0].id, "guide", "{:?}", plain.hits);
 }
 
 #[test]
@@ -514,3 +558,4 @@ fn hex32(bytes: &[u8; 32]) -> String {
         s
     })
 }
+

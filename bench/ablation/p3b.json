@@ -1,0 +1,8 @@
+[
+  {"name": "base", "collapse": 1},
+  {"name": "rooms", "collapse": 1, "fuse_rooms": true},
+  {"name": "passage-rooms", "collapse": 1, "passage": true, "fuse_rooms": true},
+  {"name": "passage-prefix-1-rooms", "collapse": 1, "passage": true, "passage_prefix": 1.0, "fuse_rooms": true},
+  {"name": "passage-prefix-3-rooms", "collapse": 1, "passage": true, "passage_prefix": 3.0, "fuse_rooms": true},
+  {"name": "passage-prefix-3-rooms-vp", "collapse": 1, "passage": true, "passage_prefix": 3.0, "fuse_rooms": true, "vec_prefix": true}
+]

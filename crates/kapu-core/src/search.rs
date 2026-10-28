@@ -110,6 +110,7 @@ pub enum Fusion {
 /// 0.2.1, bit for bit (rule 5). `kapu bench --config` sets them for the
 /// ablation (M0).
 #[derive(Debug, Clone, PartialEq)]
+#[allow(clippy::struct_excessive_bools)] // independent switches of the ablation
 pub struct RankOptions {
     /// Stems looked up for each query word.
     pub stemming: Stemming,
@@ -155,6 +156,21 @@ pub struct RankOptions {
     pub graph_sim: f64,
     /// J9: how many fused hits seed the step.
     pub graph_seeds: usize,
+    /// Plan v3 P1: BM25 over passages of the leaves (a room's introduction,
+    /// its sub-doors), a door scored by its best passage.
+    pub passage: bool,
+    /// Plan v3 P2: weight of the room title, section title and room tags in
+    /// every passage (0 = off).
+    pub passage_prefix: f64,
+    /// Plan v3 P4: the window size of a passage in characters.
+    pub passage_chars: usize,
+    /// Plan v3 P3: the vector score of a room with sub-doors comes from its
+    /// introduction only, as its BM25 score over passages (file with `#VEC`).
+    pub vec_leaf: bool,
+    /// Plan v3 P3: a sub-door's vector text starts with its room's title.
+    pub vec_prefix: bool,
+    /// Plan v3 P3b: the rankings are fused per room, not per door.
+    pub fuse_rooms: bool,
 }
 
 impl Default for RankOptions {
@@ -188,6 +204,12 @@ impl RankOptions {
             graph_term: 0.0,
             graph_sim: 0.0,
             graph_seeds: GRAPH_SEEDS,
+            passage: false,
+            passage_prefix: 0.0,
+            passage_chars: crate::passage::PASSAGE_CHARS,
+            vec_leaf: false,
+            vec_prefix: false,
+            fuse_rooms: false,
         }
     }
 }
@@ -264,6 +286,16 @@ impl RankOptions {
                     .map(|x| r.depth = x)
                     .is_some(),
                 "min_door_tokens" => count().map(|x| r.min_door_tokens = x).is_some(),
+                "passage" => value.as_bool().map(|x| r.passage = x).is_some(),
+                "passage_prefix" => num().map(|x| r.passage_prefix = x).is_some(),
+                "passage_chars" => count()
+                    .and_then(|x| usize::try_from(x).ok())
+                    .filter(|x| *x >= 100)
+                    .map(|x| r.passage_chars = x)
+                    .is_some(),
+                "vec_leaf" => value.as_bool().map(|x| r.vec_leaf = x).is_some(),
+                "vec_prefix" => value.as_bool().map(|x| r.vec_prefix = x).is_some(),
+                "fuse_rooms" => value.as_bool().map(|x| r.fuse_rooms = x).is_some(),
                 _ => false,
             };
             if !ok {
@@ -294,6 +326,12 @@ impl RankOptions {
             "graph_term": self.graph_term,
             "graph_sim": self.graph_sim,
             "graph_seeds": self.graph_seeds,
+            "passage": self.passage,
+            "passage_prefix": self.passage_prefix,
+            "passage_chars": self.passage_chars,
+            "vec_leaf": self.vec_leaf,
+            "vec_prefix": self.vec_prefix,
+            "fuse_rooms": self.fuse_rooms,
         })
     }
 }
@@ -629,7 +667,7 @@ fn ranked_in(
             .unwrap_or_default()
     };
 
-    let keyword: Vec<Hit> = bm25_where(s, query, &allowed, rank, rank.depth.max(BENCH_DEPTH))?;
+    let keyword = keyword_ranking(s, query, &allowed, rank)?;
 
     let vector_status = vector_status(s, cache);
     let (Some(cache), VectorStatus::Available) = (cache, &vector_status) else {
@@ -661,7 +699,7 @@ fn ranked_in(
         .take(rank.rescore_bm25)
         .map(|h| h.id.as_str())
         .collect();
-    let semantic = vector_ranking(s, &desc, &allowed, cache, query, &extra)?;
+    let semantic = vector_ranking(s, &desc, &allowed, cache, query, &extra, rank)?;
     let (w_bm25, w_vec) = query_weights(s, query, rank);
     let kw = keyword.get(..rank.depth).unwrap_or(&keyword);
     let sem = semantic.get(..rank.depth).unwrap_or(&semantic);
@@ -669,26 +707,10 @@ fn ranked_in(
         Fusion::Rrf => rrf(kw, sem, w_bm25, w_vec, rank.rrf_k),
         Fusion::Convex => convex(kw, sem, w_bm25, w_vec),
     };
-    let mut hits: Vec<SearchHit> = fused
-        .into_iter()
-        .map(|(id, (score, kw, vec))| SearchHit {
-            title: title(&id),
-            tokens: price(&id),
-            score,
-            source: match (kw, vec) {
-                (true, true) => Source::Both,
-                (true, false) => Source::Bm25,
-                _ => Source::Vec,
-            },
-            id,
-            also: Vec::new(),
-        })
-        .collect();
-    hits.sort_by(|a, b| {
-        b.score
-            .total_cmp(&a.score)
-            .then_with(|| a.id.as_bytes().cmp(b.id.as_bytes()))
-    });
+    let mut hits = fused_hits(fused, &|id| (title(id), price(id)));
+    if rank.fuse_rooms {
+        fuse_rooms(&mut hits, kw, sem, w_bm25, w_vec, rank.rrf_k);
+    }
     if rank.graph_link > 0.0 || rank.graph_term > 0.0 || rank.graph_sim > 0.0 {
         hits = graph_step(s, hits, rank, &allowed, &|id| (title(id), price(id)))?;
     }
@@ -698,6 +720,90 @@ fn ranked_in(
         hits: collapse(hits, rank, limit),
         status: VectorStatus::Available,
     })
+}
+
+/// The fused doors as hits, best first, ties by id.
+fn fused_hits(
+    fused: BTreeMap<String, (f64, bool, bool)>,
+    about: &dyn Fn(&str) -> (String, u64),
+) -> Vec<SearchHit> {
+    let mut hits: Vec<SearchHit> = fused
+        .into_iter()
+        .map(|(id, (score, kw, vec))| {
+            let (title, tokens) = about(&id);
+            SearchHit {
+                title,
+                tokens,
+                score,
+                source: match (kw, vec) {
+                    (true, true) => Source::Both,
+                    (true, false) => Source::Bm25,
+                    _ => Source::Vec,
+                },
+                id,
+                also: Vec::new(),
+            }
+        })
+        .collect();
+    hits.sort_by(|a, b| {
+        b.score
+            .total_cmp(&a.score)
+            .then_with(|| a.id.as_bytes().cmp(b.id.as_bytes()))
+    });
+    hits
+}
+
+/// The rank of each room in a ranking: where its first door stands, counting
+/// rooms from 1.
+fn room_ranks<'a>(ids: impl Iterator<Item = &'a str>) -> BTreeMap<&'a str, usize> {
+    let mut out = BTreeMap::new();
+    for id in ids {
+        let next = out.len() + 1;
+        out.entry(room_of(id)).or_insert(next);
+    }
+    out
+}
+
+/// Plan v3 P3b: RRF over rooms. Each ranking is folded to rooms, a room
+/// scores `w / (k + rank)` from each, and every hit takes its room's score;
+/// within a room the doors keep their fused order (the sort is stable). So the
+/// keyword and the vector evidence of one room add up even when they name
+/// different doors of it: a section by its passages, the room by its vectors.
+fn fuse_rooms(
+    hits: &mut [SearchHit],
+    keyword: &[Hit],
+    semantic: &[(f64, String)],
+    w_bm25: f64,
+    w_vec: f64,
+    k: f64,
+) {
+    let kw = room_ranks(keyword.iter().map(|h| h.id.as_str()));
+    let sem = room_ranks(semantic.iter().map(|(_, id)| id.as_str()));
+    #[allow(clippy::cast_precision_loss)]
+    let part = |ranks: &BTreeMap<&str, usize>, room: &str, w: f64| {
+        ranks.get(room).map_or(0.0, |r| w / (k + *r as f64))
+    };
+    for h in hits.iter_mut() {
+        let room = room_of(&h.id);
+        h.score = part(&kw, room, w_bm25) + part(&sem, room, w_vec);
+    }
+    hits.sort_by(|a, b| b.score.total_cmp(&a.score));
+}
+
+/// The BM25 ranking to at least [`BENCH_DEPTH`]: over doors, or over the
+/// passages of the leaves (plan v3 P1).
+fn keyword_ranking(
+    s: &Sections<'_>,
+    query: &str,
+    allowed: &dyn Fn(&str) -> bool,
+    rank: &RankOptions,
+) -> Result<Vec<Hit>> {
+    let depth = rank.depth.max(BENCH_DEPTH);
+    if rank.passage {
+        crate::passage::bm25(s, query, allowed, rank, depth)
+    } else {
+        bm25_where(s, query, allowed, rank, depth)
+    }
 }
 
 /// J9 (plan v2, variant A): one step of score diffusion on `#GRAPH`. The
@@ -871,6 +977,7 @@ fn vector_ranking(
     cache: &crate::embed::VectorCache<'_>,
     query: &str,
     extra: &[&str],
+    rank: &RankOptions,
 ) -> Result<Vec<(f64, String)>> {
     let q = cache.model().embed(query)?;
     let entries = s.doc_entries()?;
@@ -915,8 +1022,10 @@ fn vector_ranking(
             }
         }
         let picked: Vec<crate::DocEntry<'_>> = coarse.iter().map(|(_, e)| **e).collect();
-        let windows =
-            crate::embed::rescore_windows(cache.model(), &picked, || door_texts(s, &picked, desc))?;
+        let picked = leaf_entries(s, &entries, picked, rank);
+        let windows = crate::embed::rescore_windows(cache.model(), &picked, || {
+            door_texts(s, &picked, desc, rank.vec_prefix)
+        })?;
         picked
             .iter()
             .zip(windows.iter())
@@ -941,11 +1050,58 @@ fn vector_ranking(
 /// D143: how many doors the sign bits of `#VEC` hand to the float rescoring.
 pub const RESCORE: usize = 200;
 
-/// The vector texts (FR-10/2) of `entries`: title, description and served text.
+/// Plan v3 P3: the entries the vector rescoring scores. With `vec_leaf` a
+/// room that has sub-doors is scored on its introduction only (its sections
+/// score their own text); with `vec_prefix` a sub-door's text starts with its
+/// room's title. A changed text gets its own fingerprint, so the rescoring
+/// memory keeps the forms apart.
+fn leaf_entries<'a>(
+    s: &Sections<'a>,
+    all: &[crate::DocEntry<'a>],
+    picked: Vec<crate::DocEntry<'a>>,
+    rank: &RankOptions,
+) -> Vec<crate::DocEntry<'a>> {
+    if !rank.vec_leaf && !rank.vec_prefix {
+        return picked;
+    }
+    let mut first_sub: BTreeMap<&str, u64> = BTreeMap::new();
+    if rank.vec_leaf {
+        for e in all.iter().filter(|e| e.id.contains('/')) {
+            let start = first_sub.entry(room_of(e.id)).or_insert(e.span.start);
+            *start = (*start).min(e.span.start);
+        }
+    }
+    picked
+        .into_iter()
+        .map(|mut e| {
+            if e.id.contains('/') {
+                if rank.vec_prefix {
+                    let mut key = e.hash.0.to_vec();
+                    key.extend_from_slice(b"\0room title");
+                    e.hash = crate::blake3_of(&key);
+                }
+            } else if let Some(len) = first_sub
+                .get(e.id)
+                .and_then(|start| start.checked_sub(e.span.start))
+                .filter(|len| *len > 0)
+            {
+                e.span.len = len;
+                if let Ok(intro) = s.stored(&e) {
+                    e.hash = crate::blake3_of(intro);
+                }
+            }
+            e
+        })
+        .collect()
+}
+
+/// The vector texts (FR-10/2) of `entries`: title, description and served
+/// text; with `room_title` (P3) a sub-door's text starts with its room's title.
 fn door_texts(
     s: &Sections<'_>,
     entries: &[crate::DocEntry<'_>],
     desc: &[crate::catalog::DescLine<'_>],
+    room_title: bool,
 ) -> Result<Vec<String>> {
     let titles: BTreeMap<&str, String> = crate::catalog::parse_map(s.map)?
         .doors
@@ -961,7 +1117,11 @@ fn door_texts(
                 .map_or_else(|_| Ok(String::new()), crate::docs::served_text)?;
             let description = descriptions.get(entry.id).copied().unwrap_or("");
             let title = titles.get(entry.id).map_or("", String::as_str);
-            Ok(crate::embed::door_text(title, description, &served))
+            let text = crate::embed::door_text(title, description, &served);
+            Ok(match titles.get(room_of(entry.id)) {
+                Some(room) if room_title && entry.id.contains('/') => format!("{room}\n{text}"),
+                _ => text,
+            })
         })
         .collect()
 }
@@ -975,7 +1135,7 @@ fn door_vectors(
     cache: &crate::embed::VectorCache<'_>,
 ) -> Result<crate::embed::Vectors> {
     cache.door_vectors(&s.header.bodyhash, entries.len(), || {
-        door_texts(s, entries, desc)
+        door_texts(s, entries, desc, false)
     })
 }
 

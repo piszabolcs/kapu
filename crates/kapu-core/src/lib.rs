@@ -25,6 +25,7 @@ pub mod error;
 pub mod evaluate;
 pub mod header;
 pub mod leiden;
+pub mod passage;
 pub mod reader;
 pub mod scan;
 pub mod search;

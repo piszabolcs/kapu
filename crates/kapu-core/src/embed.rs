@@ -347,7 +347,7 @@ impl Model {
 /// D141: windows of `text` of at most `max` characters, each starting 7/8 of
 /// `max` characters after the previous one, until one reaches the end (one
 /// window for a short text).
-fn windows(text: &str, max: usize) -> Vec<&str> {
+pub(crate) fn windows(text: &str, max: usize) -> Vec<&str> {
     let starts: Vec<usize> = text.char_indices().map(|(i, _)| i).collect();
     let chars = starts.len();
     let max = max.max(1);

@@ -1,0 +1,9 @@
+[
+  {"name": "base", "collapse": 1},
+  {"name": "passage", "collapse": 1, "passage": true},
+  {"name": "passage-prefix-1", "collapse": 1, "passage": true, "passage_prefix": 1.0},
+  {"name": "passage-prefix-3", "collapse": 1, "passage": true, "passage_prefix": 3.0},
+  {"name": "passage-1000", "collapse": 1, "passage": true, "passage_chars": 1000},
+  {"name": "passage-1000-prefix-1", "collapse": 1, "passage": true, "passage_chars": 1000, "passage_prefix": 1.0},
+  {"name": "passage-prefix-1-beta-0.1", "collapse": 1, "passage": true, "passage_prefix": 1.0, "room_beta": 0.1}
+]
