@@ -154,7 +154,11 @@ impl PassageIndex {
                     tags.get(room).map_or("", String::as_str)
                 )
             } else {
-                format!("{}\n{}", title(room), tags.get(room).map_or("", String::as_str))
+                format!(
+                    "{}\n{}",
+                    title(room),
+                    tags.get(room).map_or("", String::as_str)
+                )
             };
             let leaf = u32::try_from(ix.leaves.len()).unwrap_or(u32::MAX);
             let (head_tf, head_len) = ix.counts(&head, &mut memo);

@@ -558,4 +558,3 @@ fn hex32(bytes: &[u8; 32]) -> String {
         s
     })
 }
-
