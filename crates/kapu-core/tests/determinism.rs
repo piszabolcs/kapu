@@ -102,7 +102,7 @@ fn build_with_tiny_model_is_identical_on_every_platform() {
     // K-14 (D143): the window sign vectors are part of the compared bytes
     let vec = s.vec.expect("a build with a model writes #VEC");
     let doors = s.doc_entries().unwrap().len();
-    let signs = kapu_core::embed::SignVectors::parse(vec, doors).unwrap();
+    let signs = kapu_core::embed::FileVectors::parse(vec, doors).unwrap();
     assert_eq!((signs.doors(), signs.dim()), (doors, model.dim()));
     // the full validator rebuilds with the same model and compares bytes
     let report = validate_with(&built.bytes, Level::Full, Some(&model)).unwrap();

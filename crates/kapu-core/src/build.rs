@@ -11,7 +11,7 @@ use std::fmt::Write as _;
 use std::path::Path;
 
 use crate::docs::{blake3_of, strip_comments, unescape};
-use crate::embed::{Model, cosine, door_text, sign_line, vec_params};
+use crate::embed::{Model, Progress, cosine, door_text, vec_line, vec_params};
 use crate::error::{Error, ErrorCode, Result};
 use crate::header::Hash;
 use crate::leiden::leiden;
@@ -22,7 +22,7 @@ use crate::text::{
     without_kind_line,
 };
 use crate::validate::is_valid_id;
-use crate::{FORMAT_VERSION, HEADER_LEN, yake};
+use crate::{FORMAT_VERSION, FORMAT_VERSION_1_2, HEADER_LEN, yake};
 
 /// `sim` edges: nearest neighbours per room (FR-11/3, ASSUMPTION-06).
 pub const SIM_K: usize = 5;
@@ -588,10 +588,11 @@ fn term_edges(doors: &[Door]) -> Vec<EdgeRow> {
 }
 
 /// FR-11/3 `sim` edges: for every room its k = 5 nearest rooms by cosine
-/// similarity of the room vectors, if the similarity is at least 0.6;
+/// similarity of the room vectors, if the similarity is at least the model's
+/// threshold (0.6, D171: a contextual model may give another);
 /// undirected, stored once with the smaller id first, weight = similarity.
 /// Ties in similarity go to the smaller id.
-fn sim_edges(rooms: &[(&str, Vec<f32>)]) -> Vec<EdgeRow> {
+fn sim_edges(rooms: &[(&str, Vec<f32>)], threshold: f64) -> Vec<EdgeRow> {
     let mut pairs: BTreeMap<(String, String), f64> = BTreeMap::new();
     for (i, (id, vector)) in rooms.iter().enumerate() {
         let mut near: Vec<(f64, &str)> = rooms
@@ -599,7 +600,7 @@ fn sim_edges(rooms: &[(&str, Vec<f32>)]) -> Vec<EdgeRow> {
             .enumerate()
             .filter(|(j, _)| *j != i)
             .map(|(_, (other, v))| (cosine(vector, v), *other))
-            .filter(|(sim, _)| *sim >= SIM_THRESHOLD)
+            .filter(|(sim, _)| *sim >= threshold)
             .collect();
         near.sort_by(|a, b| {
             b.0.total_cmp(&a.0)
@@ -623,19 +624,19 @@ fn sim_edges(rooms: &[(&str, Vec<f32>)]) -> Vec<EdgeRow> {
 /// All edges, sorted by (source, target, type) (FR-11/5).
 fn build_graph(
     doors: &[Door],
-    vectors: Option<&[Vec<f32>]>,
+    vectors: Option<(&[Vec<f32>], f64)>,
     warnings: &mut Vec<Warning>,
 ) -> Vec<EdgeRow> {
     let mut edges = link_edges(doors, warnings);
     edges.extend(term_edges(doors));
-    if let Some(vectors) = vectors {
+    if let Some((vectors, threshold)) = vectors {
         let rooms: Vec<(&str, Vec<f32>)> = doors
             .iter()
             .filter(|d| d.is_room)
             .zip(vectors)
             .map(|(d, v)| (d.id.as_str(), v.clone()))
             .collect();
-        edges.extend(sim_edges(&rooms));
+        edges.extend(sim_edges(&rooms, threshold));
     }
     edges.sort_by(|a, b| (&a.0, &a.1, a.2).cmp(&(&b.0, &b.1, b.2)));
     edges
@@ -944,13 +945,41 @@ fn docs_lines(doors: &[Door]) -> Vec<String> {
         .collect()
 }
 
-/// FR-10/6 `#VEC` (D143): the parameter line, then per door in `#DOCS`
-/// order (id bytes) its window sign bits.
-fn vec_lines(doors: &[Door], windows: &[Vec<Vec<f32>>], dim: usize) -> Vec<String> {
+/// FR-10/6 `#VEC` (D143, D171): the parameter line, then per door in `#DOCS`
+/// order (id bytes) its windows, `bits` bits per component.
+fn vec_lines(doors: &[Door], windows: &[Vec<Vec<f32>>], dim: usize, bits: u8) -> Vec<String> {
     let mut sorted: Vec<(&Door, &Vec<Vec<f32>>)> = doors.iter().zip(windows).collect();
     sorted.sort_by(|a, b| a.0.id.as_bytes().cmp(b.0.id.as_bytes()));
-    std::iter::once(vec_params(dim))
-        .chain(sorted.iter().map(|(_, w)| sign_line(w)))
+    std::iter::once(vec_params(dim, bits))
+        .chain(sorted.iter().map(|(_, w)| vec_line(w, bits)))
+        .collect()
+}
+
+/// FR-10/2 the vector text of every door: title, description and served
+/// text (D91). D171: for a contextual model a room with sub-doors has the
+/// text before its first sub-door only, so no text is computed twice (its
+/// sub-doors have the rest).
+fn vector_texts(doors: &[Door], own_text_only: bool) -> Vec<String> {
+    doors
+        .iter()
+        .enumerate()
+        .map(|(i, d)| {
+            let first_sub = doors
+                .get(i + 1)
+                .filter(|s| own_text_only && d.is_room && !s.is_room && s.room_id() == d.id);
+            match first_sub {
+                Some(sub) => {
+                    let intro = d
+                        .stored
+                        .get(..sub.offset.saturating_sub(d.offset))
+                        .unwrap_or(&[]);
+                    let served =
+                        strip_comments(&unescape(std::str::from_utf8(intro).unwrap_or("")));
+                    door_text(&d.title, &d.description, &served)
+                }
+                None => door_text(&d.title, &d.description, &d.served),
+            }
+        })
         .collect()
 }
 
@@ -960,11 +989,12 @@ fn assemble(
     body: &[u8],
     counts: (usize, usize, usize),
     model: (&str, Hash),
+    version: &str,
 ) -> Result<Vec<u8>> {
     let (rooms, doors, groups) = counts;
     let (emb, embhash) = model;
     let mut header = format!(
-        "%KAPU {FORMAT_VERSION}\neol=LF\nenc=UTF-8\ntok=o200k_base\nemb={emb}\nembhash=b3:{}\n",
+        "%KAPU {version}\neol=LF\nenc=UTF-8\ntok=o200k_base\nemb={emb}\nembhash=b3:{}\n",
         hex(&embhash)
     );
     let mut pos = HEADER_LEN;
@@ -1009,6 +1039,18 @@ pub fn build(rooms: &[RoomSource]) -> Result<Built> {
 /// # Errors
 /// As [`build`], plus a tokenizer failure (E012).
 pub fn build_with(rooms: &[RoomSource], model: Option<&Model>) -> Result<Built> {
+    build_with_progress(rooms, model, None)
+}
+
+/// [`build_with`], reporting the progress of the window vectors (D171).
+///
+/// # Errors
+/// As [`build_with`].
+pub fn build_with_progress(
+    rooms: &[RoomSource],
+    model: Option<&Model>,
+    progress: Option<Progress<'_>>,
+) -> Result<Built> {
     let mut warnings = Vec::new();
     let mut seen = BTreeSet::new();
     for room in rooms {
@@ -1029,14 +1071,22 @@ pub fn build_with(rooms: &[RoomSource], model: Option<&Model>) -> Result<Built> 
     let (mut doors, body) = build_doors(rooms)?;
     kind_warnings(&doors, &mut warnings);
     // D141, D143: every door's window vectors; a room's first window is the
-    // vector of its whole text as `embed` sees it, for the `sim` edges
+    // vector of its whole text as `embed` sees it, for the `sim` edges (D171:
+    // of its own text, for a contextual model)
     let windows: Option<Vec<Vec<Vec<f32>>>> = match model {
-        Some(m) => Some(
-            doors
-                .iter()
-                .map(|d| m.embed_windows(&door_text(&d.title, &d.description, &d.served)))
-                .collect::<Result<_>>()?,
-        ),
+        Some(m) => {
+            let texts = vector_texts(&doors, m.is_contextual());
+            let (windows, failed) = m.embed_windows_many(&texts, progress)?;
+            if failed > 0 {
+                warnings.push(Warning {
+                    code: "W009",
+                    message: format!(
+                        "{failed} vector windows could not be computed; they score 0 (D171)"
+                    ),
+                });
+            }
+            Some(windows)
+        }
         None => None,
     };
     let vectors: Option<Vec<Vec<f32>>> = windows.as_ref().map(|all| {
@@ -1047,7 +1097,12 @@ pub fn build_with(rooms: &[RoomSource], model: Option<&Model>) -> Result<Built> 
             .map(|(_, w)| w.first().cloned().unwrap_or_default())
             .collect()
     });
-    let edges = build_graph(&doors, vectors.as_deref(), &mut warnings);
+    let threshold = model.map_or(SIM_THRESHOLD, Model::sim_threshold);
+    let edges = build_graph(
+        &doors,
+        vectors.as_deref().map(|v| (v, threshold)),
+        &mut warnings,
+    );
     let groups = build_groups(&mut doors, &edges);
     let graph: Vec<String> = edges
         .iter()
@@ -1060,12 +1115,22 @@ pub fn build_with(rooms: &[RoomSource], model: Option<&Model>) -> Result<Built> 
         ("index", section("INDEX", &index_lines(&doors))),
         ("docs", section("DOCS", &docs_lines(&doors))),
     ];
+    let bits = model.map_or(1, Model::vec_bits);
     if let (Some(m), Some(windows)) = (model, &windows) {
-        sections.push(("vec", section("VEC", &vec_lines(&doors, windows, m.dim()))));
+        sections.push((
+            "vec",
+            section("VEC", &vec_lines(&doors, windows, m.dim(), bits)),
+        ));
     }
     let counts = (rooms.len(), doors.len(), groups.len());
     let model_id = model.map_or((NO_MODEL, blake3_of(b"")), |m| (m.name(), m.hash()));
-    let bytes = assemble(sections, &body, counts, model_id)?;
+    // D171: 1.3 only for what a 1.2 reader cannot read
+    let version = if bits == 1 {
+        FORMAT_VERSION_1_2
+    } else {
+        FORMAT_VERSION
+    };
+    let bytes = assemble(sections, &body, counts, model_id, version)?;
     if bytes.len() > SIZE_WARNING_BYTES {
         warnings.push(Warning {
             code: "W008",
@@ -1126,9 +1191,21 @@ pub fn rebuild(file: &[u8]) -> Result<Built> {
 /// # Errors
 /// As [`rebuild`] and [`build_with`].
 pub fn rebuild_with(file: &[u8], model: Option<&Model>) -> Result<Built> {
+    rebuild_with_progress(file, model, None)
+}
+
+/// [`rebuild_with`], reporting the progress of the window vectors (D171).
+///
+/// # Errors
+/// As [`rebuild_with`].
+pub fn rebuild_with_progress(
+    file: &[u8],
+    model: Option<&Model>,
+    progress: Option<Progress<'_>>,
+) -> Result<Built> {
     let s =
         crate::Sections::parse_with(file, &crate::Limits::default(), crate::BodyLength::Tolerate)?;
-    build_with(&parse_body(s.body)?, model)
+    build_with_progress(&parse_body(s.body)?, model, progress)
 }
 
 /// A free room id for a new room (FR-04/4): the slug of its title, with

@@ -409,16 +409,19 @@ mod tests {
 
     #[test]
     fn older_versions_are_still_read() {
-        // D140, D143: the builder writes 1.2; 1.0 and 1.1 files stay readable until rebuilt
+        // D140, D143, D171: the builder writes 1.3 or 1.2; 1.0 and 1.1 files
+        // stay readable until rebuilt
         let refs: Vec<String> = valid_lines();
         let refs: Vec<&str> = refs.iter().map(String::as_str).collect();
         let mut bytes = header_with(&refs);
+        assert_eq!(Header::parse(&bytes).unwrap().version, "1.3");
+        bytes[8] = b'2';
         assert_eq!(Header::parse(&bytes).unwrap().version, "1.2");
         bytes[8] = b'1';
         assert_eq!(Header::parse(&bytes).unwrap().version, "1.1");
         bytes[8] = b'0';
         assert_eq!(Header::parse(&bytes).unwrap().version, "1.0");
-        bytes[8] = b'3';
+        bytes[8] = b'4';
         assert_eq!(Header::parse(&bytes).unwrap_err().code, ErrorCode::E001);
     }
 

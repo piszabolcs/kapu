@@ -1083,7 +1083,7 @@ fn vector_ranking(
     extra: &[&str],
     rank: &RankOptions,
 ) -> Result<Vec<(f64, String)>> {
-    let q = cache.model().embed(query)?;
+    let q = cache.model().embed_query(query)?;
     let entries = s.doc_entries()?;
     let best = |windows: &[Vec<f32>]| {
         windows
@@ -1100,41 +1100,63 @@ fn vector_ranking(
                 format!("#VEC has {} components, the model {}", signs.dim(), q.len()),
             ));
         }
-        // D143: the sign bits pick the candidates, the model's float windows
-        // of the best RESCORE allowed doors give their order
-        let mut coarse: Vec<(f64, &crate::DocEntry<'_>)> = entries
-            .iter()
-            .zip(signs.best_scores(&q))
-            .filter(|(entry, _)| allowed(entry.id))
-            .map(|(entry, score)| (score, entry))
-            .collect();
-        coarse.sort_by(|a, b| {
-            b.0.total_cmp(&a.0)
-                .then_with(|| a.1.id.as_bytes().cmp(b.1.id.as_bytes()))
-        });
-        coarse.truncate(RESCORE);
-        if !extra.is_empty() {
-            let have: BTreeSet<&str> = coarse.iter().map(|(_, e)| e.id).collect();
-            for id in extra {
-                // #DOCS is in byte order of the ids (FR-09/4)
-                let at = entries.binary_search_by(|e| e.id.as_bytes().cmp(id.as_bytes()));
-                if let Some(entry) = at.ok().and_then(|i| entries.get(i))
-                    && !have.contains(id)
-                {
-                    coarse.push((0.0, entry));
+        if signs.bits() == 1 {
+            // D143: the sign bits pick the candidates, the model's float windows
+            // of the best RESCORE allowed doors give their order
+            let mut coarse: Vec<(f64, &crate::DocEntry<'_>)> = entries
+                .iter()
+                .zip(signs.best_scores(&q))
+                .filter(|(entry, _)| allowed(entry.id))
+                .map(|(entry, score)| (score, entry))
+                .collect();
+            coarse.sort_by(|a, b| {
+                b.0.total_cmp(&a.0)
+                    .then_with(|| a.1.id.as_bytes().cmp(b.1.id.as_bytes()))
+            });
+            coarse.truncate(RESCORE);
+            if !extra.is_empty() {
+                let have: BTreeSet<&str> = coarse.iter().map(|(_, e)| e.id).collect();
+                for id in extra {
+                    // #DOCS is in byte order of the ids (FR-09/4)
+                    let at = entries.binary_search_by(|e| e.id.as_bytes().cmp(id.as_bytes()));
+                    if let Some(entry) = at.ok().and_then(|i| entries.get(i))
+                        && !have.contains(id)
+                    {
+                        coarse.push((0.0, entry));
+                    }
                 }
             }
+            let picked: Vec<crate::DocEntry<'_>> = coarse.iter().map(|(_, e)| **e).collect();
+            let picked = leaf_entries(s, &entries, picked, rank);
+            let windows = crate::embed::rescore_windows(cache.model(), &picked, || {
+                door_texts(s, &picked, desc, rank.vec_prefix)
+            })?;
+            picked
+                .iter()
+                .zip(windows.iter())
+                .map(|(entry, w)| (best(w), entry.id.to_owned()))
+                .collect()
+        } else {
+            // D171: the stored integer windows are the vectors themselves,
+            // every allowed door gets its score; the first RESCORE and the
+            // `extra` doors go on
+            let mut all: Vec<(f64, &str)> = entries
+                .iter()
+                .zip(signs.best_scores(&q))
+                .filter(|(entry, _)| allowed(entry.id))
+                .map(|(entry, score)| (score, entry.id))
+                .collect();
+            all.sort_by(|a, b| {
+                b.0.total_cmp(&a.0)
+                    .then_with(|| a.1.as_bytes().cmp(b.1.as_bytes()))
+            });
+            let wanted: BTreeSet<&str> = extra.iter().copied().collect();
+            all.into_iter()
+                .enumerate()
+                .filter(|(i, (_, id))| *i < RESCORE || wanted.contains(id))
+                .map(|(_, (score, id))| (score, id.to_owned()))
+                .collect()
         }
-        let picked: Vec<crate::DocEntry<'_>> = coarse.iter().map(|(_, e)| **e).collect();
-        let picked = leaf_entries(s, &entries, picked, rank);
-        let windows = crate::embed::rescore_windows(cache.model(), &picked, || {
-            door_texts(s, &picked, desc, rank.vec_prefix)
-        })?;
-        picked
-            .iter()
-            .zip(windows.iter())
-            .map(|(entry, w)| (best(w), entry.id.to_owned()))
-            .collect()
     } else {
         entries
             .iter()

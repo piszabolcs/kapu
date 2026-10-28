@@ -21,6 +21,21 @@ counted (`failed`).
 `report` scores them on the fixed dev/test split (`bench/splits`) and gives,
 on the test part, the difference of each model to the first one (the packaged
 model) with a paired bootstrap 95% interval, per set and pooled.
+
+Plan v3 V2 (D171): a model name may end in `@<form>`, the chunk vectors as a
+file would store them, the query vector staying float: `@int8` and `@int4`
+(each vector rounded to 127 or 7 steps of its largest component, then
+normalised), `@sign` (the sign bits read as +-1), `@sign+int8` and
+`@sign+int4` (the sign bits pick the best RESCORE chunks, the int8 or int4
+vectors order them, as `#VEC` does with the float rescoring of D143). A
+leading `c` (`@cfloat`, `@csign`, `@cint4`, `@cint3`, `@ctern`) first takes
+the mean of all chunk vectors off every chunk vector and off the query:
+`@cint3` rounds to 3 steps of the largest component, `@ctern` to -1, 0, +1
+with the threshold 0.6 standard deviations of the vector. A leading `r`
+(`@rsign`, `@rtern`, `@rint4`) stores the code of each chunk's residual from
+the mean and one scale per chunk (least squares), and scores the mean plus the
+scaled code against the uncentred query, so the cosine stays that of the
+model.
 """
 
 import json
@@ -43,6 +58,7 @@ MODELS = {
     "multilingual-e5-small-qint8": ("onnx", "multilingual-e5-small-qint8", "query: ", "passage: "),
 }
 SHARD = 1024
+RESCORE = 200
 BATCH = 16
 MAX_TOKENS = 512
 FUSE = 50
@@ -166,6 +182,40 @@ def room(door):
     return door.split("/", 1)[0]
 
 
+def stored(emb, form):
+    """Plan v3 V2: the chunk vectors in the storage `form` (see the module text);
+    a centred form expects `emb` already centred."""
+    if form.startswith("r"):
+        mean = emb.mean(axis=0)
+        residual = emb - mean
+        code = stored(residual, form[1:]) if form[1:] in ("sign", "tern") else stored(residual, form[1:])
+        scale = (residual * code).sum(axis=1, keepdims=True) / np.maximum((code * code).sum(axis=1, keepdims=True), 1e-12)
+        return (mean + scale * code).astype(np.float32)
+    form = form.removeprefix("c")
+    if form == "float":
+        return normalised(emb)
+    if form == "sign":
+        return normalised(np.where(emb > 0, 1.0, -1.0).astype(np.float32))
+    if form == "tern":
+        sd = emb.std(axis=1, keepdims=True)
+        return normalised((np.where(emb > 0.6 * sd, 1.0, 0.0) - np.where(emb < -0.6 * sd, 1.0, 0.0)).astype(np.float32))
+    levels = {"int8": 127, "int4": 7, "int3": 3}[form]
+    top = np.abs(emb).max(axis=1, keepdims=True)
+    top[top == 0] = 1.0
+    return normalised(np.rint(emb / top * levels).astype(np.float32))
+
+
+def ranking(forms, q):
+    """Chunk indexes best first, at most 400: one form, or the sign bits picking
+    RESCORE candidates for the second form to order."""
+    first = np.argsort(-(forms[0] @ q), kind="stable")[:400]
+    if len(forms) == 1:
+        return first.tolist()
+    picked = first[:RESCORE]
+    fine = picked[np.argsort(-(forms[1][picked] @ q), kind="stable")]
+    return fine.tolist() + first[RESCORE:].tolist()
+
+
 def rank(ranked_rooms, gold):
     top = ranked_rooms[:100]
     return top.index(gold) + 1 if gold in top else None
@@ -220,20 +270,26 @@ def run(argv):
     bm = BM25(texts)
     bm_orders = [np.argsort(-bm.scores(q["kerdes"]))[:FUSE].tolist() for q in qs]
     result["chunk_bm25"] = [rank(dedup([room_of[j] for j in o]), g) for o, g in zip(bm_orders, golds)]
+    loaded = {}
     for name in names:
-        model = load(name)
+        base, _, form = name.partition("@")
+        model = loaded.setdefault(base, load(base))
         started = time.time()
-        emb = chunk_embeddings(rooms, texts, name, model)
+        emb = chunk_embeddings(rooms, texts, base, model)
+        centre = np.zeros(emb.shape[1], dtype=np.float32)
+        if form.startswith("c"):
+            centre = emb.mean(axis=0)
+        forms = [stored(emb - centre, f) for f in (form or "float").split("+")]
         build_s = time.time() - started
-        _, _, qprefix, _ = MODELS[name]
+        _, _, qprefix, _ = MODELS[base]
         started = time.time()
-        qemb = normalised(model.encode([qprefix + q["kerdes"] for q in qs]))
+        qemb = normalised(model.encode([qprefix + q["kerdes"] for q in qs])) - centre
         query_ms = (time.time() - started) * 1000 / max(len(qs), 1)
         entry = {"vector": [], "chunk_hybrid": [], "dim": int(emb.shape[1]), "embed_s": round(build_s, 1),
                  "query_ms": round(query_ms, 2), "failed": model.failed, "truncated": model.truncated}
         fused = {c: [] for c in configs}
         for i, g in enumerate(golds):
-            order = np.argsort(-(emb @ qemb[i]))[:400].tolist()
+            order = ranking(forms, qemb[i])
             vec_rooms = dedup([room_of[j] for j in order])
             entry["vector"].append(rank(vec_rooms, g))
             hyb = rrf(bm_orders[i], order)

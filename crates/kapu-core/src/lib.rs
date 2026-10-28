@@ -16,6 +16,7 @@
 )]
 
 pub mod about;
+pub mod bert;
 pub mod build;
 pub mod catalog;
 pub mod docs;
@@ -47,13 +48,18 @@ pub use reader::{
 pub use sections::{BodyLength, CheckedFile, Limits, Sections};
 pub use validate::{Level, Report, is_valid_id, validate, validate_with};
 
-/// Format version the builder writes on the first header line (`%KAPU 1.2`,
-/// FR-03).
-pub const FORMAT_VERSION: &str = "1.2";
+/// The newest format version the builder writes on the first header line
+/// (`%KAPU 1.3`, FR-03): a file whose `#VEC` holds whole vectors of 4 or 8
+/// bits per component (D171).
+pub const FORMAT_VERSION: &str = "1.3";
 
-/// Format versions the reader accepts (D140, D143): an older file stays
-/// readable until `kapu build` rewrites it as 1.2.
-pub const READ_VERSIONS: [&str; 3] = ["1.0", "1.1", "1.2"];
+/// The version of every other file (sign bits or no `#VEC`), so a 1.2 reader
+/// still reads it (D171).
+pub const FORMAT_VERSION_1_2: &str = "1.2";
+
+/// Format versions the reader accepts (D140, D143, D171): an older file stays
+/// readable until `kapu build` rewrites it.
+pub const READ_VERSIONS: [&str; 4] = ["1.0", "1.1", "1.2", "1.3"];
 
 /// Exact size of the file header in bytes (FR-03).
 pub const HEADER_LEN: usize = 512;
@@ -69,7 +75,7 @@ mod tests {
 
     #[test]
     fn format_version_matches_spec() {
-        assert_eq!(FORMAT_VERSION, "1.2");
-        assert_eq!(READ_VERSIONS, ["1.0", "1.1", "1.2"]);
+        assert_eq!((FORMAT_VERSION, FORMAT_VERSION_1_2), ("1.3", "1.2"));
+        assert_eq!(READ_VERSIONS, ["1.0", "1.1", "1.2", "1.3"]);
     }
 }

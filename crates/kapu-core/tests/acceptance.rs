@@ -69,7 +69,7 @@ fn sample_header_is_512_bytes_and_ends_with_lf() {
     let data = vector("minta.kapu");
     assert!(data.len() > kapu_core::HEADER_LEN);
     assert_eq!(data[kapu_core::HEADER_LEN - 1], b'\n');
-    let first_line = format!("%KAPU {}\n", kapu_core::FORMAT_VERSION);
+    let first_line = format!("%KAPU {}\n", kapu_core::FORMAT_VERSION_1_2);
     assert!(data.starts_with(first_line.as_bytes()));
 }
 

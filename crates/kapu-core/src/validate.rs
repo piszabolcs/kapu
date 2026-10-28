@@ -126,7 +126,7 @@ pub fn validate_with(
                 "#VEC in a file built without a model (emb=none)",
             ));
         }
-        crate::embed::SignVectors::parse(text, entries.len())?;
+        crate::embed::FileVectors::parse(text, entries.len())?;
     }
 
     if level == Level::Full {

@@ -13,7 +13,7 @@ use std::time::Instant;
 use clap::builder::styling::{Effects, Style};
 use clap::{CommandFactory, FromArgMatches, Parser, Subcommand};
 use kapu_core::about;
-use kapu_core::build::{Built, Warning, rebuild_with, write_atomic};
+use kapu_core::build::{Built, Warning, rebuild_with_progress, write_atomic};
 use kapu_core::embed::{DEFAULT_MODEL, Model, VectorCache, find_default_model_dir, find_model_dir};
 use kapu_core::search::{SearchOptions, VectorStatus};
 use kapu_core::{Error, ErrorCode, Level};
@@ -170,6 +170,42 @@ fn file_name(path: &Path) -> String {
         .unwrap_or_default()
 }
 
+/// Rebuilds `bytes` with `model`. D171: a contextual model computes its
+/// window vectors for minutes, so the build says on stderr how far it is, at
+/// most every 10 seconds, with an estimate of the time left.
+fn rebuild(bytes: &[u8], model: Option<&Model>) -> Result<Built, Error> {
+    if !model.is_some_and(Model::is_contextual) {
+        return rebuild_with_progress(bytes, model, None);
+    }
+    let start = Instant::now();
+    let first: std::sync::Mutex<Option<(usize, Instant)>> = std::sync::Mutex::new(None);
+    let shown = std::sync::Mutex::new(start);
+    // window counts are far below 2^52
+    #[allow(clippy::cast_precision_loss)]
+    let report = |done: usize, total: usize| {
+        let now = Instant::now();
+        let Ok(mut base) = first.lock() else { return };
+        let (from, since) = *base.get_or_insert((done, now));
+        drop(base);
+        let Ok(mut last) = shown.lock() else { return };
+        if done < total && now.duration_since(*last).as_secs() < 10 {
+            return;
+        }
+        *last = now;
+        let rate = (done - from) as f64 / now.duration_since(since).as_secs_f64().max(1e-9);
+        let left = if rate > 0.0 {
+            format!(", about {:.0} min left", (total - done) as f64 / rate / 60.0)
+        } else {
+            String::new()
+        };
+        eprintln!(
+            "kapu: vectors {done}/{total} ({:.0}%){left}",
+            100.0 * done as f64 / total.max(1) as f64
+        );
+    };
+    rebuild_with_progress(bytes, model, Some(&report))
+}
+
 /// The model for writing: `--no-model`, `--model`, or the packaged default
 /// if present (otherwise W005 and no model).
 fn writer_model(cli: &Cli, warnings: &mut Vec<Warning>) -> Result<Option<Model>, Error> {
@@ -260,7 +296,7 @@ fn run(cli: &Cli) -> Result<Output, Error> {
             }
             let model = writer_model(cli, &mut warnings)?;
             let base = kapu_core::edit::new_file_of(kind.as_deref())?;
-            let built = rebuild_with(&base.bytes, model.as_ref())?;
+            let built = rebuild(&base.bytes, model.as_ref())?;
             written(file, built, model.as_ref(), warnings, json!({}))
         }
         Command::Template { kind } => {
@@ -275,7 +311,7 @@ fn run(cli: &Cli) -> Result<Output, Error> {
                 kapu_core::edit::import_dir(dir)?
             };
             warnings.extend(imported.warnings);
-            let built = rebuild_with(&imported.bytes, model.as_ref())?;
+            let built = rebuild(&imported.bytes, model.as_ref())?;
             written(file, built, model.as_ref(), warnings, json!({}))
         }
         Command::Export { file, dir } => {
@@ -290,7 +326,7 @@ fn run(cli: &Cli) -> Result<Output, Error> {
             let (added, room) =
                 kapu_core::edit::add_room(&read(file)?, &file_name(markdown), &md, id.as_deref())?;
             warnings.extend(added.warnings);
-            let built = rebuild_with(&added.bytes, model.as_ref())?;
+            let built = rebuild(&added.bytes, model.as_ref())?;
             // FR-18/4, FR-19: content scan of the saved room, as warnings
             for f in kapu_core::scan::scan_file(&built.bytes)?
                 .into_iter()
@@ -308,7 +344,7 @@ fn run(cli: &Cli) -> Result<Output, Error> {
         Command::Rm { file, id } => {
             let model = writer_model(cli, &mut warnings)?;
             let removed = kapu_core::edit::remove_room(&read(file)?, id)?;
-            let built = rebuild_with(&removed.bytes, model.as_ref())?;
+            let built = rebuild(&removed.bytes, model.as_ref())?;
             written(
                 file,
                 built,
@@ -319,7 +355,7 @@ fn run(cli: &Cli) -> Result<Output, Error> {
         }
         Command::Build { file } => {
             let model = writer_model(cli, &mut warnings)?;
-            let built = rebuild_with(&read(file)?, model.as_ref())?;
+            let built = rebuild(&read(file)?, model.as_ref())?;
             written(file, built, model.as_ref(), warnings, json!({}))
         }
         Command::Validate { file, full } => validate(cli, file, *full),

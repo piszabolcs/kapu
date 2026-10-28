@@ -1,4 +1,5 @@
-//! Static vector model (FR-10, D28, D29, D38, D46): `Model2Vec` inference and the
+//! Vector models (FR-10, D28, D29, D38, D46): `Model2Vec` inference, the
+//! contextual BERT encoder of [`crate::bert`] (plan v3 V2, D171), and the
 //! reader's vector cache.
 //!
 //! A model directory holds `model.safetensors` (one `embeddings` tensor,
@@ -26,18 +27,34 @@ fn model_err(detail: impl Into<String>) -> Error {
     Error::new(ErrorCode::E012, format!("vector model: {}", detail.into()))
 }
 
-/// A loaded static embedding model.
+/// A loaded vector model: static (`Model2Vec`) or contextual (BERT, D171).
 pub struct Model {
     name: String,
     hash: Hash,
     dim: usize,
-    rows: usize,
-    /// `rows × dim`, row-major.
-    embeddings: Matrix,
     tokenizer: Tokenizer,
-    unk: Option<u32>,
-    max_chars: usize,
-    normalize: bool,
+    kind: Kind,
+    /// `sim` edges: minimum cosine (`sim_threshold` in `config.json`, else
+    /// [`crate::build::SIM_THRESHOLD`]).
+    sim_threshold: f64,
+    /// Bits per component in `#VEC`: 1 for a static model (D143), the
+    /// `vec_bits` of `config.json` (4 or 8, else 8) for a contextual one (D171).
+    vec_bits: u8,
+    /// The cache root of the window log (D171), if not [`cache_root`].
+    log_root: Option<PathBuf>,
+}
+
+/// What computes a vector.
+enum Kind {
+    Static {
+        rows: usize,
+        /// `rows × dim`, row-major.
+        embeddings: Matrix,
+        unk: Option<u32>,
+        max_chars: usize,
+        normalize: bool,
+    },
+    Bert(Box<crate::bert::Encoder>),
 }
 
 impl std::fmt::Debug for Model {
@@ -45,7 +62,7 @@ impl std::fmt::Debug for Model {
         f.debug_struct("Model")
             .field("name", &self.name)
             .field("dim", &self.dim)
-            .field("rows", &self.rows)
+            .field("contextual", &self.is_contextual())
             .finish_non_exhaustive()
     }
 }
@@ -119,63 +136,22 @@ fn f32_le(bytes: &[u8]) -> Vec<f32> {
 /// F32 is taken as is; I8 is multiplied by the per-row `scales` (f32).
 fn read_embeddings(path: &Path) -> Result<(Matrix, usize, usize)> {
     let bytes = std::fs::read(path).map_err(|e| model_err(format!("{}: {e}", path.display())))?;
-    let header_len = bytes
-        .get(..8)
-        .and_then(|b| <[u8; 8]>::try_from(b).ok())
-        .map(u64::from_le_bytes)
-        .and_then(|n| usize::try_from(n).ok())
-        .ok_or_else(|| model_err("safetensors header length missing"))?;
-    let header_end = header_len
-        .checked_add(8)
-        .ok_or_else(|| model_err("bad header length"))?;
-    let header: serde_json::Value = bytes
-        .get(8..header_end)
-        .and_then(|h| serde_json::from_slice(h).ok())
-        .ok_or_else(|| model_err("safetensors header is not JSON"))?;
-    let tensor = |name: &str| -> Result<(String, Vec<usize>, &[u8])> {
-        let t = header
+    let index = crate::bert::safetensors_index(&bytes)?;
+    let tensor = |name: &str| -> Result<(&str, &[usize], &[u8])> {
+        let (dtype, shape, range) = index
             .get(name)
             .ok_or_else(|| model_err(format!("no `{name}` tensor")))?;
-        let dtype = t
-            .get("dtype")
-            .and_then(|d| d.as_str())
-            .unwrap_or("")
-            .to_owned();
-        let shape: Vec<usize> = t
-            .get("shape")
-            .and_then(|s| s.as_array())
-            .map(|a| {
-                a.iter()
-                    .filter_map(|x| x.as_u64().and_then(|v| usize::try_from(v).ok()))
-                    .collect()
-            })
-            .unwrap_or_default();
-        let offsets: Vec<usize> = t
-            .get("data_offsets")
-            .and_then(|s| s.as_array())
-            .map(|a| {
-                a.iter()
-                    .filter_map(|x| x.as_u64().and_then(|v| usize::try_from(v).ok()))
-                    .collect()
-            })
-            .unwrap_or_default();
-        let (Some(&start), Some(&end)) = (offsets.first(), offsets.get(1)) else {
-            return Err(model_err(format!("`{name}` has no data offsets")));
-        };
-        let data = bytes
-            .get(header_end.saturating_add(start)..header_end.saturating_add(end))
-            .ok_or_else(|| model_err(format!("`{name}` data out of range")))?;
-        Ok((dtype, shape, data))
+        Ok((dtype, shape, bytes.get(range.clone()).unwrap_or(&[])))
     };
     let (dtype, shape, data) = tensor("embeddings")?;
-    let [rows, dim] = shape.as_slice() else {
+    let [rows, dim] = shape else {
         return Err(model_err("`embeddings` is not two-dimensional"));
     };
     let (rows, dim) = (*rows, *dim);
     let count = rows
         .checked_mul(dim)
         .ok_or_else(|| model_err("tensor too large"))?;
-    let values = match dtype.as_str() {
+    let values = match dtype {
         "F32" if data.len() == count * 4 => Matrix::F32(f32_le(data)),
         "I8" if data.len() == count => {
             let (_, scale_shape, scale_data) = tensor("scales")?;
@@ -208,20 +184,50 @@ impl Model {
             .map(|n| n.to_string_lossy().into_owned())
             .filter(|n| !n.is_empty() && n.chars().count() <= 64 && n != crate::build::NO_MODEL)
             .ok_or_else(|| model_err(format!("bad model directory name: {}", dir.display())))?;
-        let (embeddings, rows, dim) = read_embeddings(&dir.join("model.safetensors"))?;
         let mut tokenizer = Tokenizer::from_file(dir.join("tokenizer.json"))
             .map_err(|e| model_err(format!("tokenizer.json: {e}")))?;
+        let _ = tokenizer.with_padding(None);
+        let config: serde_json::Value = std::fs::read(dir.join("config.json"))
+            .ok()
+            .and_then(|b| serde_json::from_slice(&b).ok())
+            .unwrap_or(serde_json::Value::Null);
+        let sim_threshold = config
+            .get("sim_threshold")
+            .and_then(serde_json::Value::as_f64)
+            .unwrap_or(crate::build::SIM_THRESHOLD);
+        if config.get("kind").and_then(serde_json::Value::as_str) == Some("bert") {
+            // D171: the encoder cuts long texts into windows itself
+            tokenizer
+                .with_truncation(None)
+                .map_err(|e| model_err(format!("truncation: {e}")))?;
+            let encoder = crate::bert::Encoder::load(dir, &config)?;
+            let vec_bits = match config.get("vec_bits").and_then(serde_json::Value::as_u64) {
+                None | Some(8) => 8,
+                Some(4) => 4,
+                Some(other) => {
+                    return Err(model_err(format!(
+                        "config.json: `vec_bits` is {other}, a contextual model stores 4 or 8"
+                    )));
+                }
+            };
+            return Ok(Self {
+                name,
+                hash: model_hash(dir)?,
+                dim: encoder.dim(),
+                tokenizer,
+                kind: Kind::Bert(Box::new(encoder)),
+                sim_threshold,
+                vec_bits,
+                log_root: None,
+            });
+        }
+        let (embeddings, rows, dim) = read_embeddings(&dir.join("model.safetensors"))?;
         tokenizer
             .with_truncation(Some(TruncationParams {
                 max_length: MAX_TOKENS,
                 ..TruncationParams::default()
             }))
             .map_err(|e| model_err(format!("truncation: {e}")))?;
-        let _ = tokenizer.with_padding(None);
-        let config: serde_json::Value = std::fs::read(dir.join("config.json"))
-            .ok()
-            .and_then(|b| serde_json::from_slice(&b).ok())
-            .unwrap_or(serde_json::Value::Null);
         let normalize = config
             .get("normalize")
             .and_then(serde_json::Value::as_bool)
@@ -248,13 +254,45 @@ impl Model {
             name,
             hash: model_hash(dir)?,
             dim,
-            rows,
-            embeddings,
             tokenizer,
-            unk,
-            max_chars: MAX_TOKENS.saturating_mul(median.max(1)),
-            normalize,
+            kind: Kind::Static {
+                rows,
+                embeddings,
+                unk,
+                max_chars: MAX_TOKENS.saturating_mul(median.max(1)),
+                normalize,
+            },
+            sim_threshold,
+            vec_bits: 1,
+            log_root: None,
         })
+    }
+
+    /// Keeps the window log of a contextual model (D171) under `root`
+    /// instead of the user cache folder (tests, portable setups).
+    pub fn set_log_root(&mut self, root: &Path) {
+        self.log_root = Some(root.to_path_buf());
+    }
+
+    /// Bits per component of this model's windows in `#VEC`: 1 (sign bits,
+    /// D143) for a static model, 4 or 8 for a contextual one (D171).
+    #[must_use]
+    pub fn vec_bits(&self) -> u8 {
+        self.vec_bits
+    }
+
+    /// D171: whether the model is contextual. Its window vectors are stored
+    /// whole in `#VEC` (`bits=8`), since the reader cannot compute them on
+    /// the fly, and a room with sub-doors has windows of its own text only.
+    #[must_use]
+    pub fn is_contextual(&self) -> bool {
+        matches!(self.kind, Kind::Bert(_))
+    }
+
+    /// `sim` edges: the minimum cosine of two room vectors.
+    #[must_use]
+    pub fn sim_threshold(&self) -> f64 {
+        self.sim_threshold
     }
 
     /// Model name written to `emb=`.
@@ -275,12 +313,17 @@ impl Model {
         self.dim
     }
 
-    /// Token ids of a text, as `model2vec` would use them.
+    /// Token ids of a text, as `model2vec` would use them; for a contextual
+    /// model with the special tokens, at most its token limit.
     ///
     /// # Errors
     /// A tokenizer failure (E012).
     pub fn token_ids(&self, text: &str) -> Result<Vec<u32>> {
-        let cut: String = text.chars().take(self.max_chars).collect();
+        let (max_chars, unk) = match &self.kind {
+            Kind::Static { max_chars, unk, .. } => (*max_chars, *unk),
+            Kind::Bert(encoder) => return encoder.token_ids(&self.tokenizer, text),
+        };
+        let cut: String = text.chars().take(max_chars).collect();
         let encoding = self
             .tokenizer
             .encode_fast(cut, false)
@@ -289,16 +332,31 @@ impl Model {
             .get_ids()
             .iter()
             .copied()
-            .filter(|id| Some(*id) != self.unk)
+            .filter(|id| Some(*id) != unk)
             .collect())
     }
 
-    /// The vector of a text: mean of the token rows, L2-normalised (zero
-    /// vector for a text without known tokens).
+    /// The vector of a text: for a static model the mean of the token rows,
+    /// L2-normalised (zero vector for a text without known tokens); for a
+    /// contextual one the text as one passage window.
     ///
     /// # Errors
     /// A tokenizer failure (E012).
     pub fn embed(&self, text: &str) -> Result<Vec<f32>> {
+        let (rows, embeddings, normalize) = match &self.kind {
+            Kind::Static {
+                rows,
+                embeddings,
+                normalize,
+                ..
+            } => (*rows, embeddings, *normalize),
+            Kind::Bert(encoder) => {
+                return encoder.encode(
+                    &self.tokenizer,
+                    &format!("{}{text}", encoder.passage_prefix),
+                );
+            }
+        };
         let ids = self.token_ids(text)?;
         let mut sum = vec![0f64; self.dim];
         let mut used = 0u32;
@@ -306,10 +364,10 @@ impl Model {
             let Ok(row) = usize::try_from(id) else {
                 continue;
             };
-            if row >= self.rows {
+            if row >= rows {
                 continue;
             }
-            if self.embeddings.add_row(row, self.dim, &mut sum) {
+            if embeddings.add_row(row, self.dim, &mut sum) {
                 used += 1;
             }
         }
@@ -319,13 +377,27 @@ impl Model {
         let n = f64::from(used);
         let mean: Vec<f64> = sum.iter().map(|s| s / n).collect();
         #[allow(clippy::cast_possible_truncation)]
-        let out = if self.normalize {
+        let out = if normalize {
             let norm = mean.iter().map(|x| x * x).sum::<f64>().sqrt() + 1e-32;
             mean.iter().map(|x| (x / norm) as f32).collect()
         } else {
             mean.iter().map(|x| *x as f32).collect()
         };
         Ok(out)
+    }
+
+    /// The vector of a search query: [`Model::embed`], for a contextual
+    /// model with its query prefix (D171).
+    ///
+    /// # Errors
+    /// A tokenizer failure (E012).
+    pub fn embed_query(&self, query: &str) -> Result<Vec<f32>> {
+        match &self.kind {
+            Kind::Bert(encoder) => {
+                encoder.encode(&self.tokenizer, &format!("{}{query}", encoder.query_prefix))
+            }
+            Kind::Static { .. } => self.embed(query),
+        }
     }
 }
 
@@ -337,10 +409,210 @@ impl Model {
     /// # Errors
     /// A tokenizer failure (E012).
     pub fn embed_windows(&self, text: &str) -> Result<Vec<Vec<f32>>> {
-        windows(text, self.max_chars)
+        match &self.kind {
+            Kind::Static { max_chars, .. } => windows(text, *max_chars)
+                .into_iter()
+                .map(|w| self.embed(w))
+                .collect(),
+            Kind::Bert(encoder) => encoder
+                .passage_windows(&self.tokenizer, text)?
+                .iter()
+                .map(|w| encoder.encode(&self.tokenizer, w))
+                .collect(),
+        }
+    }
+}
+
+/// Progress of a long vector computation (D171), called from any thread:
+/// windows done (taken from the window log or computed) and all windows.
+pub type Progress<'a> = &'a (dyn Fn(usize, usize) + Sync);
+
+impl Model {
+    /// D171: the window vectors of many texts, in order, and how many windows
+    /// failed. A static model computes them one after the other. A contextual
+    /// model cuts every text into windows on every core, takes the windows it
+    /// computed before from the window log ([`WindowLog`]), computes the
+    /// others on every core, the longest first, and appends each to the log as
+    /// soon as it is done, so an interrupted build goes on where it stopped. A
+    /// text the tokenizer refuses has no windows, and a window it refuses is
+    /// all zeros (left out of `#VEC`); both count as failed, and the others
+    /// go on.
+    ///
+    /// # Errors
+    /// A tokenizer failure of a static model (E012).
+    pub fn embed_windows_many(
+        &self,
+        texts: &[String],
+        progress: Option<Progress<'_>>,
+    ) -> Result<(Vec<Vec<Vec<f32>>>, usize)> {
+        let Kind::Bert(encoder) = &self.kind else {
+            let all = texts
+                .iter()
+                .map(|t| self.embed_windows(t))
+                .collect::<Result<_>>()?;
+            return Ok((all, 0));
+        };
+        let cut: Vec<Option<Vec<String>>> =
+            parallel_map(texts, |t| encoder.passage_windows(&self.tokenizer, t).ok())
+                .into_iter()
+                .map(Option::flatten)
+                .collect();
+        let mut failed = cut.iter().filter(|c| c.is_none()).count();
+        let flat: Vec<&str> = cut.iter().flatten().flatten().map(String::as_str).collect();
+        let keys: Vec<Hash> = flat
+            .iter()
+            .map(|w| crate::docs::blake3_of(w.as_bytes()))
+            .collect();
+        let log = WindowLog::open(self);
+        let mut vectors: Vec<Option<Vec<f32>>> = keys.iter().map(|k| log.get(k)).collect();
+        let mut todo: Vec<usize> = (0..flat.len())
+            .filter(|i| vectors.get(*i).is_some_and(Option::is_none))
+            .collect();
+        // the longest first, so the last windows to finish are short
+        todo.sort_by_key(|i| std::cmp::Reverse(flat.get(*i).map_or(0, |w| w.len())));
+        let total = flat.len();
+        let done = std::sync::atomic::AtomicUsize::new(total - todo.len());
+        if let Some(report) = progress {
+            report(total - todo.len(), total);
+        }
+        let computed = parallel_map(&todo, |i| {
+            let window = flat.get(*i).copied().unwrap_or("");
+            let vector = encoder.encode(&self.tokenizer, window).ok();
+            if let (Some(v), Some(key)) = (&vector, keys.get(*i)) {
+                log.append(key, v);
+            }
+            let now = done.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+            if let Some(report) = progress {
+                report(now, total);
+            }
+            vector
+        });
+        for (i, vector) in todo.iter().zip(computed) {
+            if let Some(slot) = vectors.get_mut(*i) {
+                *slot = Some(vector.flatten().unwrap_or_else(|| {
+                    failed += 1;
+                    vec![0.0; self.dim]
+                }));
+            }
+        }
+        let mut vectors = vectors.into_iter().map(Option::unwrap_or_default);
+        let all = cut
+            .iter()
+            .map(|c| {
+                vectors
+                    .by_ref()
+                    .take(c.as_ref().map_or(0, Vec::len))
+                    .collect()
+            })
+            .collect();
+        Ok((all, failed))
+    }
+}
+
+/// `f` of every item on every core (D171), the results in item order. The
+/// items are handed out one at a time, so long and short ones mix. A result
+/// is `None` only if its thread stopped (it cannot without a panic).
+fn parallel_map<T: Sync, R: Send>(items: &[T], f: impl Fn(&T) -> R + Sync) -> Vec<Option<R>> {
+    let threads = std::thread::available_parallelism()
+        .map_or(1, std::num::NonZero::get)
+        .min(items.len());
+    if threads <= 1 {
+        return items.iter().map(|x| Some(f(x))).collect();
+    }
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let parts: Vec<Vec<(usize, R)>> = std::thread::scope(|scope| {
+        let workers: Vec<_> = (0..threads)
+            .map(|_| {
+                scope.spawn(|| {
+                    let mut out = Vec::new();
+                    loop {
+                        let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        let Some(item) = items.get(i) else {
+                            return out;
+                        };
+                        out.push((i, f(item)));
+                    }
+                })
+            })
+            .collect();
+        workers
             .into_iter()
-            .map(|w| self.embed(w))
+            .map(|w| w.join().unwrap_or_default())
             .collect()
+    });
+    let mut out: Vec<Option<R>> = std::iter::repeat_with(|| None).take(items.len()).collect();
+    for (i, r) in parts.into_iter().flatten() {
+        if let Some(slot) = out.get_mut(i) {
+            *slot = Some(r);
+        }
+    }
+    out
+}
+
+/// D171: the windows a contextual model has computed, in
+/// `<cache>/<embhash>/windows.bin`. A record is the BLAKE3 of the window text
+/// (32 bytes), the `dim` f32 components (little-endian), and the first 8
+/// bytes of the BLAKE3 of the two, so a record torn by a crash or mixed by
+/// two writers ends the log there (the rest is computed again). The log only
+/// grows; it can be deleted any time, and its failures are silent.
+struct WindowLog {
+    known: BTreeMap<[u8; 32], Vec<f32>>,
+    file: Option<Mutex<std::fs::File>>,
+}
+
+impl WindowLog {
+    fn open(model: &Model) -> Self {
+        let dim = model.dim();
+        let mut known = BTreeMap::new();
+        let file = (|| {
+            use std::io::{Seek, Write as _};
+            let root = model.log_root.clone().or_else(cache_root)?;
+            let dir = root.join(hex(&model.hash()));
+            std::fs::create_dir_all(&dir).ok()?;
+            let path = dir.join("windows.bin");
+            let bytes = std::fs::read(&path).unwrap_or_default();
+            let record = 32 + 4 * dim + 8;
+            let mut good = 0usize;
+            for r in bytes.chunks_exact(record) {
+                let (key, rest) = r.split_at(32);
+                let (values, check) = rest.split_at(4 * dim);
+                if crate::docs::blake3_of(r.get(..32 + 4 * dim)?).0.get(..8) != Some(check) {
+                    break;
+                }
+                known.insert(<[u8; 32]>::try_from(key).ok()?, f32_le(values));
+                good += record;
+            }
+            let mut f = std::fs::OpenOptions::new()
+                .create(true)
+                .truncate(false)
+                .write(true)
+                .open(&path)
+                .ok()?;
+            f.set_len(u64::try_from(good).ok()?).ok()?;
+            f.seek(std::io::SeekFrom::End(0)).ok()?;
+            f.flush().ok()?;
+            Some(Mutex::new(f))
+        })();
+        Self { known, file }
+    }
+
+    fn get(&self, key: &Hash) -> Option<Vec<f32>> {
+        self.known.get(&key.0).cloned()
+    }
+
+    fn append(&self, key: &Hash, vector: &[f32]) {
+        use std::io::Write as _;
+        let Some(file) = &self.file else { return };
+        let mut record = Vec::with_capacity(32 + 4 * vector.len() + 8);
+        record.extend_from_slice(&key.0);
+        for x in vector {
+            record.extend_from_slice(&x.to_le_bytes());
+        }
+        let check = crate::docs::blake3_of(&record);
+        record.extend_from_slice(check.0.get(..8).unwrap_or(&[]));
+        if let Ok(mut f) = file.lock() {
+            let _ = f.write_all(&record);
+        }
     }
 }
 
@@ -426,23 +698,49 @@ pub fn find_default_model_dir() -> Option<PathBuf> {
 }
 
 // ---------------------------------------------------------------------------
-// Vectors in the file (FR-10/6, D143)
+// Vectors in the file (FR-10/6, D143, D171)
 // ---------------------------------------------------------------------------
 
-/// The first line of `#VEC`: one sign bit per component (D143).
+/// The component widths `#VEC` knows: one sign bit (D143), or a signed
+/// integer of 4 or 8 bits (D171).
+pub const VEC_BITS: [u8; 3] = [1, 4, 8];
+
+/// The first line of `#VEC`: `dim=<n> bits=<b>` (D143, D171).
 #[must_use]
-pub fn vec_params(dim: usize) -> String {
-    format!("dim={dim} bits=1")
+pub fn vec_params(dim: usize, bits: u8) -> String {
+    format!("dim={dim} bits={bits}")
 }
 
-/// Base64 characters of one window: `dim` sign bits in whole bytes, without
-/// padding (43 for 256 components).
+/// Bytes of one window: `dim` components of `bits` bits, the last byte filled
+/// up with zero bits.
+const fn window_bytes(dim: usize, bits: u8) -> usize {
+    (dim * bits as usize).div_ceil(8)
+}
+
+/// Base64 characters of one window without padding (43 for 256 sign bits,
+/// 512 for 384 components of 8 bits).
 #[must_use]
-pub const fn window_chars(dim: usize) -> usize {
-    (dim.div_ceil(8) * 4).div_ceil(3)
+pub const fn window_chars(dim: usize, bits: u8) -> usize {
+    (window_bytes(dim, bits) * 4).div_ceil(3)
 }
 
 const BASE64: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/// Appends `bytes` as unpadded base64.
+fn push_base64(bytes: &[u8], line: &mut String) {
+    for chunk in bytes.chunks(3) {
+        let n = chunk
+            .iter()
+            .zip([16u32, 8, 0])
+            .fold(0u32, |n, (b, shift)| n | (u32::from(*b) << shift));
+        for k in 0..=chunk.len() {
+            let six = (n >> (18 - 6 * k)) & 63;
+            if let Some(c) = usize::try_from(six).ok().and_then(|i| BASE64.get(i)) {
+                line.push(char::from(*c));
+            }
+        }
+    }
+}
 
 /// D143: one `#VEC` line, the windows of a door in order. A window is the
 /// sign bits of its vector (1 for a component above 0, the first component
@@ -459,20 +757,58 @@ pub fn sign_line(windows: &[Vec<f32>]) -> String {
                 *b |= 0x80 >> (i % 8);
             }
         }
-        for chunk in bytes.chunks(3) {
-            let n = chunk
-                .iter()
-                .zip([16u32, 8, 0])
-                .fold(0u32, |n, (b, shift)| n | (u32::from(*b) << shift));
-            for k in 0..=chunk.len() {
-                let six = (n >> (18 - 6 * k)) & 63;
-                if let Some(c) = usize::try_from(six).ok().and_then(|i| BASE64.get(i)) {
-                    line.push(char::from(*c));
-                }
-            }
-        }
+        push_base64(&bytes, &mut line);
     }
     line
+}
+
+/// The largest value of a `bits`-bit component (D171): 7 or 127; -8 and
+/// -128 are not used, so a window and its negation have the same scale.
+const fn int_levels(bits: u8) -> i16 {
+    if bits == 4 { 7 } else { 127 }
+}
+
+/// D171: one `#VEC` line of 4- or 8-bit integers, the windows of a door in
+/// order. Every component is divided by the largest absolute component of
+/// its window, times 7 or 127, rounded half to even (in f64), and written in
+/// two's complement; with 4 bits two components share a byte, the first in
+/// the high half (the low half of a last odd one is 0). A window whose vector
+/// is all zeros is left out, as in [`sign_line`].
+#[must_use]
+pub fn int_line(windows: &[Vec<f32>], bits: u8) -> String {
+    let levels = f64::from(int_levels(bits));
+    let mut line = String::new();
+    for v in windows.iter().filter(|v| v.iter().any(|x| *x != 0.0)) {
+        let top = v.iter().map(|x| f64::from(x.abs())).fold(0.0, f64::max);
+        // |x| / top <= 1, so the value fits in -127..=127
+        #[allow(clippy::cast_possible_truncation)]
+        let q: Vec<i8> = v
+            .iter()
+            .map(|x| (f64::from(*x) / top * levels).round_ties_even() as i8)
+            .collect();
+        let bytes: Vec<u8> = if bits == 4 {
+            q.chunks(2)
+                .map(|pair| {
+                    let nibble = |x: Option<&i8>| x.map_or(0, |x| x.to_le_bytes()[0] & 0x0F);
+                    (nibble(pair.first()) << 4) | nibble(pair.get(1))
+                })
+                .collect()
+        } else {
+            q.iter().map(|x| x.to_le_bytes()[0]).collect()
+        };
+        push_base64(&bytes, &mut line);
+    }
+    line
+}
+
+/// One `#VEC` line of the given width: [`sign_line`] or [`int_line`].
+#[must_use]
+pub fn vec_line(windows: &[Vec<f32>], bits: u8) -> String {
+    if bits == 1 {
+        sign_line(windows)
+    } else {
+        int_line(windows, bits)
+    }
 }
 
 /// Unpadded base64 to bytes; `None` for a character outside the alphabet, a
@@ -508,40 +844,50 @@ fn unbase64(text: &[u8], out: &mut Vec<u8>) -> Option<()> {
 /// `dim / 8 * 256` sums, so a hostile file must not choose its size.
 pub const MAX_VEC_DIM: usize = 4096;
 
-/// The window vectors of a file's `#VEC` section (D143): `dim` sign bits per
-/// window, door `i` owning windows `starts[i]..starts[i + 1]`.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SignVectors {
+/// The window vectors of a file's `#VEC` section (D143, D171): `dim`
+/// components of `bits` bits per window, door `i` owning windows
+/// `starts[i]..starts[i + 1]`. Sign bits stay packed; integer components are
+/// kept as i16 with the length of each window.
+#[derive(Debug, Clone, PartialEq)]
+pub struct FileVectors {
     dim: usize,
+    bits: u8,
     bytes: usize,
     data: Vec<u8>,
+    values: Vec<i16>,
+    norms: Vec<f64>,
     starts: Vec<usize>,
 }
 
-impl SignVectors {
+impl FileVectors {
     /// Reads the inner text of `#VEC` for a file of `doors` doors: the line
-    /// `dim=<n> bits=1`, then one line per door in `#DOCS` order, each a run
-    /// of [`window_chars`] base64 characters per window.
+    /// `dim=<n> bits=<b>` (`b` one of [`VEC_BITS`]), then one line per door in
+    /// `#DOCS` order, each a run of [`window_chars`] base64 characters per
+    /// window.
     ///
     /// # Errors
-    /// E005 for another first line, another number of door lines, or a line
-    /// that is not whole windows of canonical base64.
+    /// E005 for another first line, another number of door lines, a line that
+    /// is not whole windows of canonical base64, or a set unused half byte.
     pub fn parse(text: &str, doors: usize) -> Result<Self> {
         let bad = |what: String| Error::new(ErrorCode::E005, format!("#VEC {what}"));
         let mut lines = text.lines();
         let params = lines.next().unwrap_or("");
-        let dim = params
+        let parsed = params
             .strip_prefix("dim=")
-            .and_then(|r| r.strip_suffix(" bits=1"))
-            .and_then(crate::header::parse_decimal)
+            .and_then(|r| r.split_once(" bits="));
+        let dim = parsed
+            .and_then(|(d, _)| crate::header::parse_decimal(d))
             .and_then(|d| usize::try_from(d).ok())
-            .filter(|d| (1..=MAX_VEC_DIM).contains(d))
-            .ok_or_else(|| {
-                bad(format!(
-                    "line 1: `{params}`, expected `dim=<n> bits=1` with n from 1 to {MAX_VEC_DIM}"
-                ))
-            })?;
-        let (bytes, chars) = (dim.div_ceil(8), window_chars(dim));
+            .filter(|d| (1..=MAX_VEC_DIM).contains(d));
+        let bits = parsed
+            .and_then(|(_, b)| b.parse::<u8>().ok())
+            .filter(|b| VEC_BITS.contains(b) && parsed.is_some_and(|(_, t)| t == b.to_string()));
+        let (Some(dim), Some(bits)) = (dim, bits) else {
+            return Err(bad(format!(
+                "line 1: `{params}`, expected `dim=<n> bits=<b>` with n from 1 to {MAX_VEC_DIM} and b 1, 4 or 8"
+            )));
+        };
+        let (bytes, chars) = (window_bytes(dim, bits), window_chars(dim, bits));
         let mut data = Vec::new();
         let mut starts = vec![0usize];
         for (n, line) in lines.enumerate() {
@@ -555,6 +901,12 @@ impl SignVectors {
             for window in line.as_bytes().chunks(chars) {
                 unbase64(window, &mut data)
                     .ok_or_else(|| bad(format!("line {}: not canonical base64", n + 2)))?;
+                if bits == 4 && dim % 2 == 1 && data.last().is_some_and(|b| b & 0x0F != 0) {
+                    return Err(bad(format!(
+                        "line {}: the unused half byte is not 0",
+                        n + 2
+                    )));
+                }
             }
             starts.push(data.len() / bytes);
         }
@@ -564,12 +916,50 @@ impl SignVectors {
                 starts.len() - 1
             )));
         }
-        Ok(Self {
+        let mut out = Self {
             dim,
+            bits,
             bytes,
             data,
+            values: Vec::new(),
+            norms: Vec::new(),
             starts,
-        })
+        };
+        if bits != 1 {
+            out.decode_integers();
+        }
+        Ok(out)
+    }
+
+    /// D171: the integer components of every window and their lengths; the
+    /// packed bytes are not needed after that.
+    fn decode_integers(&mut self) {
+        let dim = self.dim;
+        let windows = self.data.len() / self.bytes.max(1);
+        let mut values = Vec::with_capacity(windows * dim);
+        for w in self.data.chunks(self.bytes.max(1)) {
+            if self.bits == 4 {
+                let nibbles = w.iter().flat_map(|b| {
+                    let b = i8::from_le_bytes([*b]);
+                    // the high half by an arithmetic shift, the low half moved up first
+                    [b >> 4, (b << 4) >> 4]
+                });
+                values.extend(nibbles.take(dim).map(i16::from));
+            } else {
+                values.extend(w.iter().map(|b| i16::from(i8::from_le_bytes([*b]))));
+            }
+        }
+        self.norms = values
+            .chunks(dim)
+            .map(|w| {
+                w.iter()
+                    .map(|x| f64::from(*x) * f64::from(*x))
+                    .sum::<f64>()
+                    .sqrt()
+            })
+            .collect();
+        self.values = values;
+        self.data = Vec::new();
     }
 
     /// Number of components per window.
@@ -578,18 +968,87 @@ impl SignVectors {
         self.dim
     }
 
+    /// Bits per component: 1 (sign bits, D143), 4 or 8 (D171).
+    #[must_use]
+    pub fn bits(&self) -> u8 {
+        self.bits
+    }
+
     /// Number of doors.
     #[must_use]
     pub fn doors(&self) -> usize {
         self.starts.len().saturating_sub(1)
     }
 
-    /// Per door, the best cosine of `query` with one of its windows read as
-    /// ±1 per component (0 for a door without windows). A table of 256 partial
-    /// sums per byte position makes a window `dim / 8` lookups; every sum runs
-    /// in f64 in component order, the same bits on every platform (D46).
+    /// Per door, the best cosine of `query` with one of its windows (0 for a
+    /// door without windows). Sign bits are read as ±1 per component: a table
+    /// of 256 partial sums per byte position makes a window `dim / 8`
+    /// lookups, every sum in f64 in component order (D46). Integer windows
+    /// (D171) are scored against the query rounded to 16 bits (`32767 /` its
+    /// largest component): the dot product is exact in integers, so its order
+    /// does not matter, and the cosine divides it by both lengths in f64.
     #[must_use]
     pub fn best_scores(&self, query: &[f32]) -> Vec<f64> {
+        if self.bits == 1 {
+            return self.sign_scores(query);
+        }
+        let top = query.iter().map(|x| f64::from(x.abs())).fold(0.0, f64::max);
+        if top == 0.0 {
+            return vec![0.0; self.doors()];
+        }
+        // |x| / top <= 1, so the value fits in i16
+        #[allow(clippy::cast_possible_truncation)]
+        let q: Vec<i16> = query
+            .iter()
+            .map(|x| (f64::from(*x) / top * 32767.0).round_ties_even() as i16)
+            .collect();
+        let q_norm = q
+            .iter()
+            .map(|x| f64::from(*x) * f64::from(*x))
+            .sum::<f64>()
+            .sqrt();
+        let dim = self.dim.max(1);
+        self.starts
+            .windows(2)
+            .map(|pair| {
+                let (Some(&first), Some(&end)) = (pair.first(), pair.get(1)) else {
+                    return 0.0;
+                };
+                let windows = self.values.get(first * dim..end * dim).unwrap_or(&[]);
+                let norms = self.norms.get(first..end).unwrap_or(&[]);
+                windows
+                    .chunks(dim)
+                    .zip(norms)
+                    .map(|(w, norm)| {
+                        // 128 components of at most 127 * 32767 stay below 2^31
+                        let dot: i64 = w
+                            .chunks(128)
+                            .zip(q.chunks(128))
+                            .map(|(a, b)| {
+                                i64::from(
+                                    a.iter()
+                                        .zip(b)
+                                        .map(|(x, y)| i32::from(*x) * i32::from(*y))
+                                        .sum::<i32>(),
+                                )
+                            })
+                            .sum();
+                        let denom = norm * q_norm;
+                        // exact below 2^53
+                        #[allow(clippy::cast_precision_loss)]
+                        let dot = dot as f64;
+                        if denom == 0.0 { 0.0 } else { dot / denom }
+                    })
+                    .fold(None, |best: Option<f64>, c| {
+                        Some(best.map_or(c, |b| b.max(c)))
+                    })
+                    .unwrap_or(0.0)
+            })
+            .collect()
+    }
+
+    /// [`FileVectors::best_scores`] of sign bits.
+    fn sign_scores(&self, query: &[f32]) -> Vec<f64> {
         let norm = query
             .iter()
             .map(|x| f64::from(*x) * f64::from(*x))
@@ -645,21 +1104,21 @@ impl SignVectors {
 const MEMO_FILES: usize = 2;
 
 /// Decoded `#VEC` sections by the BLAKE3 of their text, the most recent last.
-static SIGN_MEMO: Mutex<Vec<(Hash, Arc<SignVectors>)>> = Mutex::new(Vec::new());
+static SIGN_MEMO: Mutex<Vec<(Hash, Arc<FileVectors>)>> = Mutex::new(Vec::new());
 
-/// [`SignVectors::parse`], decoded once per section text for the process (as
+/// [`FileVectors::parse`], decoded once per section text for the process (as
 /// the cache's memo, D137).
 ///
 /// # Errors
-/// As [`SignVectors::parse`].
-pub fn file_vectors(text: &str, doors: usize) -> Result<Arc<SignVectors>> {
+/// As [`FileVectors::parse`].
+pub fn file_vectors(text: &str, doors: usize) -> Result<Arc<FileVectors>> {
     let key = crate::docs::blake3_of(text.as_bytes());
     if let Ok(memo) = SIGN_MEMO.lock()
         && let Some((_, hit)) = memo.iter().find(|(k, v)| *k == key && v.doors() == doors)
     {
         return Ok(Arc::clone(hit));
     }
-    let vectors = Arc::new(SignVectors::parse(text, doors)?);
+    let vectors = Arc::new(FileVectors::parse(text, doors)?);
     if let Ok(mut memo) = SIGN_MEMO.lock() {
         memo.retain(|(k, _)| *k != key);
         memo.push((key, Arc::clone(&vectors)));
@@ -1075,11 +1534,11 @@ mod tests {
             .map(|i| if i < 128 { 1.0 } else { -1.0 })
             .collect();
         let zero = vec![0f32; 256];
-        assert_eq!(window_chars(256), 43);
+        assert_eq!(window_chars(256, 1), 43);
         let line = sign_line(&[a.clone(), zero.clone(), b.clone()]);
         assert_eq!(line.len(), 2 * 43, "the zero window is left out");
-        let text = format!("{}\n{line}\n{}\n", vec_params(256), sign_line(&[zero]));
-        let signs = SignVectors::parse(&text, 2).unwrap();
+        let text = format!("{}\n{line}\n{}\n", vec_params(256, 1), sign_line(&[zero]));
+        let signs = FileVectors::parse(&text, 2).unwrap();
         assert_eq!((signs.doors(), signs.dim()), (2, 256));
         let q: Vec<f32> = (0u16..256).map(|i| f32::from((i * 7) % 11) - 5.0).collect();
         let sign = |v: &[f32]| -> Vec<f32> {
@@ -1101,12 +1560,14 @@ mod tests {
         let ones = sign_line(&[vec![1.0f32; 256]]);
         assert_eq!(ones, format!("{}//8", "/".repeat(40)));
         let ok = format!("dim=256 bits=1\n{ones}\n");
-        assert!(SignVectors::parse(&ok, 1).is_ok());
-        assert!(SignVectors::parse(&format!("dim={MAX_VEC_DIM} bits=1\n"), 0).is_ok());
+        assert!(FileVectors::parse(&ok, 1).is_ok());
+        assert!(FileVectors::parse(&format!("dim={MAX_VEC_DIM} bits=1\n"), 0).is_ok());
         let not_canonical = format!("{}//9", "/".repeat(40));
         let bad_char = format!("*{}", &ones[1..]);
         for (text, doors) in [
+            (format!("dim=256 bits=2\n{ones}\n"), 1),
             (format!("dim=256 bits=8\n{ones}\n"), 1),
+            (format!("dim=256 bits=08\n{ones}\n"), 1),
             (format!("dim=256 bits=1\n{ones}x\n"), 1),
             (format!("dim=256 bits=1\n{not_canonical}\n"), 1),
             (format!("dim=256 bits=1\n{bad_char}\n"), 1),
@@ -1115,9 +1576,53 @@ mod tests {
             ("dim=922222223 bits=1".to_owned(), 0),
             (format!("dim={} bits=1\n", MAX_VEC_DIM + 1), 0),
         ] {
-            let e = SignVectors::parse(&text, doors).unwrap_err();
+            let e = FileVectors::parse(&text, doors).unwrap_err();
             assert_eq!(e.code, ErrorCode::E005, "{text:?}");
         }
+    }
+
+    #[test]
+    #[allow(clippy::cast_possible_truncation)]
+    fn integer_lines_round_trip_and_score_like_their_rounded_vectors() {
+        // D171: rounded to 127 or 7 steps of the largest component
+        let a: Vec<f32> = (0u16..384).map(|i| f32::from(i % 17) - 8.0).collect();
+        let b: Vec<f32> = (0u16..384)
+            .map(|i| if i < 100 { 0.5 } else { -0.125 })
+            .collect();
+        let zero = vec![0f32; 384];
+        let q: Vec<f32> = (0u16..384).map(|i| f32::from((i * 7) % 11) - 5.0).collect();
+        for bits in [8u8, 4] {
+            let levels = f64::from(int_levels(bits));
+            let rounded = |v: &[f32]| -> Vec<f32> {
+                let top = v.iter().map(|x| f64::from(x.abs())).fold(0.0, f64::max);
+                v.iter()
+                    .map(|x| (f64::from(*x) / top * levels).round_ties_even() as f32)
+                    .collect()
+            };
+            let line = int_line(&[a.clone(), zero.clone(), b.clone()], bits);
+            assert_eq!(
+                line.len(),
+                2 * window_chars(384, bits),
+                "the zero window is left out"
+            );
+            let text = format!("{}\n{line}\n\n", vec_params(384, bits));
+            let v = FileVectors::parse(&text, 2).unwrap();
+            assert_eq!((v.doors(), v.dim(), v.bits()), (2, 384, bits));
+            let want = cosine(&q, &rounded(&a)).max(cosine(&q, &rounded(&b)));
+            let got = v.best_scores(&q);
+            // the query is rounded to 16 bits
+            assert!((got[0] - want).abs() < 1e-4, "{bits}: {got:?} {want}");
+            assert!(got[1].abs() < f64::EPSILON);
+        }
+        assert_eq!(window_chars(384, 8), 512);
+        assert_eq!(window_chars(384, 4), 256);
+        // an odd count of 4-bit components: the last low half must be 0
+        let odd = int_line(&[vec![1.0f32; 3]], 4);
+        assert!(FileVectors::parse(&format!("dim=3 bits=4\n{odd}\n"), 1).is_ok());
+        let mut bad = String::new();
+        push_base64(&[0x77, 0x71], &mut bad);
+        let e = FileVectors::parse(&format!("dim=3 bits=4\n{bad}\n"), 1).unwrap_err();
+        assert_eq!(e.code, ErrorCode::E005);
     }
 
     #[test]
