@@ -990,6 +990,7 @@ fn assemble(
     counts: (usize, usize, usize),
     model: (&str, Hash),
     version: &str,
+    pending: Option<&str>,
 ) -> Result<Vec<u8>> {
     let (rooms, doors, groups) = counts;
     let (emb, embhash) = model;
@@ -1005,6 +1006,9 @@ fn assemble(
     let _ = writeln!(header, "body={}+{}", pos + "#BODY\n".len(), body.len());
     let _ = writeln!(header, "rooms={rooms}\ndoors={doors}\ngroups={groups}");
     let _ = writeln!(header, "bodyhash=b3:{}\nguide=std-1", hex(&blake3_of(body)));
+    if let Some(name) = pending {
+        let _ = writeln!(header, "pending={name}");
+    }
     if header.len() > HEADER_LEN - 1 {
         return Err(Error::new(
             ErrorCode::E002,
@@ -1050,6 +1054,22 @@ pub fn build_with_progress(
     rooms: &[RoomSource],
     model: Option<&Model>,
     progress: Option<Progress<'_>>,
+) -> Result<Built> {
+    build_file(rooms, model, progress, None)
+}
+
+/// D173: a build that would compute more window vectors than this (about
+/// 15 seconds on 12 threads, a minute on a slow machine) first writes the
+/// file without vectors ([`rebuild_pending`]), so it is usable at once.
+pub const PENDING_WINDOWS: usize = 200;
+
+/// The build; `pending` names the model whose vectors are still to come
+/// (D173, then `model` is `None`).
+fn build_file(
+    rooms: &[RoomSource],
+    model: Option<&Model>,
+    progress: Option<Progress<'_>>,
+    pending: Option<&str>,
 ) -> Result<Built> {
     let mut warnings = Vec::new();
     let mut seen = BTreeSet::new();
@@ -1130,7 +1150,7 @@ pub fn build_with_progress(
     } else {
         FORMAT_VERSION
     };
-    let bytes = assemble(sections, &body, counts, model_id, version)?;
+    let bytes = assemble(sections, &body, counts, model_id, version, pending)?;
     if bytes.len() > SIZE_WARNING_BYTES {
         warnings.push(Warning {
             code: "W008",
@@ -1205,7 +1225,38 @@ pub fn rebuild_with_progress(
 ) -> Result<Built> {
     let s =
         crate::Sections::parse_with(file, &crate::Limits::default(), crate::BodyLength::Tolerate)?;
-    build_with_progress(&parse_body(s.body)?, model, progress)
+    // D173: a rebuild without a model keeps a pending model, a build with one
+    // computes its vectors
+    let pending = model.map_or(s.header.pending.as_deref(), |_| None);
+    build_file(&parse_body(s.body)?, model, progress, pending)
+}
+
+/// D173: `file` rebuilt without vectors, its header naming `model` as the
+/// one whose vectors are still being computed (`pending=`): keyword search
+/// works at once, and `kapu build` with the model adds the vectors.
+///
+/// # Errors
+/// As [`rebuild_with`].
+pub fn rebuild_pending(file: &[u8], model: &Model) -> Result<Built> {
+    let s =
+        crate::Sections::parse_with(file, &crate::Limits::default(), crate::BodyLength::Tolerate)?;
+    build_file(&parse_body(s.body)?, None, None, Some(model.name()))
+}
+
+/// D173: how many window vectors a build of `file` with `model` would
+/// compute (they are not in the window log yet), and how many windows it
+/// has; `(0, 0)` for a static model.
+///
+/// # Errors
+/// A broken header, layout or body.
+pub fn missing_windows(file: &[u8], model: &Model) -> Result<(usize, usize)> {
+    if !model.is_contextual() {
+        return Ok((0, 0));
+    }
+    let s =
+        crate::Sections::parse_with(file, &crate::Limits::default(), crate::BodyLength::Tolerate)?;
+    let (doors, _) = build_doors(&parse_body(s.body)?)?;
+    Ok(model.missing_windows(&vector_texts(&doors, true)))
 }
 
 /// A free room id for a new room (FR-04/4): the slug of its title, with

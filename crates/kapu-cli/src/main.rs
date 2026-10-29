@@ -13,7 +13,10 @@ use std::time::Instant;
 use clap::builder::styling::{Effects, Style};
 use clap::{CommandFactory, FromArgMatches, Parser, Subcommand};
 use kapu_core::about;
-use kapu_core::build::{Built, Warning, rebuild_with_progress, write_atomic};
+use kapu_core::build::{
+    Built, PENDING_WINDOWS, Warning, missing_windows, rebuild_pending, rebuild_with_progress,
+    write_atomic,
+};
 use kapu_core::embed::{DEFAULT_MODEL, Model, VectorCache, find_default_model_dir, find_model_dir};
 use kapu_core::search::{SearchOptions, VectorStatus};
 use kapu_core::{Error, ErrorCode, Level};
@@ -170,12 +173,25 @@ fn file_name(path: &Path) -> String {
         .unwrap_or_default()
 }
 
-/// Rebuilds `bytes` with `model`. D171: a contextual model computes its
-/// window vectors for minutes, so the build says on stderr how far it is, at
-/// most every 10 seconds, with an estimate of the time left.
-fn rebuild(bytes: &[u8], model: Option<&Model>) -> Result<Built, Error> {
-    if !model.is_some_and(Model::is_contextual) {
+/// Rebuilds `bytes` with `model` for `target`. D171: a contextual model
+/// computes its window vectors for minutes, so the build says on stderr how
+/// far it is, at most every 10 seconds, with an estimate of the time left.
+/// D173: with more than [`PENDING_WINDOWS`] windows to compute, `target` is
+/// first written without vectors (`pending=`), so it is usable at once; the
+/// caller writes the whole file when the vectors are done.
+fn rebuild(target: &Path, bytes: &[u8], model: Option<&Model>) -> Result<Built, Error> {
+    let Some(model) = model.filter(|m| m.is_contextual()) else {
         return rebuild_with_progress(bytes, model, None);
+    };
+    let (missing, total) = missing_windows(bytes, model)?;
+    if missing > PENDING_WINDOWS {
+        let first = rebuild_pending(bytes, model)?;
+        write_atomic(target, &first.bytes)?;
+        eprintln!(
+            "kapu: {} is ready for keyword search; now computing {missing} of {total} vector windows, \
+             then the file gets them (stopping is safe: `kapu build` goes on from there)",
+            target.display()
+        );
     }
     let start = Instant::now();
     let first: std::sync::Mutex<Option<(usize, Instant)>> = std::sync::Mutex::new(None);
@@ -206,7 +222,7 @@ fn rebuild(bytes: &[u8], model: Option<&Model>) -> Result<Built, Error> {
             100.0 * done as f64 / total.max(1) as f64
         );
     };
-    rebuild_with_progress(bytes, model, Some(&report))
+    rebuild_with_progress(bytes, Some(model), Some(&report))
 }
 
 /// The model for writing: `--no-model`, `--model`, or the packaged default
@@ -299,7 +315,7 @@ fn run(cli: &Cli) -> Result<Output, Error> {
             }
             let model = writer_model(cli, &mut warnings)?;
             let base = kapu_core::edit::new_file_of(kind.as_deref())?;
-            let built = rebuild(&base.bytes, model.as_ref())?;
+            let built = rebuild(file, &base.bytes, model.as_ref())?;
             written(file, built, model.as_ref(), warnings, json!({}))
         }
         Command::Template { kind } => {
@@ -314,7 +330,7 @@ fn run(cli: &Cli) -> Result<Output, Error> {
                 kapu_core::edit::import_dir(dir)?
             };
             warnings.extend(imported.warnings);
-            let built = rebuild(&imported.bytes, model.as_ref())?;
+            let built = rebuild(file, &imported.bytes, model.as_ref())?;
             written(file, built, model.as_ref(), warnings, json!({}))
         }
         Command::Export { file, dir } => {
@@ -329,7 +345,7 @@ fn run(cli: &Cli) -> Result<Output, Error> {
             let (added, room) =
                 kapu_core::edit::add_room(&read(file)?, &file_name(markdown), &md, id.as_deref())?;
             warnings.extend(added.warnings);
-            let built = rebuild(&added.bytes, model.as_ref())?;
+            let built = rebuild(file, &added.bytes, model.as_ref())?;
             // FR-18/4, FR-19: content scan of the saved room, as warnings
             for f in kapu_core::scan::scan_file(&built.bytes)?
                 .into_iter()
@@ -347,7 +363,7 @@ fn run(cli: &Cli) -> Result<Output, Error> {
         Command::Rm { file, id } => {
             let model = writer_model(cli, &mut warnings)?;
             let removed = kapu_core::edit::remove_room(&read(file)?, id)?;
-            let built = rebuild(&removed.bytes, model.as_ref())?;
+            let built = rebuild(file, &removed.bytes, model.as_ref())?;
             written(
                 file,
                 built,
@@ -358,7 +374,7 @@ fn run(cli: &Cli) -> Result<Output, Error> {
         }
         Command::Build { file } => {
             let model = writer_model(cli, &mut warnings)?;
-            let built = rebuild(&read(file)?, model.as_ref())?;
+            let built = rebuild(file, &read(file)?, model.as_ref())?;
             written(file, built, model.as_ref(), warnings, json!({}))
         }
         Command::Validate { file, full } => validate(cli, file, *full),

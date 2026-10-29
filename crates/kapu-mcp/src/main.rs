@@ -1242,7 +1242,18 @@ impl KapuServer {
         };
         let (added, id) =
             kapu_core::edit::add_room(data, "kapu_write", &args.markdown, args.id.as_deref())?;
-        let built = kapu_core::build::rebuild_with(&added.bytes, model.as_deref())?;
+        // D173: a write never computes vectors for minutes inside a tool
+        // call; with many windows to compute it saves without vectors
+        let missing = match model.as_deref() {
+            Some(m) => kapu_core::build::missing_windows(&added.bytes, m)?.0,
+            None => 0,
+        };
+        let built = match model.as_deref() {
+            Some(m) if missing > kapu_core::build::PENDING_WINDOWS => {
+                kapu_core::build::rebuild_pending(&added.bytes, m)?
+            }
+            _ => kapu_core::build::rebuild_with(&added.bytes, model.as_deref())?,
+        };
         kapu_core::build::write_atomic(&path, &built.bytes)?;
         self.forget(&args.file);
         let map = kapu_core::view::map_view(&built.bytes, None)?;
@@ -1262,6 +1273,12 @@ impl KapuServer {
         }
         if model.is_none() {
             out.push_str("W005: no vector model; built without vectors\n");
+        } else if missing > kapu_core::build::PENDING_WINDOWS {
+            let _ = writeln!(
+                out,
+                "saved without vectors: {missing} vector windows are not computed yet; keyword search works now, `kapu build {}` adds the vectors (D173)",
+                args.file
+            );
         }
         priced(&out).map(|(full, _)| full)
     }

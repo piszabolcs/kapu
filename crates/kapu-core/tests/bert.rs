@@ -7,7 +7,8 @@
     clippy::unwrap_used,
     clippy::expect_used,
     clippy::indexing_slicing,
-    clippy::cast_possible_truncation
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss
 )]
 
 use std::fmt::Write as _;
@@ -187,4 +188,92 @@ fn a_contextual_model_stores_whole_vectors_and_builds_the_same_bytes_twice() {
             found.hits
         );
     }
+}
+
+/// A long text: full windows (512 tokens) and a last one that is not, and
+/// token counts that are not a multiple of 32 (the lanes of the kernel).
+fn long_text() -> String {
+    let mut text = String::new();
+    for i in 0..60 {
+        write!(
+            text,
+            "Section {i}: the preload script exposes `api.read({i})` to the renderer. \
+             A {i}. bekezdés az adóelőleg negyedéves fizetéséről szól, {i} példával. "
+        )
+        .unwrap();
+    }
+    text
+}
+
+/// BLAKE3 of the f32 bits of every window of [`long_text`] (0.5.0 kernel).
+const LONG_GOLDEN: &str = "d91432d8095eca6fb77fc3694b94389dfad41fe8523330875dc650c217efbdc7";
+
+#[test]
+fn long_windows_keep_their_bits() {
+    let Some(model) = model() else { return };
+    let windows = model.embed_windows(&long_text()).unwrap();
+    assert!(windows.len() >= 3, "{}", windows.len());
+    let mut bytes = Vec::new();
+    for v in &windows {
+        for x in v {
+            bytes.extend_from_slice(&x.to_bits().to_le_bytes());
+        }
+    }
+    let mut hash = String::new();
+    for b in kapu_core::blake3_of(&bytes).0 {
+        write!(hash, "{b:02x}").unwrap();
+    }
+    assert_eq!(hash, LONG_GOLDEN);
+}
+
+/// `cargo test --release -p kapu-core --test bert -- --ignored --nocapture`:
+/// one 512-token window on one thread, then windows a second on every core.
+#[test]
+#[ignore = "speed measurement"]
+fn encoder_speed() {
+    let Some(mut model) = model() else { return };
+    // a fresh window log, so every window is computed
+    let cache = std::env::temp_dir().join(format!("kapu-speed-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&cache);
+    model.set_log_root(&cache);
+    let text = long_text();
+    let one = model.embed_windows(&text).unwrap();
+    let start = std::time::Instant::now();
+    let rounds = 3;
+    for _ in 0..rounds {
+        model.embed_windows(&text).unwrap();
+    }
+    let single = start.elapsed().as_secs_f64() / f64::from(rounds) / one.len() as f64;
+    let texts: Vec<String> = (0..48).map(|i| format!("{i} {text}")).collect();
+    let start = std::time::Instant::now();
+    let (all, failed) = model.embed_windows_many(&texts, None).unwrap();
+    let took = start.elapsed().as_secs_f64();
+    let count: usize = all.iter().map(Vec::len).sum();
+    assert_eq!(failed, 0);
+    eprintln!(
+        "one thread: {:.0} ms a window; all cores: {count} windows in {took:.1} s, {:.1} a second",
+        single * 1000.0,
+        count as f64 / took
+    );
+    let _ = std::fs::remove_dir_all(&cache);
+}
+
+#[test]
+fn missing_windows_counts_what_the_log_lacks() {
+    // D173: the count that decides whether a build first writes the file
+    // without vectors
+    let Some(mut model) = model() else { return };
+    let cache = std::env::temp_dir().join(format!("kapu-missing-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&cache);
+    model.set_log_root(&cache);
+    let file = kapu_core::build::build_with(&rooms(), None).unwrap().bytes;
+    let (missing, total) = kapu_core::build::missing_windows(&file, &model).unwrap();
+    assert!(total > 0);
+    assert_eq!(missing, total);
+    kapu_core::build::build_with(&rooms(), Some(&model)).unwrap();
+    assert_eq!(
+        kapu_core::build::missing_windows(&file, &model).unwrap(),
+        (0, total)
+    );
+    let _ = std::fs::remove_dir_all(&cache);
 }

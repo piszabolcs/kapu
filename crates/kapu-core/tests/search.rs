@@ -592,3 +592,34 @@ fn hex32(bytes: &[u8; 32]) -> String {
         s
     })
 }
+
+#[test]
+fn d173_a_pending_file_serves_keyword_search_and_says_why() {
+    let model = tiny();
+    let built = build_with(&rooms(), Some(&model)).unwrap();
+    let pending = kapu_core::build::rebuild_pending(&built.bytes, &model).unwrap();
+    let s = kapu_core::Sections::parse(&pending.bytes).unwrap();
+    assert_eq!(s.header.pending.as_deref(), Some(model.name()));
+    assert_eq!(s.header.emb, kapu_core::build::NO_MODEL);
+    assert!(s.vec.is_none());
+    // a rebuild without a model keeps the field, so the full check passes
+    let report = kapu_core::validate(&pending.bytes, kapu_core::Level::Full).unwrap();
+    assert!(report.rebuild_checked);
+    let cache = VectorCache::in_memory(&model);
+    let found = search(
+        &pending.bytes,
+        "gomb",
+        &SearchOptions::default(),
+        Some(&cache),
+    )
+    .unwrap();
+    assert_ne!(found.hits.len(), 0);
+    assert!(
+        matches!(&found.vector, VectorStatus::Unavailable(m) if m.contains("still being computed")),
+        "{:?}",
+        found.vector
+    );
+    // a build with the model adds the vectors and drops the field
+    let full = kapu_core::build::rebuild_with(&pending.bytes, Some(&model)).unwrap();
+    assert_eq!(full.bytes, built.bytes);
+}

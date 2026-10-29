@@ -975,6 +975,11 @@ fn graph_step(
 
 /// FR-10/4: whether the reader's model matches the file's `embhash`.
 fn vector_status(s: &Sections<'_>, cache: Option<&crate::embed::VectorCache<'_>>) -> VectorStatus {
+    if let Some(name) = &s.header.pending {
+        return VectorStatus::Unavailable(format!(
+            "the vectors of `{name}` are still being computed; keyword search only until `kapu build` finishes them (D173)"
+        ));
+    }
     match cache.map(crate::embed::VectorCache::model) {
         None => VectorStatus::Unavailable("no vector model".to_owned()),
         Some(m) if m.name() != s.header.emb || m.hash() != s.header.embhash => {

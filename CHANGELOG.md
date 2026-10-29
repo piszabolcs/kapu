@@ -5,6 +5,19 @@ The file format has its own version (`%KAPU 1.3`, see `SPEC-KAPU.md`); the tools
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-29
+
+Specification v1.3.1; the file format stays 1.2 and 1.3. A large file can be searched within seconds of `kapu import`, and its first build with the vector model is 2.5 times faster (D173).
+
+### Changed
+- The x86-64 release builds need a processor with AVX2 (x86-64-v3: Intel from 2013, AMD from 2015); on an older one they stop with an illegal-instruction error. macOS on Apple silicon is unchanged.
+- The encoder of the vector model is faster and gives the same vectors: integer products in 32 lanes, rounding without a library call, the attention head by head. One 512-token window on one thread: 1.10 s → 0.66 s with a baseline build, 0.44 s with AVX2; on 12 threads 5.8 → 14.3 windows a second. The ElevenLabs documentation (1,399 rooms, 14,942 windows) builds in 14.5 minutes instead of 33 minutes on 12 threads. Files and window logs of 0.5.0 stay valid.
+
+### Added
+- When a build has more than 200 window vectors to compute, `kapu import`, `build`, `add`, `rm` and `new` first write the file without vectors (header field `pending=<model>`), so it can be searched by keyword at once (the ElevenLabs file after 37 seconds), then compute the vectors and write the whole file. Stopping is safe: `kapu build` goes on from the window log. A search on such a file says that the vectors are still being computed.
+- `kapu_write` with more than 200 windows to compute saves without vectors the same way and says so, instead of computing for minutes inside the tool call.
+- Tests: the bits of long windows, the count of missing windows, a file with pending vectors, and `encoder_speed` (ignored: `cargo test --release -p kapu-core --test bert -- --ignored --nocapture`).
+
 ## [0.5.0] - 2026-10-28
 
 Specification v1.3: a file whose `#VEC` holds 4- or 8-bit integers is format 1.3, every other file stays 1.2. Plan v3 (D168-D172): the bundled vector model is now `multilingual-e5-small`, a contextual encoder run in plain Rust (`bench/RESULTS.md` chapter 13, `bench/results/2026-10-28-plan-v3.json`, the results page with a new section and its PDFs). There is no 0.4.0.

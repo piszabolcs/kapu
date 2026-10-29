@@ -429,6 +429,28 @@ impl Model {
 pub type Progress<'a> = &'a (dyn Fn(usize, usize) + Sync);
 
 impl Model {
+    /// D173: of the windows of `texts`, cut as [`Model::embed_windows_many`]
+    /// cuts them, how many are not in the window log yet, and how many there
+    /// are. A static model computes its windows in moments: `(0, 0)`.
+    #[must_use]
+    pub fn missing_windows(&self, texts: &[String]) -> (usize, usize) {
+        let Kind::Bert(encoder) = &self.kind else {
+            return (0, 0);
+        };
+        let cut = parallel_map(texts, |t| encoder.passage_windows(&self.tokenizer, t).ok());
+        let known = WindowLog::path(self)
+            .map(|(_, path)| WindowLog::read(&path, self.dim).0)
+            .unwrap_or_default();
+        let (mut missing, mut total) = (0, 0);
+        for window in cut.iter().flatten().flatten().flatten() {
+            total += 1;
+            if !known.contains_key(&crate::docs::blake3_of(window.as_bytes()).0) {
+                missing += 1;
+            }
+        }
+        (missing, total)
+    }
+
     /// D171: the window vectors of many texts, in order, and how many windows
     /// failed. A static model computes them one after the other. A contextual
     /// model cuts every text into windows on every core, takes the windows it
@@ -562,27 +584,45 @@ struct WindowLog {
 }
 
 impl WindowLog {
+    /// The log file of `model`, and its folder.
+    fn path(model: &Model) -> Option<(PathBuf, PathBuf)> {
+        let root = model.log_root.clone().or_else(cache_root)?;
+        let dir = root.join(hex(&model.hash()));
+        let path = dir.join("windows.bin");
+        Some((dir, path))
+    }
+
+    /// The good records at the start of the log file, and their length in
+    /// bytes (a record cut short by a crash ends it).
+    fn read(path: &Path, dim: usize) -> (BTreeMap<[u8; 32], Vec<f32>>, usize) {
+        let mut known = BTreeMap::new();
+        let bytes = std::fs::read(path).unwrap_or_default();
+        let record = 32 + 4 * dim + 8;
+        let mut good = 0usize;
+        for r in bytes.chunks_exact(record) {
+            let (key, rest) = r.split_at(32);
+            let (values, check) = rest.split_at(4 * dim);
+            let whole = r.get(..32 + 4 * dim).unwrap_or(&[]);
+            let (Ok(key), true) = (
+                <[u8; 32]>::try_from(key),
+                crate::docs::blake3_of(whole).0.get(..8) == Some(check),
+            ) else {
+                break;
+            };
+            known.insert(key, f32_le(values));
+            good += record;
+        }
+        (known, good)
+    }
+
     fn open(model: &Model) -> Self {
-        let dim = model.dim();
         let mut known = BTreeMap::new();
         let file = (|| {
             use std::io::{Seek, Write as _};
-            let root = model.log_root.clone().or_else(cache_root)?;
-            let dir = root.join(hex(&model.hash()));
+            let (dir, path) = Self::path(model)?;
             std::fs::create_dir_all(&dir).ok()?;
-            let path = dir.join("windows.bin");
-            let bytes = std::fs::read(&path).unwrap_or_default();
-            let record = 32 + 4 * dim + 8;
-            let mut good = 0usize;
-            for r in bytes.chunks_exact(record) {
-                let (key, rest) = r.split_at(32);
-                let (values, check) = rest.split_at(4 * dim);
-                if crate::docs::blake3_of(r.get(..32 + 4 * dim)?).0.get(..8) != Some(check) {
-                    break;
-                }
-                known.insert(<[u8; 32]>::try_from(key).ok()?, f32_le(values));
-                good += record;
-            }
+            let (read, good) = Self::read(&path, model.dim());
+            known = read;
             let mut f = std::fs::OpenOptions::new()
                 .create(true)
                 .truncate(false)

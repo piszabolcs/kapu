@@ -1,0 +1,6 @@
+# 0.5.1 (D173): x86-64 builds need AVX2 (x86-64-v3: Intel from 2013, AMD
+# from 2015). The vector model's matrix products run 1.5 times faster than
+# with the baseline (SSE2); the vectors have the same bits either way
+# (integer products, float sums in a fixed order, tests/bert.rs).
+[target.'cfg(target_arch = "x86_64")']
+rustflags = ["-C", "target-cpu=x86-64-v3"]

@@ -65,6 +65,9 @@ pub struct Header {
     pub bodyhash: Hash,
     /// Which standard guide the reader serves (`std-1`).
     pub guide: String,
+    /// D173: the model whose window vectors are still being computed
+    /// (`pending=`); the file is then built without vectors (`emb=none`).
+    pub pending: Option<String>,
     /// Fields this version does not know, in key order.
     pub extra: BTreeMap<String, String>,
 }
@@ -169,7 +172,7 @@ impl Header {
                 ));
             }
         }
-        let header = Self {
+        Ok(Self {
             version,
             emb: take(&mut kv, "emb")?,
             embhash: parse_hash("embhash", &take(&mut kv, "embhash")?, ErrorCode::E002)?,
@@ -188,9 +191,9 @@ impl Header {
             groups: parse_count("groups", &take(&mut kv, "groups")?)?,
             bodyhash: parse_hash("bodyhash", &take(&mut kv, "bodyhash")?, ErrorCode::E002)?,
             guide: take(&mut kv, "guide")?,
+            pending: kv.remove("pending"),
             extra: kv,
-        };
-        Ok(header)
+        })
     }
 }
 
@@ -390,6 +393,16 @@ mod tests {
                 .map(String::as_str),
             Some("42")
         );
+    }
+
+    #[test]
+    fn pending_field_names_the_model() {
+        assert_eq!(parse_lines(&valid_lines()).unwrap().pending, None);
+        let mut lines = valid_lines();
+        lines.push("pending=multilingual-e5-small-q8".to_owned());
+        let header = parse_lines(&lines).unwrap();
+        assert_eq!(header.pending.as_deref(), Some("multilingual-e5-small-q8"));
+        assert!(header.extra.is_empty());
     }
 
     #[test]

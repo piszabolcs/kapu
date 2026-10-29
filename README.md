@@ -26,7 +26,7 @@ It is built for two cases: **coding agents** that should use your accumulated kn
 
 ## Try it in 30 seconds
 
-**1. Install** the prebuilt `kapu` and `kapu-mcp` (Windows x64, Linux x64, macOS on Apple silicon), with the embedding model included. No Rust, no Python.
+**1. Install** the prebuilt `kapu` and `kapu-mcp` (Windows x64, Linux x64, macOS on Apple silicon), with the embedding model included. No Rust, no Python. The x64 builds need a processor with AVX2 (Intel from 2013, AMD from 2015).
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/piszabolcs/kapu/main/install.sh | sh
@@ -368,7 +368,7 @@ A nyilvános dokumentációkon (Rust Book, Kubernetes, MDN) a keresés 35-320 ms
 
 **Amire nem való:** kicsi, jól szétszedett Markdown-mappára (ott a grep is olcsó), naponta változó csapatos dokumentációra (a git diff zajos, ilyenkor a Markdown a forrás), és futtatandó skillekre (a KAPU a tudást adja, a szkriptet nem futtatja).
 
-**Kipróbálás:** telepítés előre fordított binárissal és a beágyazó modellel, Rust és Python nélkül: Linuxon és macOS-en `curl -fsSL https://raw.githubusercontent.com/piszabolcs/kapu/main/install.sh | sh`, Windowson `irm https://raw.githubusercontent.com/piszabolcs/kapu/main/install.ps1 | iex` (vagy a kiadás archívuma a [Releases](https://github.com/piszabolcs/kapu/releases) oldalról), majd `kapu map examples/kapu-docs.kapu`; forrásból: Rust 1.90 vagy újabb, `cargo build --release -p kapu-cli -p kapu-mcp`. Saját fájl egy Markdown-mappából: `kapu import ./jegyzetek jegyzetek.kapu`, skillekből: `kapu import --skills ~/.claude/skills skillek.kapu`, projektkártya: `kapu template --kind project`. Claude Code-hoz: `claude mcp add kapu -- kapu-mcp`; a Codex és a VS Code beállítása fent, a [Connect an agent](#connect-an-agent) részben.
+**Kipróbálás:** telepítés előre fordított binárissal és a beágyazó modellel, Rust és Python nélkül: Linuxon és macOS-en `curl -fsSL https://raw.githubusercontent.com/piszabolcs/kapu/main/install.sh | sh`, Windowson `irm https://raw.githubusercontent.com/piszabolcs/kapu/main/install.ps1 | iex` (vagy a kiadás archívuma a [Releases](https://github.com/piszabolcs/kapu/releases) oldalról), majd `kapu map examples/kapu-docs.kapu`; forrásból: Rust 1.90 vagy újabb, `cargo build --release -p kapu-cli -p kapu-mcp`. Saját fájl egy Markdown-mappából: `kapu import ./jegyzetek jegyzetek.kapu`, skillekből: `kapu import --skills ~/.claude/skills skillek.kapu`, projektkártya: `kapu template --kind project`. Claude Code-hoz: `claude mcp add kapu -- kapu-mcp`; a Codex és a VS Code beállítása fent, a [Connect an agent](#connect-an-agent) részben. Az x64-es binárisokhoz AVX2-t tudó processzor kell (Intel 2013-tól, AMD 2015-től).
 
 **Hogyan működik:** a `.kapu` fájl sima UTF-8 szöveg. A Markdown törzs az egyetlen igazságforrás; a térkép a tokenárakkal, a keresőindex, a keresés vektorai, a gráf és az ujjlenyomatok bájtra azonosan újraépülnek belőle. A formátum specifikációja magyarul: [SPEC-KAPU.hu.md](SPEC-KAPU.hu.md), angolul: [SPEC-KAPU.md](SPEC-KAPU.md).
 
