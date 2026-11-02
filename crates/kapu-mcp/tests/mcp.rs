@@ -90,7 +90,7 @@ async fn check_tool_list(client: &RunningService<RoleClient, ()>) {
         names,
         [
             "kapu_ask",
-            "kapu_describe",
+            "kapu_grep",
             "kapu_map",
             "kapu_open",
             "kapu_search",
@@ -175,14 +175,27 @@ async fn conformance_and_core_flow_on_the_sample() {
             && hits.contains("vector: unavailable")
     );
 
-    // kapu_describe: long description and all tags; unknown ids fail per id
-    let (_, d) = call(
+    // kapu_grep (D176): the lines with the words, any case, a|b for either
+    let (_, g) = call(
         &client,
-        "kapu_describe",
-        json!({ "file": f, "ids": ["electron-leckek", "nincs"] }),
+        "kapu_grep",
+        json!({ "file": f, "pattern": "CONTEXTBRIDGE|qqqzzz" }),
     )
     .await;
-    assert!(d.contains("tags: electron, preload, ipc, hiba") && d.contains("nincs: E009"));
+    assert!(
+        g.contains("electron-leckek/preload-bridge:L") && g.contains("contextBridge"),
+        "{g}"
+    );
+    let (_, none) = call(
+        &client,
+        "kapu_grep",
+        json!({ "file": f, "pattern": "qqqzzz" }),
+    )
+    .await;
+    assert!(
+        priced(&none).1.starts_with("no match for `qqqzzz`"),
+        "{none}"
+    );
 
     // kapu_open: four ids in one call (D19), frames and neighbours
     let ids = [
@@ -201,7 +214,7 @@ async fn conformance_and_core_flow_on_the_sample() {
 
     // FR-15/1: no response ever holds the whole body
     let body_rooms = ["# Frontend design alapok", "# Electron leckék"];
-    for response in [&first, &second, &hits, &d, &opened] {
+    for response in [&first, &second, &hits, &g, &opened] {
         assert!(
             !body_rooms.iter().all(|r| response.contains(r)),
             "a response contains the whole body"
@@ -485,13 +498,16 @@ async fn k07_ask_answers_with_passages_of_the_best_rooms() {
     let (n, body) = priced(&reply);
     assert!(body.starts_with("<kapu-passages "), "{reply}");
     assert!(body.contains("backdrop-filter"), "{reply}");
-    // D175: one frame, about 700 tokens by default
-    assert!(n <= 700, "{n}");
-    // the best passage of each room, under a `[id Lfrom-to]` line
+    // D175, D176: one frame, about 1000 tokens by default
+    assert!(n <= 1000, "{n}");
+    // the best passage of each room, under a `[id Lfrom-to]` line (on a copy:
+    // a file has its own list of passages this session was shown, D176)
+    let copy = dir.join("minta2.kapu");
+    std::fs::copy(&file, &copy).unwrap();
     let (_, two) = call(
         &client,
         "kapu_ask",
-        json!({ "file": f, "query": "gomb preload" }),
+        json!({ "file": copy.to_str().unwrap(), "query": "gomb preload" }),
     )
     .await;
     let ids: Vec<&str> = two
@@ -506,6 +522,15 @@ async fn k07_ask_answers_with_passages_of_the_best_rooms() {
     assert!(rooms.len() >= 2 && rooms.len() == ids.len(), "{two}");
     let (_, none) = call(&client, "kapu_ask", json!({ "file": f, "query": "qqqzzz" })).await;
     assert!(priced(&none).1.starts_with("no match"), "{none}");
+    // D176: the same question again leaves out what this session was shown
+    let (_, again) = call(
+        &client,
+        "kapu_ask",
+        json!({ "file": f, "query": "glass gomb" }),
+    )
+    .await;
+    assert!(again.contains("shown before in this session"), "{again}");
+    assert_ne!(again, reply);
     client.cancel().await.unwrap();
     let _ = std::fs::remove_dir_all(&dir);
 }
@@ -657,8 +682,8 @@ async fn k06_replies_stay_within_max_tokens() {
                 json!({ "file": f, "query": "setup error", "k": 50, "max_tokens": budget }),
             ),
             (
-                "kapu_describe",
-                json!({ "file": f, "ids": ids, "max_tokens": budget }),
+                "kapu_grep",
+                json!({ "file": f, "pattern": "setup|error|topic", "max_tokens": budget }),
             ),
             (
                 "kapu_open",

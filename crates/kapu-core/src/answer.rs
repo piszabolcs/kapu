@@ -26,6 +26,8 @@ const HARD_CHARS: usize = 1100;
 const RRF_K: f64 = 60.0;
 /// Passages taken from BM25 alone, besides those of the given rooms.
 const BM25_CANDIDATES: usize = 100;
+/// A grep line is cut to this many characters.
+const GREP_LINE_CHARS: usize = 160;
 
 /// How the passages are picked.
 #[derive(Debug, Clone)]
@@ -70,9 +72,32 @@ struct Meta {
     len: f32,
 }
 
+/// One line `kapu_grep` found.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GrepLine {
+    /// Its door.
+    pub door: String,
+    /// Its line in the door's served text, from 1.
+    pub line: u32,
+    /// The line, trimmed and cut to [`GREP_LINE_CHARS`] characters.
+    pub text: String,
+}
+
+/// What `kapu_grep` found: the first lines, all the lines, the doors with one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GrepResult {
+    /// The first lines, in file order.
+    pub lines: Vec<GrepLine>,
+    /// Lines that matched.
+    pub total: usize,
+    /// Doors with a line that matched.
+    pub doors: usize,
+}
+
 /// The passages of one file and their BM25 postings.
 pub struct AnswerIndex {
-    doors: Vec<(String, String)>,
+    /// Per door: id, title and served text (a room's own text only).
+    doors: Vec<(String, String, Arc<str>)>,
     passages: Vec<Meta>,
     terms: HashMap<String, u32>,
     postings: Vec<Vec<(u32, f32)>>,
@@ -205,7 +230,7 @@ impl AnswerIndex {
                     len,
                 });
             }
-            ix.doors.push((e.id.to_owned(), title));
+            ix.doors.push((e.id.to_owned(), title, text));
         }
         #[allow(clippy::cast_precision_loss)]
         {
@@ -261,7 +286,7 @@ impl AnswerIndex {
 
     fn passage(&self, p: u32) -> Option<Passage> {
         let m = self.passages.get(p as usize)?;
-        let (door, title) = self.doors.get(m.door as usize)?;
+        let (door, title, _) = self.doors.get(m.door as usize)?;
         Some(Passage {
             door: door.clone(),
             title: title.clone(),
@@ -321,7 +346,7 @@ impl AnswerIndex {
                     .passages
                     .get(*p as usize)
                     .and_then(|m| self.doors.get(m.door as usize))
-                    .map_or("", |(d, _)| room_of(d));
+                    .map_or("", |(d, _, _)| room_of(d));
                 if let Some(r) = room_rank.get(room) {
                     #[allow(clippy::cast_precision_loss)]
                     let r = *r as f64;
@@ -345,6 +370,49 @@ impl AnswerIndex {
             }
             *n += 1;
             out.push(passage);
+        }
+        out
+    }
+}
+
+impl AnswerIndex {
+    /// D176 (`kapu_grep`): the lines of the doors' served texts that hold one
+    /// of the `|`-separated alternatives of `pattern`, in any case; the first
+    /// `max` in file order, and how many lines and doors matched. An empty
+    /// pattern matches nothing.
+    #[must_use]
+    pub fn grep(&self, pattern: &str, max: usize) -> GrepResult {
+        let wants: Vec<String> = pattern
+            .split('|')
+            .map(|w| w.trim().to_lowercase())
+            .filter(|w| !w.is_empty())
+            .collect();
+        let mut out = GrepResult {
+            lines: Vec::new(),
+            total: 0,
+            doors: 0,
+        };
+        if wants.is_empty() {
+            return out;
+        }
+        for (id, _, text) in &self.doors {
+            let mut hit = false;
+            for (i, line) in text.lines().enumerate() {
+                let low = line.to_lowercase();
+                if !wants.iter().any(|w| low.contains(w.as_str())) {
+                    continue;
+                }
+                hit = true;
+                out.total += 1;
+                if out.lines.len() < max {
+                    out.lines.push(GrepLine {
+                        door: id.clone(),
+                        line: u32::try_from(i + 1).unwrap_or(u32::MAX),
+                        text: line.trim().chars().take(GREP_LINE_CHARS).collect(),
+                    });
+                }
+            }
+            out.doors += usize::from(hit);
         }
         out
     }

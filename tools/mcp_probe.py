@@ -89,7 +89,8 @@ async def main():
                 if top and i < 25:
                     o = await timed(session, "kapu_open", {"file": file, "ids": [top]})
                     opens.append(o[:2])
-                    d = await timed(session, "kapu_describe", {"file": file, "ids": [top]})
+                    # D176: kapu_grep took kapu_describe's place
+                    d = await timed(session, "kapu_grep", {"file": file, "pattern": top.split("/")[-1].split("-")[0]})
                     describes.append(d[:2])
             report["search_first_ms"] = first_search
             report["search"] = {"ms": stats([s[0] for s in searches]), "tokens": stats([s[1] for s in searches])}

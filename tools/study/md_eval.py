@@ -6,7 +6,7 @@
         [--domain plc|pixellab] [--forms kapu,md] [--runs 3] [--model sonnet] [--jobs 3] \
         [--rank <json> --tag <suffix>]
     py tools/study/md_eval.py session <work> <questions.json> <file.kapu> <kapu-mcp> <model-dir> \
-        [--domain plc|pixellab] [--forms kapu,md,pasted] [--runs 1] [--turns 25] [--model sonnet]
+        [--domain plc|pixellab] [--forms kapu,md,pasted] [--runs 1] [--turns 25] [--model sonnet]         [--rank <json> --tag <suffix>]
     py tools/study/md_eval.py judge <work> [--model haiku]
     py tools/study/md_eval.py report <work> <out.json>
 
@@ -172,6 +172,8 @@ def options(argv, defaults):
 
 def setup(work, kfile, mcp, model_dir, rank=""):
     """The MCP config, the empty folders the forms run in, the docs and its index."""
+    if not Path(mcp).is_file():
+        sys.exit(f"no kapu-mcp at {mcp}")
     args = ["--rank", rank] if rank else []
     cfg = {"mcpServers": {"kapu": {"command": str(Path(mcp).resolve()), "args": args,
                                    "env": {"KAPU_MODEL_DIR": str(Path(model_dir).resolve())}}}}
@@ -250,9 +252,10 @@ def run(argv):
 
 def session(argv):
     opts, pos = options(argv, {"--domain": "plc", "--forms": "kapu,md,pasted", "--runs": "1", "--turns": "25",
-                               "--model": "sonnet"})
+                               "--model": "sonnet", "--rank": "", "--tag": ""})
     work, qfile, kfile, mcp, model_dir = (Path(p) for p in pos)
-    config, cwds, index, text, lines = setup(work, kfile, mcp, model_dir)
+    config, cwds, index, text, lines = setup(work, kfile, mcp, model_dir, opts["--rank"])
+    tag = opts["--tag"]
     qs = json.loads(qfile.read_text(encoding="utf-8"))[: int(opts["--turns"])]
     out = work / "sessions.jsonl"
     done = {(r["form"], r["run"]) for r in load(out) if r.get("turn") == len(qs) and not r.get("error")} \
@@ -269,15 +272,15 @@ def session(argv):
             except subprocess.TimeoutExpired:
                 r = {"error": "timeout"}
             rows.append({"mode": "session", "session": sid, "turn": t, "qid": q["qid"], "kind": q["kind"],
-                         "form": f, "run": n, "model": opts["--model"], **r,
+                         "form": f + tag, "run": n, "model": opts["--model"], **r,
                          "gold_read": gold_read(q, r.get("opened", []))})
-            print(f"{f} run {n} turn {t}: {r.get('cost_usd')} $, error {r.get('error')}", flush=True)
+            print(f"{f}{tag} run {n} turn {t}: {r.get('cost_usd')} $, error {r.get('error')}", flush=True)
             if r.get("error"):
                 break
         return rows
 
     jobs = [(f, n) for n in range(1, int(opts["--runs"]) + 1) for f in opts["--forms"].split(",")
-            if (f, n) not in done]
+            if (f + tag, n) not in done]
     with ThreadPoolExecutor(len(jobs) or 1) as pool, open(out, "a", encoding="utf-8") as sink:
         for rows in pool.map(one, jobs):
             for r in rows:

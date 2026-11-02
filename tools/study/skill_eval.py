@@ -43,7 +43,7 @@ TASKS = Path(__file__).with_name("skill_tasks.json")
 _EXE = Path(os.environ.get("APPDATA", "")) / "npm" / "node_modules" / "@anthropic-ai" / "claude-code" / "bin" / "claude.exe"
 CLAUDE = [str(_EXE)] if _EXE.is_file() else ["claude"]
 FORMS = ["native", "kapu", "md"]
-KAPU_TOOLS = ["kapu_map", "kapu_search", "kapu_describe", "kapu_open", "kapu_ask"]
+KAPU_TOOLS = ["kapu_map", "kapu_search", "kapu_grep", "kapu_open", "kapu_ask"]
 ROOM = re.compile(r'<kapu-room file="[^"]*" id="([^"]+)"')
 
 ENDING = ("Do not do the task itself: when you have the relevant skills, stop and list their names, "

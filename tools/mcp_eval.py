@@ -21,7 +21,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-READ_TOOLS = ["kapu_map", "kapu_search", "kapu_describe", "kapu_open"]
+READ_TOOLS = ["kapu_map", "kapu_search", "kapu_grep", "kapu_open"]
 # The npm shim is a .cmd file; run the package's own executable (older
 # versions: its script with node) so the prompt, sent on stdin, never passes
 # through cmd.exe quoting.
