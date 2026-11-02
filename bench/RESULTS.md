@@ -1,6 +1,6 @@
 # KAPU measurements
 
-English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file; chapter 9 measures it again with file format 1.1, chapter 10 with format 1.2 ([results/2026-10-26-format-1.2.json](results/2026-10-26-format-1.2.json)), chapter 11 compares native skills, a KAPU file and a Markdown folder at finding skills ([results/2026-10-26-skill-finding.json](results/2026-10-26-skill-finding.json), and after the catalog of tools 0.2.1 [results/2026-10-26-skill-finding-0.2.1.json](results/2026-10-26-skill-finding-0.2.1.json)), chapter 12 measures every ranking change of plan v2 on a fixed dev/test split, against fair chunk baselines and with agents on a new corpus of PLC manuals ([results/2026-10-27-plan-v2.json](results/2026-10-27-plan-v2.json)), and chapter 13 the vector model of 0.5.0, a contextual encoder in plain Rust ([results/2026-10-28-plan-v3.json](results/2026-10-28-plan-v3.json)). The [results page](../docs/results/index.html) shows the pilot, formats 1.1 and 1.2 and the skill finding with charts and tables; printed as PDF in [English](../docs/results/kapu-measurements-en.pdf) and [Hungarian](../docs/results/kapu-measurements-hu.pdf) (`tools/study/results_pdf.py`).
+English summary of the measurements. Raw numbers: [results/2026-10-23-english-corpus.json](results/2026-10-23-english-corpus.json). Chapter 8 is a pilot on public documentation, with its own results file; chapter 9 measures it again with file format 1.1, chapter 10 with format 1.2 ([results/2026-10-26-format-1.2.json](results/2026-10-26-format-1.2.json)), chapter 11 compares native skills, a KAPU file and a Markdown folder at finding skills ([results/2026-10-26-skill-finding.json](results/2026-10-26-skill-finding.json), and after the catalog of tools 0.2.1 [results/2026-10-26-skill-finding-0.2.1.json](results/2026-10-26-skill-finding-0.2.1.json)), chapter 12 measures every ranking change of plan v2 on a fixed dev/test split, against fair chunk baselines and with agents on a new corpus of PLC manuals ([results/2026-10-27-plan-v2.json](results/2026-10-27-plan-v2.json)), chapter 13 the vector model of 0.5.0, a contextual encoder in plain Rust ([results/2026-10-28-plan-v3.json](results/2026-10-28-plan-v3.json)), and chapter 14 a small local model, `qwen3:8b`, with KAPU through the Vellum client ([results/2026-11-02-j2-qwen.json](results/2026-11-02-j2-qwen.json)). The [results page](../docs/results/index.html) shows the pilot, formats 1.1 and 1.2 and the skill finding with charts and tables; printed as PDF in [English](../docs/results/kapu-measurements-en.pdf) and [Hungarian](../docs/results/kapu-measurements-hu.pdf) (`tools/study/results_pdf.py`).
 
 - **Date:** 2026-10-23
 - **Version:** tools 0.1.0 with specification v1.0.2 (chapters 1-8); chapters 9 and 10 name their own
@@ -624,7 +624,55 @@ Per set, default ranking, 4 bits (search time: median of `kapu bench`, the query
 - **The file grows by 9-16%**, above the 3% of K-11, which the user accepted for the model; the 8-bit form would be 20-34%.
 
 
-## 14. Reproduce
+## 14. A small local model: qwen3:8b with KAPU (J2)
+
+Measured from 2026-10-28 to 2026-11-02 with `qwen3:8b` on an 8 GB GPU (Ollama; at 32k context about 40% of the model runs on the CPU), through the Vellum client and its KAPU branch (`feat/kapu-knowledge`, 028d7e6: `--kapu-dir`, `--kapu-rank`), the way a user runs it; one run per question, temperature 0 ([results/2026-11-02-j2-qwen.json](results/2026-11-02-j2-qwen.json)). The judge is Claude Haiku; on the PLC manuals with the judge prompts of chapter 12 (N1) word for word, and Claude's stored answers are scored again by the same judge. Tools 0.3.0 with the static model, and 0.5.0 with e5 (the PLC file rebuilt in 13.5 minutes); 0.5.1 gives the same vectors, so its numbers are those of 0.5.0.
+
+The forms: closed book; KAPU tools (the model calls them); KAPU prefetch and tools (the client first puts a `kapu_ask` reply into the prompt, within its knowledge budget: 600 tokens at 8k context, 2000 at 32k); a Markdown folder with grep and line reads; the whole file pasted, cut to fit; and the oracle, the right page in the prompt.
+
+**PLC manuals** (36 answerable questions, 24 whose answer is not in the manuals):
+
+| Form | Tools | Context | Budget | Correct | Partly | Right room read | Made up (absent) | Time |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| closed book | - | 8k | - | 3% | 22% | - | 71% | 13 s |
+| KAPU tools | 0.3 | 8k | 600 | 0% | 14% | 39% | 8% | 14 s |
+| KAPU prefetch + tools | 0.3 | 8k | 600 | 8% | 11% | 53% | 21% | 15 s |
+| KAPU prefetch + tools | 0.3 | 8k | 2000 | 8% | 8% | 67% | 21% | 19 s |
+| KAPU prefetch + tools | 0.3 | 16k | 6000 | 28% | 19% | 67% | - | 40 s |
+| KAPU prefetch + tools | 0.3 | 32k | 2000 | 11% | 6% | 53% | 4% | 58 s |
+| KAPU prefetch + tools | 0.3 | 32k | 6000 | 39% | 6% | 56% | 0% | 62 s |
+| KAPU prefetch + tools | 0.3 | 32k | 12000 | 44% | 19% | 61% | - | 75 s |
+| KAPU prefetch + tools | 0.5 | 8k | 600 | 6% | 17% | 61% | 4% | 14 s |
+| the same, passage BM25 | 0.5 | 8k | 600 | 3% | 22% | 64% | 8% | 15 s |
+| the same, `kapu_ask` top | 0.5 | 8k | 600 | 14% | 11% | 58% | 8% | 15 s |
+| KAPU prefetch + tools | 0.5 | 32k | 6000 | 44% | 11% | 67% | - | 60 s |
+| the same, passage BM25 | 0.5 | 32k | 6000 | 44% | 6% | 58% | - | 57 s |
+| Markdown, grep + line reads | - | 8k | - | 0% | 14% | 0% | 12% | 12 s |
+| whole file pasted | - | 8k | - | 3% | 6% | 0% | 17% | 15 s |
+| oracle page | - | 8k | - | 75% | 25% | - | - | 11 s |
+| oracle page | - | 32k | - | 81% | 14% | 100% | - | 49 s |
+| Claude Sonnet, closed book (N1) | - | - | - | 28% | 17% | - | 46% | |
+| Claude Sonnet with KAPU (N1) | - | - | - | 92% | 8% | - | 4% | |
+
+**Public documentation and PixelLab** (correct / partly / wrong):
+
+| Set | Closed book | KAPU tools | KAPU prefetch + tools | Markdown, grep | Oracle page |
+|---|---:|---:|---:|---:|---:|
+| Rust book (30) | 17% / 70% / 13% | 37% / 60% / 3% | 13% / 77% / 10% | 10% / 60% / 30% | 13% / 80% / 7% |
+| Kubernetes (30) | 10% / 70% / 17% | - | 3% / 60% / 20% | 7% / 37% / 20% | - |
+| MDN (30) | 30% / 63% / 3% | - | 30% / 47% / 3% | 33% / 30% / 10% | - |
+| PixelLab (12) | 0% / 25% / 67% | 0% / 50% / 17% | 0% / 58% / 33% | 0% / 25% / 0% | - |
+
+- **The gap is reading, not the knowledge.** With the right page in the prompt the small model answers 75-81% of the PLC questions correctly; with KAPU 0-44%, while Claude with KAPU answers 92%. On 8k context the 600-token `kapu_ask` reply is shared among the best rooms (a median of 2 doors in the study's logs), so a section gets a few hundred tokens.
+- **The budget counts with the context.** At 32k context a knowledge budget of 2000 tokens gives 11% correct, 6000 tokens 39% and 12,000 tokens 44% (and 19% partly). The client's table gives 2000 at 32k; raising it is a change in Vellum, not in KAPU.
+- **KAPU stops the guessing.** Closed book the small model makes up an answer to 71% of the questions the manuals do not answer; with KAPU 0-21%.
+- **0.5 finds the right room more often** (53% to 58-64% at 8k, 67% at 32k) and makes up less at 8k (21% to 4%); at 32k with 6000 tokens 44% instead of 39% correct. `kapu_ask` giving the best door whole instead of sharing the budget: 5 of 36 correct instead of 1 at 8k (both with passage BM25). These are 36 questions and one run: a direction, not a measured difference.
+- **Elsewhere:** on the Rust book the tools help (17% to 37% correct, 3% wrong), the prefetch at 8k does not (13%; its prompt is 6,600 tokens instead of 2,500); on Kubernetes and MDN KAPU does not help the small model (the right page is read for 33% and 7% of the questions); on PixelLab nothing is correct in any form, but KAPU cuts the wrong answers from 67% to 17-33%, and 32k does not change that. The whole file pasted or a Markdown folder with grep does not work for the small model (PLC 3% and 0% correct; with grep 69% "not in the documents").
+- **Cost** on the 8 GB card: 15 s a question at 8k, 40 s at 16k, 60-75 s at 32k.
+
+Open, not decided: a `kapu_ask` that gives the best door whole below a small budget (for example under 1500 tokens) and shares a larger one; it has to pass the M0 rule of chapter 12 on a larger question set first.
+
+## 15. Reproduce
 
 ```bash
 python tools/collect_skills.py bench/korpusz/rooms           # the installed skills as rooms (local only)
@@ -635,4 +683,4 @@ python tools/mcp_probe.py corpus.kapu questions.jsonl        # MCP latency and r
 python tools/kapu_mcp_call.py call kapu_search '{"file": "...", "query": "..."}'
 ```
 
-Chapter 13: `tools/study/model_candidates.py` (`run` per set, `@<form>` for the storage forms, `report`), `tools/onnx_to_kapu.py` (the model folder), `kapu --model <folder> build` on a copy of each set file, `ablation.py run` with the matrix `bench/ablation/v1.json` (`KAPU_MODEL_DIR` and `KAPU_CACHE_DIR` set), `ablation.py report` with `--base ml-base` on the runs of both models side by side, and `collect_v3.py` (the results file). Chapter 12: `tools/study/split_questions.py` (the dev/test split), `ablation.py run` and `report` (the matrices `bench/ablation/m0.json`, `m1.json`, `m2.json`; set `KAPU_MODEL_DIR` for a copied binary, `--chunk 50` for MDN), `chunk_baseline.py` (with `--chunks` in the report), `ask_eval.py` (`bench/ablation/ask-modes*.json`), `title_weight.py`, `neighbour_follow.py`, `group_quality.py`, `oracle_eval.py` (needs a logged-in `claude` CLI), `collect_v2.py` (the results file) and `v2_tables.py` (these tables). Chapter 11: `tools/study/skill_pool.py` collects the skills of the machine, `tools/study/skill_eval.py` prepares the three forms (`prepare`), runs the tasks of `tools/study/skill_tasks.json` (`run`), measures the fixed cost (`baseline`) and writes the results file (`report`); it needs a logged-in `claude` CLI. Chapter 10: `tools/study/measure_v12.py` (reply prices, `kapu_ask`, open times over MCP), `tools/study/measure_scale.py` (a file of a given size), `tools/study/translate_hu.py` (the translated questions) and `tools/study/collect_v12.py` (the results file). Chapters 8 and 9 (public documentation): `tools/study/prepare_corpus.py` and `so_questions.py` prepare the corpora and questions, `scale_probe.py` measures a size, `chunk_baseline.py` the chunk baselines, `collect_results.py` writes `results/2026-10-23-study-pilot.json`, and `results_page.py` turns that and the format 1.2 results file into the results page.
+Chapter 14: the Vellum client's KAPU branch (`feat/kapu-knowledge`, 028d7e6, `--kapu-dir` and `--kapu-rank`) with Ollama, and the scripts of the study folder (`prepare.py`, `run_*.sh`, `judge.py` with a logged-in `claude` CLI, `report.py`), which are not in this repository. Chapter 13: `tools/study/model_candidates.py` (`run` per set, `@<form>` for the storage forms, `report`), `tools/onnx_to_kapu.py` (the model folder), `kapu --model <folder> build` on a copy of each set file, `ablation.py run` with the matrix `bench/ablation/v1.json` (`KAPU_MODEL_DIR` and `KAPU_CACHE_DIR` set), `ablation.py report` with `--base ml-base` on the runs of both models side by side, and `collect_v3.py` (the results file). Chapter 12: `tools/study/split_questions.py` (the dev/test split), `ablation.py run` and `report` (the matrices `bench/ablation/m0.json`, `m1.json`, `m2.json`; set `KAPU_MODEL_DIR` for a copied binary, `--chunk 50` for MDN), `chunk_baseline.py` (with `--chunks` in the report), `ask_eval.py` (`bench/ablation/ask-modes*.json`), `title_weight.py`, `neighbour_follow.py`, `group_quality.py`, `oracle_eval.py` (needs a logged-in `claude` CLI), `collect_v2.py` (the results file) and `v2_tables.py` (these tables). Chapter 11: `tools/study/skill_pool.py` collects the skills of the machine, `tools/study/skill_eval.py` prepares the three forms (`prepare`), runs the tasks of `tools/study/skill_tasks.json` (`run`), measures the fixed cost (`baseline`) and writes the results file (`report`); it needs a logged-in `claude` CLI. Chapter 10: `tools/study/measure_v12.py` (reply prices, `kapu_ask`, open times over MCP), `tools/study/measure_scale.py` (a file of a given size), `tools/study/translate_hu.py` (the translated questions) and `tools/study/collect_v12.py` (the results file). Chapters 8 and 9 (public documentation): `tools/study/prepare_corpus.py` and `so_questions.py` prepare the corpora and questions, `scale_probe.py` measures a size, `chunk_baseline.py` the chunk baselines, `collect_results.py` writes `results/2026-10-23-study-pilot.json`, and `results_page.py` turns that and the format 1.2 results file into the results page.

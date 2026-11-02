@@ -1,0 +1,943 @@
+{
+ "date": "2026-11-02",
+ "study": "J2: a small local model with KAPU, the way a user runs it",
+ "model": "qwen3:8b (Ollama, 8 GB GPU; at 32k about 40% of the model on the CPU)",
+ "client": "Vellum, branch feat/kapu-knowledge (028d7e6: --kapu-dir, --kapu-rank)",
+ "runs": "one per question, temperature 0, 2026-10-28 to 2026-11-02",
+ "judge": "Claude Haiku; on PLC the JUDGE/JUDGE_ABSENT prompts of chapter 12 (N1) word for word; Claude's stored answers re-scored with the same judge",
+ "tools": "0.3.0 (static model) unless the condition says v05 (0.5.0, e5; the PLC file rebuilt, 13.5 min); 0.5.1 has the same vectors",
+ "context": "8k and the client's knowledge budget (600 tokens at 8k, 2000 at 32k) unless the condition says otherwise",
+ "forms": {
+  "L0": "closed book",
+  "L2": "KAPU tools (the model calls them)",
+  "L2p": "KAPU prefetch + tools (the client puts a `kapu_ask` reply into the prompt first)",
+  "L3": "Markdown folder, grep and line reads",
+  "L4t": "whole file pasted, cut to fit",
+  "Lo": "oracle: the right page in the prompt"
+ },
+ "condition_suffixes": {
+  "b2000": "knowledge budget 2000 tokens",
+  "b6000": "budget 6000",
+  "b12000": "budget 12000",
+  "16k": "16k context",
+  "32k": "32k context",
+  "v05": "tools 0.5.0 (e5)",
+  "v05p": "0.5.0 with passage BM25",
+  "v05pt": "0.5.0, passage BM25 and `kapu_ask` top"
+ },
+ "sets": {
+  "plc": "36 answerable, 24 absent",
+  "rust": 30,
+  "k8s": 30,
+  "mdn": 30,
+  "pixellab": 12
+ },
+ "qwen3_8b": {
+  "k8s": {
+   "L0": {
+    "name": "closed book",
+    "answerable": {
+     "n": 30,
+     "correct": 0.1,
+     "partly": 0.7,
+     "wrong": 0.167,
+     "notfound": 0.033,
+     "unjudged": 0.0,
+     "right_page_read": null,
+     "input_tokens_median": 746.5,
+     "seconds_median": 14.6,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "L2p": {
+    "name": "KAPU prefetch+tools",
+    "answerable": {
+     "n": 30,
+     "correct": 0.033,
+     "partly": 0.6,
+     "wrong": 0.2,
+     "notfound": 0.167,
+     "unjudged": 0.0,
+     "right_page_read": 0.333,
+     "input_tokens_median": 4289.5,
+     "seconds_median": 16.4,
+     "tool_calls_median": 1.0,
+     "prefetched": 0.8,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "L3": {
+    "name": "Markdown, grep + line reads",
+    "answerable": {
+     "n": 30,
+     "correct": 0.067,
+     "partly": 0.367,
+     "wrong": 0.2,
+     "notfound": 0.367,
+     "unjudged": 0.0,
+     "right_page_read": 0.0,
+     "input_tokens_median": 1216.5,
+     "seconds_median": 11.4,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 2,
+     "harness_failures": 0
+    }
+   }
+  },
+  "mdn": {
+   "L0": {
+    "name": "closed book",
+    "answerable": {
+     "n": 30,
+     "correct": 0.3,
+     "partly": 0.633,
+     "wrong": 0.033,
+     "notfound": 0.033,
+     "unjudged": 0.0,
+     "right_page_read": null,
+     "input_tokens_median": 743.0,
+     "seconds_median": 12.4,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "L2p": {
+    "name": "KAPU prefetch+tools",
+    "answerable": {
+     "n": 30,
+     "correct": 0.3,
+     "partly": 0.467,
+     "wrong": 0.033,
+     "notfound": 0.2,
+     "unjudged": 0.0,
+     "right_page_read": 0.067,
+     "input_tokens_median": 1086.5,
+     "seconds_median": 10.1,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.333,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "L3": {
+    "name": "Markdown, grep + line reads",
+    "answerable": {
+     "n": 30,
+     "correct": 0.333,
+     "partly": 0.3,
+     "wrong": 0.1,
+     "notfound": 0.267,
+     "unjudged": 0.0,
+     "right_page_read": 0.0,
+     "input_tokens_median": 1214.5,
+     "seconds_median": 10.8,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   }
+  },
+  "pixellab": {
+   "L0": {
+    "name": "closed book",
+    "answerable": {
+     "n": 12,
+     "correct": 0.0,
+     "partly": 0.25,
+     "wrong": 0.667,
+     "notfound": 0.083,
+     "unjudged": 0.0,
+     "right_page_read": null,
+     "input_tokens_median": 772.5,
+     "seconds_median": 12.8,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "L2": {
+    "name": "KAPU tools",
+    "answerable": {
+     "n": 12,
+     "correct": 0.0,
+     "partly": 0.5,
+     "wrong": 0.167,
+     "notfound": 0.333,
+     "unjudged": 0.0,
+     "right_page_read": null,
+     "input_tokens_median": 2223.0,
+     "seconds_median": 18.1,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "L2p": {
+    "name": "KAPU prefetch+tools",
+    "answerable": {
+     "n": 12,
+     "correct": 0.0,
+     "partly": 0.583,
+     "wrong": 0.333,
+     "notfound": 0.083,
+     "unjudged": 0.0,
+     "right_page_read": null,
+     "input_tokens_median": 4498.5,
+     "seconds_median": 17.4,
+     "tool_calls_median": 1.0,
+     "prefetched": 0.75,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "L2p_32k": {
+    "name": "L2p_32k",
+    "answerable": {
+     "n": 12,
+     "correct": 0.0,
+     "partly": 0.583,
+     "wrong": 0.333,
+     "notfound": 0.083,
+     "unjudged": 0.0,
+     "right_page_read": null,
+     "input_tokens_median": 2394.0,
+     "seconds_median": 51.1,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.75,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "L3": {
+    "name": "Markdown, grep + line reads",
+    "answerable": {
+     "n": 12,
+     "correct": 0.0,
+     "partly": 0.25,
+     "wrong": 0.0,
+     "notfound": 0.75,
+     "unjudged": 0.0,
+     "right_page_read": null,
+     "input_tokens_median": 1236.5,
+     "seconds_median": 6.9,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "L4t": {
+    "name": "whole file pasted (cut to fit)",
+    "answerable": {
+     "n": 12,
+     "correct": 0.0,
+     "partly": 0.333,
+     "wrong": 0.5,
+     "notfound": 0.167,
+     "unjudged": 0.0,
+     "right_page_read": null,
+     "input_tokens_median": 7418.0,
+     "seconds_median": 15.7,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   }
+  },
+  "plc": {
+   "L0": {
+    "name": "closed book",
+    "answerable": {
+     "n": 36,
+     "correct": 0.028,
+     "partly": 0.222,
+     "wrong": 0.639,
+     "notfound": 0.111,
+     "unjudged": 0.0,
+     "right_page_read": null,
+     "input_tokens_median": 764.0,
+     "seconds_median": 13.1,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    },
+    "absent": {
+     "n": 24,
+     "abstained": 0.292,
+     "made_up": 0.708,
+     "input_tokens_median": 753.0
+    }
+   },
+   "L2": {
+    "name": "KAPU tools",
+    "answerable": {
+     "n": 36,
+     "correct": 0.0,
+     "partly": 0.139,
+     "wrong": 0.361,
+     "notfound": 0.5,
+     "unjudged": 0.0,
+     "right_page_read": 0.389,
+     "input_tokens_median": 2961.0,
+     "seconds_median": 13.7,
+     "tool_calls_median": 1.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    },
+    "absent": {
+     "n": 24,
+     "abstained": 0.917,
+     "made_up": 0.083,
+     "input_tokens_median": 1104.5
+    }
+   },
+   "L2b2000": {
+    "name": "L2b2000",
+    "answerable": {
+     "n": 36,
+     "correct": 0.083,
+     "partly": 0.111,
+     "wrong": 0.444,
+     "notfound": 0.361,
+     "unjudged": 0.0,
+     "right_page_read": 0.583,
+     "input_tokens_median": 3724.0,
+     "seconds_median": 17.5,
+     "tool_calls_median": 1.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    },
+    "absent": {
+     "n": 24,
+     "abstained": 0.917,
+     "made_up": 0.083,
+     "input_tokens_median": 1097.0
+    }
+   },
+   "L2p": {
+    "name": "KAPU prefetch+tools",
+    "answerable": {
+     "n": 36,
+     "correct": 0.083,
+     "partly": 0.111,
+     "wrong": 0.333,
+     "notfound": 0.472,
+     "unjudged": 0.0,
+     "right_page_read": 0.528,
+     "input_tokens_median": 3493.0,
+     "seconds_median": 15.0,
+     "tool_calls_median": 1.0,
+     "prefetched": 0.444,
+     "empty_answers": 0,
+     "harness_failures": 0
+    },
+    "absent": {
+     "n": 24,
+     "abstained": 0.792,
+     "made_up": 0.208,
+     "input_tokens_median": 2972.0
+    }
+   },
+   "L2p_16k": {
+    "name": "L2p_16k",
+    "answerable": {
+     "n": 36,
+     "correct": 0.056,
+     "partly": 0.194,
+     "wrong": 0.361,
+     "notfound": 0.389,
+     "unjudged": 0.0,
+     "right_page_read": 0.722,
+     "input_tokens_median": 3547.5,
+     "seconds_median": 34.7,
+     "tool_calls_median": 1.0,
+     "prefetched": 0.333,
+     "empty_answers": 0,
+     "harness_failures": 0
+    },
+    "absent": {
+     "n": 24,
+     "abstained": 0.917,
+     "made_up": 0.083,
+     "input_tokens_median": 2403.5
+    }
+   },
+   "L2p_16k_b6000": {
+    "name": "L2p_16k_b6000",
+    "answerable": {
+     "n": 36,
+     "correct": 0.278,
+     "partly": 0.194,
+     "wrong": 0.278,
+     "notfound": 0.25,
+     "unjudged": 0.0,
+     "right_page_read": 0.667,
+     "input_tokens_median": 6426.0,
+     "seconds_median": 40.2,
+     "tool_calls_median": 1.0,
+     "prefetched": 0.361,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "L2p_32k": {
+    "name": "L2p_32k",
+    "answerable": {
+     "n": 36,
+     "correct": 0.111,
+     "partly": 0.056,
+     "wrong": 0.333,
+     "notfound": 0.5,
+     "unjudged": 0.0,
+     "right_page_read": 0.528,
+     "input_tokens_median": 3740.0,
+     "seconds_median": 58.3,
+     "tool_calls_median": 1.0,
+     "prefetched": 0.417,
+     "empty_answers": 0,
+     "harness_failures": 0
+    },
+    "absent": {
+     "n": 24,
+     "abstained": 0.958,
+     "made_up": 0.042,
+     "input_tokens_median": 1823.5
+    }
+   },
+   "L2p_32k_b12000": {
+    "name": "L2p_32k_b12000",
+    "answerable": {
+     "n": 36,
+     "correct": 0.444,
+     "partly": 0.194,
+     "wrong": 0.167,
+     "notfound": 0.194,
+     "unjudged": 0.0,
+     "right_page_read": 0.611,
+     "input_tokens_median": 9290.0,
+     "seconds_median": 74.8,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.417,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "L2p_32k_b6000": {
+    "name": "L2p_32k_b6000",
+    "answerable": {
+     "n": 36,
+     "correct": 0.389,
+     "partly": 0.056,
+     "wrong": 0.278,
+     "notfound": 0.278,
+     "unjudged": 0.0,
+     "right_page_read": 0.556,
+     "input_tokens_median": 5704.5,
+     "seconds_median": 62.2,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.417,
+     "empty_answers": 0,
+     "harness_failures": 0
+    },
+    "absent": {
+     "n": 24,
+     "abstained": 1.0,
+     "made_up": 0.0,
+     "input_tokens_median": 4232.0
+    }
+   },
+   "L2p_32k_b6000_v05": {
+    "name": "L2p_32k_b6000_v05",
+    "answerable": {
+     "n": 36,
+     "correct": 0.444,
+     "partly": 0.111,
+     "wrong": 0.278,
+     "notfound": 0.167,
+     "unjudged": 0.0,
+     "right_page_read": 0.667,
+     "input_tokens_median": 5693.5,
+     "seconds_median": 60.5,
+     "tool_calls_median": 0.5,
+     "prefetched": 0.361,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "L2p_32k_b6000_v05p": {
+    "name": "L2p_32k_b6000_v05p",
+    "answerable": {
+     "n": 36,
+     "correct": 0.444,
+     "partly": 0.056,
+     "wrong": 0.25,
+     "notfound": 0.25,
+     "unjudged": 0.0,
+     "right_page_read": 0.583,
+     "input_tokens_median": 5431.0,
+     "seconds_median": 57.2,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.417,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "L2p_v05": {
+    "name": "L2p_v05",
+    "answerable": {
+     "n": 36,
+     "correct": 0.056,
+     "partly": 0.167,
+     "wrong": 0.278,
+     "notfound": 0.5,
+     "unjudged": 0.0,
+     "right_page_read": 0.611,
+     "input_tokens_median": 3085.5,
+     "seconds_median": 14.2,
+     "tool_calls_median": 1.0,
+     "prefetched": 0.556,
+     "empty_answers": 0,
+     "harness_failures": 0
+    },
+    "absent": {
+     "n": 24,
+     "abstained": 0.958,
+     "made_up": 0.042,
+     "input_tokens_median": 2944.5
+    }
+   },
+   "L2p_v05p": {
+    "name": "L2p_v05p",
+    "answerable": {
+     "n": 36,
+     "correct": 0.028,
+     "partly": 0.222,
+     "wrong": 0.361,
+     "notfound": 0.389,
+     "unjudged": 0.0,
+     "right_page_read": 0.639,
+     "input_tokens_median": 4269.0,
+     "seconds_median": 14.9,
+     "tool_calls_median": 1.0,
+     "prefetched": 0.556,
+     "empty_answers": 0,
+     "harness_failures": 0
+    },
+    "absent": {
+     "n": 24,
+     "abstained": 0.917,
+     "made_up": 0.083,
+     "input_tokens_median": 3007.5
+    }
+   },
+   "L2p_v05pt": {
+    "name": "L2p_v05pt",
+    "answerable": {
+     "n": 36,
+     "correct": 0.139,
+     "partly": 0.111,
+     "wrong": 0.389,
+     "notfound": 0.361,
+     "unjudged": 0.0,
+     "right_page_read": 0.583,
+     "input_tokens_median": 4333.5,
+     "seconds_median": 14.6,
+     "tool_calls_median": 1.0,
+     "prefetched": 0.528,
+     "empty_answers": 0,
+     "harness_failures": 0
+    },
+    "absent": {
+     "n": 24,
+     "abstained": 0.917,
+     "made_up": 0.083,
+     "input_tokens_median": 1911.0
+    }
+   },
+   "L2pb2000": {
+    "name": "L2pb2000",
+    "answerable": {
+     "n": 36,
+     "correct": 0.083,
+     "partly": 0.083,
+     "wrong": 0.417,
+     "notfound": 0.417,
+     "unjudged": 0.0,
+     "right_page_read": 0.667,
+     "input_tokens_median": 5511.5,
+     "seconds_median": 19.4,
+     "tool_calls_median": 1.0,
+     "prefetched": 0.5,
+     "empty_answers": 0,
+     "harness_failures": 0
+    },
+    "absent": {
+     "n": 24,
+     "abstained": 0.792,
+     "made_up": 0.208,
+     "input_tokens_median": 3692.5
+    }
+   },
+   "L3": {
+    "name": "Markdown, grep + line reads",
+    "answerable": {
+     "n": 36,
+     "correct": 0.0,
+     "partly": 0.139,
+     "wrong": 0.167,
+     "notfound": 0.694,
+     "unjudged": 0.0,
+     "right_page_read": 0.0,
+     "input_tokens_median": 1253.5,
+     "seconds_median": 11.6,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    },
+    "absent": {
+     "n": 24,
+     "abstained": 0.875,
+     "made_up": 0.125,
+     "input_tokens_median": 2533.0
+    }
+   },
+   "L4t": {
+    "name": "whole file pasted (cut to fit)",
+    "answerable": {
+     "n": 36,
+     "correct": 0.028,
+     "partly": 0.056,
+     "wrong": 0.5,
+     "notfound": 0.417,
+     "unjudged": 0.0,
+     "right_page_read": 0.0,
+     "input_tokens_median": 12521.0,
+     "seconds_median": 14.7,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    },
+    "absent": {
+     "n": 24,
+     "abstained": 0.833,
+     "made_up": 0.167,
+     "input_tokens_median": 6261.5
+    }
+   },
+   "Lo": {
+    "name": "oracle page",
+    "answerable": {
+     "n": 36,
+     "correct": 0.75,
+     "partly": 0.25,
+     "wrong": 0.0,
+     "notfound": 0.0,
+     "unjudged": 0.0,
+     "right_page_read": null,
+     "input_tokens_median": 2952.5,
+     "seconds_median": 11.0,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "Lo_32k": {
+    "name": "Lo_32k",
+    "answerable": {
+     "n": 36,
+     "correct": 0.806,
+     "partly": 0.139,
+     "wrong": 0.0,
+     "notfound": 0.056,
+     "unjudged": 0.0,
+     "right_page_read": 1.0,
+     "input_tokens_median": 2820.5,
+     "seconds_median": 49.4,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   }
+  },
+  "rust": {
+   "L0": {
+    "name": "closed book",
+    "answerable": {
+     "n": 30,
+     "correct": 0.167,
+     "partly": 0.7,
+     "wrong": 0.133,
+     "notfound": 0.0,
+     "unjudged": 0.0,
+     "right_page_read": null,
+     "input_tokens_median": 1183.0,
+     "seconds_median": 21.1,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "L2": {
+    "name": "KAPU tools",
+    "answerable": {
+     "n": 30,
+     "correct": 0.367,
+     "partly": 0.6,
+     "wrong": 0.033,
+     "notfound": 0.0,
+     "unjudged": 0.0,
+     "right_page_read": 0.033,
+     "input_tokens_median": 2460.0,
+     "seconds_median": 19.4,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "L2p": {
+    "name": "KAPU prefetch+tools",
+    "answerable": {
+     "n": 30,
+     "correct": 0.133,
+     "partly": 0.767,
+     "wrong": 0.1,
+     "notfound": 0.0,
+     "unjudged": 0.0,
+     "right_page_read": 0.4,
+     "input_tokens_median": 6613.5,
+     "seconds_median": 23.7,
+     "tool_calls_median": 1.0,
+     "prefetched": 1.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   },
+   "L3": {
+    "name": "Markdown, grep + line reads",
+    "answerable": {
+     "n": 30,
+     "correct": 0.1,
+     "partly": 0.6,
+     "wrong": 0.3,
+     "notfound": 0.0,
+     "unjudged": 0.0,
+     "right_page_read": 0.0,
+     "input_tokens_median": 1506.5,
+     "seconds_median": 19.3,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 2,
+     "harness_failures": 0
+    }
+   },
+   "Lo": {
+    "name": "oracle page",
+    "answerable": {
+     "n": 30,
+     "correct": 0.133,
+     "partly": 0.8,
+     "wrong": 0.067,
+     "notfound": 0.0,
+     "unjudged": 0.0,
+     "right_page_read": null,
+     "input_tokens_median": 6292.5,
+     "seconds_median": 28.0,
+     "tool_calls_median": 0.0,
+     "prefetched": 0.0,
+     "empty_answers": 0,
+     "harness_failures": 0
+    }
+   }
+  }
+ },
+ "claude_same_judge": {
+  "rust": {
+   "claude-L0": {
+    "n": 30,
+    "correct": 0.7,
+    "partly": 0.3,
+    "wrong": 0.0,
+    "notfound": 0.0
+   },
+   "claude-L3": {
+    "n": 30,
+    "correct": 0.433,
+    "partly": 0.567,
+    "wrong": 0.0,
+    "notfound": 0.0
+   },
+   "claude-L2": {
+    "n": 30,
+    "correct": 0.633,
+    "partly": 0.367,
+    "wrong": 0.0,
+    "notfound": 0.0
+   }
+  },
+  "pixellab": {
+   "claude-L3": {
+    "n": 12,
+    "correct": 0.25,
+    "partly": 0.75,
+    "wrong": 0.0,
+    "notfound": 0.0
+   },
+   "claude-pdf": {
+    "n": 12,
+    "correct": 0.5,
+    "partly": 0.5,
+    "wrong": 0.0,
+    "notfound": 0.0
+   }
+  }
+ },
+ "claude": {
+  "plc_n1_sonnet": {
+   "questions": {
+    "answerable": 36,
+    "absent": 24
+   },
+   "forms": {
+    "closed": {
+     "answerable": {
+      "n": 36,
+      "tokens_median": 2905.5,
+      "calls_median": 0.0,
+      "seconds_median": 6.25,
+      "cost_usd_median": 0.0063128,
+      "correct": 0.2777777777777778,
+      "partly": 0.16666666666666666,
+      "wrong": 0.08333333333333333,
+      "notfound": 0.4722222222222222
+     },
+     "absent": {
+      "n": 24,
+      "tokens_median": 2895.0,
+      "calls_median": 0.0,
+      "seconds_median": 7.15,
+      "cost_usd_median": 0.0053338,
+      "abstained": 0.5416666666666666,
+      "made_up": 0.4583333333333333
+     }
+    },
+    "kapu": {
+     "answerable": {
+      "n": 36,
+      "tokens_median": 12891.5,
+      "calls_median": 1.0,
+      "seconds_median": 13.4,
+      "cost_usd_median": 0.0193251,
+      "correct": 0.9166666666666666,
+      "partly": 0.08333333333333333,
+      "wrong": 0.0,
+      "notfound": 0.0,
+      "opened_gold_room": 0.9444444444444444
+     },
+     "absent": {
+      "n": 24,
+      "tokens_median": 57346.0,
+      "calls_median": 5.5,
+      "seconds_median": 28.8,
+      "cost_usd_median": 0.057217899999999995,
+      "abstained": 0.9583333333333334,
+      "made_up": 0.041666666666666664
+     }
+    },
+    "kapu_conf": {
+     "answerable": {
+      "n": 36,
+      "tokens_median": 21013.0,
+      "calls_median": 2.0,
+      "seconds_median": 15.7,
+      "cost_usd_median": 0.02468845,
+      "correct": 0.8888888888888888,
+      "partly": 0.1111111111111111,
+      "wrong": 0.0,
+      "notfound": 0.0,
+      "opened_gold_room": 1.0
+     },
+     "absent": {
+      "n": 24,
+      "tokens_median": 63346.0,
+      "calls_median": 6.0,
+      "seconds_median": 28.450000000000003,
+      "cost_usd_median": 0.060629249999999996,
+      "abstained": 0.9583333333333334,
+      "made_up": 0.041666666666666664
+     }
+    },
+    "oracle": {
+     "answerable": {
+      "n": 36,
+      "tokens_median": 5461.0,
+      "calls_median": 0.0,
+      "seconds_median": 4.7,
+      "cost_usd_median": 0.0148518,
+      "correct": 0.9722222222222222,
+      "partly": 0.027777777777777776,
+      "wrong": 0.0,
+      "notfound": 0.0
+     }
+    }
+   },
+   "retrieval_gap": 0.05555555555555558,
+   "knowledge_gain": 0.6388888888888888
+  },
+  "rust_pilot_sonnet": {
+   "closed book": {
+    "n": 30,
+    "correct": 0.933,
+    "partly": 0.067
+   },
+   "grep/read files": {
+    "n": 30,
+    "correct": 0.933,
+    "partly": 0.067
+   },
+   "KAPU": {
+    "n": 30,
+    "correct": 0.967,
+    "partly": 0.033
+   }
+  },
+  "pixellab": {
+   "source": "bench/RESULTS.md chapter 8, after specification v1.0.4 (12 requests, blind grading)",
+   "KAPU": {
+    "correct": 1.0,
+    "tokens_median": 4104
+   },
+   "one .md file, search + line reads": {
+    "correct": 1.0,
+    "tokens_median": 8280
+   },
+   "PDF, search + page reads": {
+    "correct": 0.9166666666666666,
+    "tokens_median": 8207
+   },
+   "whole .md pasted": {
+    "correct": null,
+    "tokens": 206899
+   }
+  }
+ }
+}
