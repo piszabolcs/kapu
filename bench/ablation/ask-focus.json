@@ -1,0 +1,5 @@
+[
+  {"name": "spread", "rank": {}},
+  {"name": "focus", "rank": {"ask": "focus"}},
+  {"name": "top", "rank": {"ask": "top"}}
+]

@@ -5,6 +5,14 @@ The file format has its own version (`%KAPU 1.3`, see `SPEC-KAPU.md`); the tools
 
 ## [Unreleased]
 
+### Changed
+- `kapu_ask` with 1,000 tokens or more shows each of its rooms at the part where the query's words are, not at its start (D174): on the PLC manuals the evidence of the answer is in the reply for 50% instead of 2% of the questions at 1,000 tokens and 87.5% instead of 12.5% at 2,000; no question set loses a room. Below 1,000 tokens the starts stay, so all rooms still fit.
+- Shorter lists (D174): `kapu_ask` names 3 other matches instead of 8, `kapu_open` 3 neighbours instead of 8, and a shared ask's part line no longer repeats the door id. With the change above, Claude answers the PLC questions for 21% fewer dollars (one run, accuracy within the noise). `kapu-mcp --rank '{"lean": false, "spread_best": false}'` gives the replies of 0.5.1.
+
+### Added
+- Server switches for measurement (`kapu-mcp --rank`): `ask` `focus` (only the best door, at its best part), `focus_below`, `spread_rooms`, `spread_best`, `best_from`, `ask_tokens`, `open_tokens`, `ask_others`, `neighbours`, `short_parts`, `lean`, and `tail` (`kapu_search` also names the ids of the next hits; off by default, it fits only with about 900 tokens).
+- `tools/study/md_eval.py` (plan v3 M1): Claude with one Markdown file and Grep and Read, against the KAPU tools, single questions and long sessions, with the cache writes and reads and the dollars of every call; `ask_eval.py --max-tokens` and the evidence of the answer in the reply.
+
 ## [0.5.1] - 2026-10-29
 
 Specification v1.3.1; the file format stays 1.2 and 1.3. A large file can be searched within seconds of `kapu import`, and its first build with the vector model is 2.5 times faster (D173).

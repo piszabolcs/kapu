@@ -146,6 +146,9 @@ enum AskMode {
     /// `Top` when the best hit is sure, otherwise `Spread`; the reply says
     /// `confidence: high` or `low`.
     Confidence,
+    /// J2a: only the best door, and of it the part where the query's words
+    /// are ([`best_part`]), not its start.
+    Focus,
 }
 
 /// Server settings from `kapu-mcp --rank <json>` (plan v2): the ranking
@@ -160,6 +163,28 @@ struct Tuning {
     ask_ratio: f64,
     /// J11: lines of a search excerpt, 1 or 2.
     excerpt_lines: usize,
+    /// J2a: below this reply budget a `Spread` ask is a `Focus` one (0: never).
+    focus_below: u64,
+    /// J2a: the rooms a `Spread` ask shares its budget among.
+    spread_rooms: usize,
+    /// J2a (D174): from this reply budget on a `Spread` ask shows each room's
+    /// best part ([`best_part`]), not its start; below it the starts, so all
+    /// the rooms still fit (measured: from 1000 tokens no set loses a room).
+    best_from: u64,
+    /// R1: `kapu_search` also names the next this many hits, ids only, on one
+    /// line after the hits (the first thing cut when the budget is short).
+    tail: usize,
+    /// M1: the reply budget of `kapu_ask` without `max_tokens`.
+    ask_tokens: u64,
+    /// M1: the reply budget of `kapu_open` for one door without `max_tokens`.
+    open_tokens: u64,
+    /// M1: the other matches a `kapu_ask` lists.
+    ask_others: usize,
+    /// M1: the neighbours a `kapu_open` lists.
+    neighbours: usize,
+    /// M1: the part line of a shared `kapu_ask` without the door id (it is in
+    /// the frame above).
+    short_parts: bool,
 }
 
 impl Default for Tuning {
@@ -169,14 +194,25 @@ impl Default for Tuning {
             ask: AskMode::Spread,
             ask_ratio: ASK_RATIO,
             excerpt_lines: 1,
+            focus_below: 0,
+            spread_rooms: ASK_SPREAD,
+            best_from: BEST_FROM,
+            tail: 0,
+            ask_tokens: ASK_TOKENS,
+            open_tokens: OPEN_TOKENS,
+            ask_others: LEAN_LIST,
+            neighbours: LEAN_LIST,
+            short_parts: true,
         }
     }
 }
 
 impl Tuning {
     /// A JSON object: the keys of [`RankOptions::from_json`] and `ask`
-    /// (`top`, `spread`, `excerpts`, `confidence`), `ask_ratio`,
-    /// `excerpt_lines`.
+    /// (`top`, `spread`, `excerpts`, `confidence`, `focus`), `ask_ratio`,
+    /// `excerpt_lines`, `focus_below`, `spread_rooms`, `spread_best`, `best_from`, `tail`,
+    /// `ask_tokens`, `open_tokens`, `ask_others`, `neighbours`, `short_parts`,
+    /// `lean` (the last three at [`LEAN_LIST`] and short, the default; false: 0.5.1).
     fn from_json(text: &str) -> Result<Self, Error> {
         let bad = |what: &str| Error::new(kapu_core::ErrorCode::E012, format!("--rank: {what}"));
         let mut v: serde_json::Value =
@@ -189,8 +225,72 @@ impl Tuning {
                 Some("spread") => AskMode::Spread,
                 Some("excerpts") => AskMode::Excerpts,
                 Some("confidence") => AskMode::Confidence,
-                _ => return Err(bad("ask: top, spread, excerpts or confidence")),
+                Some("focus") => AskMode::Focus,
+                _ => return Err(bad("ask: top, spread, excerpts, confidence or focus")),
             };
+        }
+        if let Some(rooms) = obj.remove("spread_rooms") {
+            t.spread_rooms = rooms
+                .as_u64()
+                .and_then(|n| usize::try_from(n).ok())
+                .filter(|n| *n >= 1)
+                .ok_or_else(|| bad("spread_rooms: 1 or more"))?;
+        }
+        if let Some(best) = obj.remove("spread_best") {
+            t.best_from = match best.as_bool() {
+                Some(true) => 0,
+                Some(false) => u64::MAX,
+                None => return Err(bad("spread_best: true or false")),
+            };
+        }
+        if let Some(from) = obj.remove("best_from") {
+            t.best_from = from
+                .as_u64()
+                .ok_or_else(|| bad("best_from: a token count"))?;
+        }
+        for (key, slot) in [
+            ("ask_tokens", &mut t.ask_tokens),
+            ("open_tokens", &mut t.open_tokens),
+        ] {
+            if let Some(n) = obj.remove(key) {
+                *slot = n.as_u64().filter(|n| *n >= MIN_TOKENS).ok_or_else(|| {
+                    bad(&format!("{key}: a token count of at least {MIN_TOKENS}"))
+                })?;
+            }
+        }
+        // M1 (D174): `lean` is the short form of the three below, on by
+        // default; `"lean": false` gives the lists of 0.5.1
+        if obj.remove("lean").and_then(|v| v.as_bool()) == Some(false) {
+            (t.ask_others, t.neighbours, t.short_parts) = (ASK_OTHERS, MAX_NEIGHBOURS, false);
+        }
+        for (key, slot) in [
+            ("ask_others", &mut t.ask_others),
+            ("neighbours", &mut t.neighbours),
+        ] {
+            if let Some(n) = obj.remove(key) {
+                *slot = n
+                    .as_u64()
+                    .and_then(|n| usize::try_from(n).ok())
+                    .filter(|n| *n <= MAX_HITS)
+                    .ok_or_else(|| bad(&format!("{key}: 0 to {MAX_HITS}")))?;
+            }
+        }
+        if let Some(short) = obj.remove("short_parts") {
+            t.short_parts = short
+                .as_bool()
+                .ok_or_else(|| bad("short_parts: true or false"))?;
+        }
+        if let Some(tail) = obj.remove("tail") {
+            t.tail = tail
+                .as_u64()
+                .and_then(|n| usize::try_from(n).ok())
+                .filter(|n| *n <= MAX_HITS)
+                .ok_or_else(|| bad("tail: 0 to 50"))?;
+        }
+        if let Some(below) = obj.remove("focus_below") {
+            t.focus_below = below
+                .as_u64()
+                .ok_or_else(|| bad("focus_below: a token count"))?;
         }
         if let Some(ratio) = obj.remove("ask_ratio") {
             t.ask_ratio = ratio
@@ -248,6 +348,10 @@ const MAX_NEIGHBOURS: usize = 8;
 /// `kapu_ask` opens at most this many doors, and lists at most this many others.
 const ASK_DOORS: usize = 3;
 const ASK_OTHERS: usize = 8;
+/// M1 (D174): the length of the other-matches and neighbour lists of `lean`.
+const LEAN_LIST: usize = 3;
+/// J2a (D174): the `kapu_ask` budget from which a shared ask shows best parts.
+const BEST_FROM: u64 = 1000;
 /// J12: rooms `kapu_ask` opens a part of when it is not sure, and the
 /// default score ratio of a sure best hit.
 const ASK_SPREAD: usize = 5;
@@ -360,6 +464,53 @@ fn fit(
     }
 }
 
+/// J2a: the part of a door where the query is: each query word (its index
+/// tokens and their stems) a part holds counts with the weight
+/// `ln(1 + parts / parts holding it)`, so a word every part has (`the`, the
+/// product name) counts little; the highest sum wins, the earlier part on a
+/// tie (the first part when nothing matches).
+fn best_part(query: &str, pieces: &[Part]) -> usize {
+    let words: Vec<Vec<String>> = kapu_core::terms::index_tokens(query)
+        .iter()
+        .map(|t| kapu_core::terms::stems(t))
+        .collect();
+    let held: Vec<std::collections::BTreeSet<String>> = pieces
+        .iter()
+        .map(|p| {
+            kapu_core::terms::index_tokens(&p.text)
+                .iter()
+                .flat_map(|t| kapu_core::terms::stems(t))
+                .collect()
+        })
+        .collect();
+    let has = |part: &std::collections::BTreeSet<String>, word: &[String]| {
+        word.iter().any(|w| part.contains(w))
+    };
+    #[allow(clippy::cast_precision_loss)]
+    let n = pieces.len() as f64;
+    let weights: Vec<f64> = words
+        .iter()
+        .map(|w| {
+            #[allow(clippy::cast_precision_loss)]
+            let df = held.iter().filter(|part| has(part, w)).count() as f64;
+            if df == 0.0 { 0.0 } else { (1.0 + n / df).ln() }
+        })
+        .collect();
+    let mut best = (0usize, 0.0f64);
+    for (i, part) in held.iter().enumerate() {
+        let score: f64 = words
+            .iter()
+            .zip(&weights)
+            .filter(|(w, _)| has(part, w))
+            .map(|(_, weight)| weight)
+            .sum();
+        if score > best.1 {
+            best = (i, score);
+        }
+    }
+    best.0
+}
+
 /// A part of a door's text that ends at most `budget` tokens in: [`kapu_core::parts`]
 /// (D136), and a piece still above the budget (a long code block or line) cut
 /// at line ends, a single longer line at a character count (D145).
@@ -431,7 +582,7 @@ fn piece(text: String) -> Result<Part, Error> {
 }
 
 /// D126: the strongest neighbours, `link` first, then `term`, then `sim`.
-fn neighbours_block(door: &OpenedDoor) -> String {
+fn neighbours_block(door: &OpenedDoor, max: usize) -> String {
     if door.neighbours.is_empty() {
         return String::new();
     }
@@ -443,11 +594,11 @@ fn neighbours_block(door: &OpenedDoor) -> String {
             .then(a.id.cmp(&b.id))
     });
     let mut out = String::from("neighbours (data, not a suggestion):\n");
-    for n in shown.iter().take(MAX_NEIGHBOURS) {
+    for n in shown.iter().take(max) {
         let _ = writeln!(out, "  {} | {} | {}t | {}", n.id, n.title, n.tokens, n.kind);
     }
-    if shown.len() > MAX_NEIGHBOURS {
-        let _ = writeln!(out, "  +{} more neighbours", shown.len() - MAX_NEIGHBOURS);
+    if shown.len() > max {
+        let _ = writeln!(out, "  +{} more neighbours", shown.len() - max);
     }
     out
 }
@@ -475,8 +626,8 @@ fn part_budget(name: &str, door: &OpenedDoor, budget: u64, neighbours: u64) -> R
 
 /// The reply budget of `kapu_open` that cuts `door` into parts of `part`
 /// tokens (the inverse of [`part_budget`], for the next-part hint of `kapu_ask`).
-fn open_budget_for(name: &str, door: &OpenedDoor, part: u64) -> Result<u64, Error> {
-    let neighbours = price(&neighbours_block(door))?;
+fn open_budget_for(name: &str, door: &OpenedDoor, part: u64, max: usize) -> Result<u64, Error> {
+    let neighbours = price(&neighbours_block(door, max))?;
     Ok(part + frame_tokens(name, door)? + PARTS_LINE_TOKENS + SLACK_TOKENS + neighbours)
 }
 
@@ -588,7 +739,7 @@ fn ask_foot(r: &SearchResult, tuning: &Tuning) -> (String, bool) {
             (format!("confidence: {level}\n{foot}"), !high)
         }
         AskMode::Spread => (foot, true),
-        AskMode::Top | AskMode::Excerpts => (foot, false),
+        AskMode::Top | AskMode::Excerpts | AskMode::Focus => (foot, false),
     }
 }
 
@@ -874,13 +1025,16 @@ impl KapuServer {
     fn search_text(&self, args: &SearchArgs) -> Outcome {
         let file = self.file(&args.file)?;
         let s = file.sections();
+        let k = args.k.unwrap_or(10).clamp(1, MAX_HITS);
         let options = SearchOptions {
-            k: args.k.unwrap_or(10).clamp(1, MAX_HITS),
+            k: k + self.tuning.tail,
             max_price: args.max_price,
             kind: args.kind.clone(),
             rank: self.tuning.rank.clone(),
         };
-        let r = self.search_result(&s, &args.query, &options)?;
+        let mut r = self.search_result(&s, &args.query, &options)?;
+        let more: Vec<String> = r.hits.iter().skip(k).map(|h| h.id.clone()).collect();
+        r.hits.truncate(k);
         // D124: one excerpt per hit, the line that matches the query best
         let show = !r.hits.is_empty();
         let ids: Vec<&str> = r.hits.iter().map(|h| h.id.as_str()).collect();
@@ -889,7 +1043,7 @@ impl KapuServer {
         } else {
             Vec::new()
         };
-        let items: Vec<String> = r
+        let mut items: Vec<String> = r
             .hits
             .iter()
             .enumerate()
@@ -909,6 +1063,14 @@ impl KapuServer {
                 item
             })
             .collect();
+        if !more.is_empty() {
+            items.push(format!(
+                "more hits {}-{} (ids): {}\n",
+                k + 1,
+                k + more.len(),
+                more.join(", ")
+            ));
+        }
         let mut foot = String::new();
         if r.hits.is_empty() {
             foot.push_str("no match\n");
@@ -960,11 +1122,12 @@ impl KapuServer {
         let doors = u64::try_from(args.ids.len()).unwrap_or(u64::MAX).max(1);
         let budget = args
             .max_tokens
-            .unwrap_or(OPEN_TOKENS * doors.min(OPEN_SHARED_DOORS))
+            .unwrap_or(self.tuning.open_tokens * doors.min(OPEN_SHARED_DOORS))
             .max(MIN_TOKENS);
         let share = (budget / doors).max(MIN_TOKENS);
         // the next part, cut the same way, from a call for that door alone
-        let again = (share != OPEN_TOKENS || args.max_tokens.is_some()).then_some(share);
+        let again =
+            (share != self.tuning.open_tokens || args.max_tokens.is_some()).then_some(share);
         let want = args.part.unwrap_or(1);
         let mut items = Vec::new();
         for (id, item) in args.ids.iter().zip(&opened.doors) {
@@ -975,7 +1138,7 @@ impl KapuServer {
                     continue;
                 }
             };
-            let neighbours = neighbours_block(d);
+            let neighbours = neighbours_block(d, self.tuning.neighbours);
             let size = part_budget(&name, d, share, price(&neighbours)?)?;
             // D136, D145: a long door comes in parts that fit the budget
             let pieces = fit_parts(&d.text, size)?;
@@ -1024,8 +1187,11 @@ impl KapuServer {
             rank: tuning.rank.clone(),
         };
         let r = self.search_result(&s, &args.query, &options)?;
-        let budget = args.max_tokens.unwrap_or(ASK_TOKENS).max(MIN_TOKENS);
+        let budget = args.max_tokens.unwrap_or(tuning.ask_tokens).max(MIN_TOKENS);
         let (foot, spread) = ask_foot(&r, tuning);
+        if tuning.ask == AskMode::Focus || (spread && budget < tuning.focus_below) {
+            return self.ask_focus(&checked, args, &foot, budget);
+        }
         if spread {
             return self.ask_spread(&checked, args, &foot, budget);
         }
@@ -1048,7 +1214,7 @@ impl KapuServer {
                 .hits
                 .iter()
                 .filter(|h| !skip.contains(&h.id))
-                .take(ASK_OTHERS)
+                .take(self.tuning.ask_others)
                 .map(|h| {
                     format!(
                         "  {} | {} | {}t | {}\n",
@@ -1083,7 +1249,7 @@ impl KapuServer {
         let mut body = kapu_core::frame(&name, &first);
         let whole = pieces.len() <= 1;
         if !whole {
-            let reopen = open_budget_for(&name, &door, size)?;
+            let reopen = open_budget_for(&name, &door, size, self.tuning.neighbours)?;
             body.push_str(&parts_line(&best.id, 1, &pieces, Some(reopen))?);
         }
         let mut whole_rooms: BTreeSet<String> = BTreeSet::new();
@@ -1137,12 +1303,13 @@ impl KapuServer {
             return fit("", &[], &foot, budget, false, &|_| String::new());
         }
         let name = name_of(&args.file);
-        let picked: Vec<&kapu_core::search::SearchHit> = r.hits.iter().take(ASK_SPREAD).collect();
+        let picked: Vec<&kapu_core::search::SearchHit> =
+            r.hits.iter().take(self.tuning.spread_rooms).collect();
         let others: Vec<String> = r
             .hits
             .iter()
             .skip(picked.len())
-            .take(ASK_OTHERS)
+            .take(self.tuning.ask_others)
             .map(|h| {
                 format!(
                     "  {} | {} | {}t | {}\n",
@@ -1174,21 +1341,100 @@ impl KapuServer {
             };
             let size = part_budget(&name, &door, share, 0)?;
             let pieces = fit_parts(&door.text, size)?;
+            // J2a: the part where the query is instead of the start
+            let at = if budget >= self.tuning.best_from {
+                best_part(&args.query, &pieces)
+            } else {
+                0
+            };
             let first = OpenedDoor {
-                text: pieces.first().map(|p| p.text.clone()).unwrap_or_default(),
+                text: pieces.get(at).map(|p| p.text.clone()).unwrap_or_default(),
                 ..door.clone()
             };
             let mut item = kapu_core::frame(&name, &first);
             if pieces.len() > 1 {
-                let _ = writeln!(
-                    item,
-                    "(start of {}: kapu_open ids=[\"{}\"] for all of it)",
-                    hit.id, hit.id
-                );
+                let what = if at == 0 {
+                    "start".to_owned()
+                } else {
+                    format!("part {} of {}", at + 1, pieces.len())
+                };
+                if self.tuning.short_parts {
+                    let _ = writeln!(item, "({what}; kapu_open it for all of it)");
+                } else {
+                    let _ = writeln!(
+                        item,
+                        "({what} of {}: kapu_open ids=[\"{}\"] for all of it)",
+                        hit.id, hit.id
+                    );
+                }
             }
             items.push(item);
         }
         fit("", &items, &tail, budget, true, &|_| String::new())
+    }
+
+    /// J2a: the best door only, cut to the budget, and of its parts the one
+    /// where the query's words are ([`best_part`]), then the other matches.
+    /// A small budget shared among rooms leaves each a few hundred tokens of
+    /// its start; a small model then reads the start of the right room and
+    /// not the answer further in.
+    fn ask_focus(&self, checked: &CheckedFile, args: &AskArgs, foot: &str, budget: u64) -> Outcome {
+        let s = checked.sections();
+        let options = SearchOptions {
+            k: 10,
+            max_price: None,
+            kind: args.kind.clone(),
+            rank: RankOptions {
+                collapse: 1,
+                ..self.tuning.rank.clone()
+            },
+        };
+        let r = self.search_result(&s, &args.query, &options)?;
+        let Some(best) = r.hits.first() else {
+            let foot = format!("no match\n{foot}");
+            return fit("", &[], &foot, budget, false, &|_| String::new());
+        };
+        let name = name_of(&args.file);
+        let others: Vec<String> = r
+            .hits
+            .iter()
+            .skip(1)
+            .take(self.tuning.ask_others)
+            .map(|h| {
+                format!(
+                    "  {} | {} | {}t | {}\n",
+                    h.id,
+                    h.title,
+                    h.tokens,
+                    h.source.as_str()
+                )
+            })
+            .collect();
+        let others = if others.is_empty() {
+            String::new()
+        } else {
+            format!("other matches (kapu_open ids=[...]):\n{}", others.concat())
+        };
+        let tail = format!("{others}{foot}");
+        let reserve = price(&tail)? + SLACK_TOKENS;
+        let door = kapu_core::open_checked(checked, &[best.id.as_str()])?
+            .doors
+            .into_iter()
+            .next()
+            .ok_or_else(|| Error::new(kapu_core::ErrorCode::E009, best.id.clone()))??;
+        let size = part_budget(&name, &door, budget.saturating_sub(reserve), 0)?;
+        let pieces = fit_parts(&door.text, size)?;
+        let at = best_part(&args.query, &pieces);
+        let shown = OpenedDoor {
+            text: pieces.get(at).map(|p| p.text.clone()).unwrap_or_default(),
+            ..door.clone()
+        };
+        let mut item = kapu_core::frame(&name, &shown);
+        if pieces.len() > 1 {
+            let reopen = open_budget_for(&name, &door, size, self.tuning.neighbours)?;
+            item.push_str(&parts_line(&best.id, at + 1, &pieces, Some(reopen))?);
+        }
+        fit("", &[item], &tail, budget, true, &|_| String::new())
     }
 
     /// J12, third mode: no door opened, the first three hits with two-line

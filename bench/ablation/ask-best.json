@@ -1,0 +1,4 @@
+[
+  {"name": "spread", "rank": {}},
+  {"name": "spread5-best", "rank": {"spread_best": true}}
+]

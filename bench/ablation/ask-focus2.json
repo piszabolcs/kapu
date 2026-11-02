@@ -1,0 +1,7 @@
+[
+  {"name": "spread", "rank": {}},
+  {"name": "focus", "rank": {"ask": "focus"}},
+  {"name": "spread5-best", "rank": {"spread_best": true}},
+  {"name": "spread3-best", "rank": {"spread_rooms": 3, "spread_best": true}},
+  {"name": "spread2-best", "rank": {"spread_rooms": 2, "spread_best": true}}
+]
