@@ -469,7 +469,7 @@ async fn a21_guide_names_the_content_language() {
 /// K-07 (D146, D159): `kapu_ask` searches and opens in one call: the start of
 /// the best door of each of the first rooms, and lists the other hits.
 #[tokio::test]
-async fn k07_ask_opens_the_start_of_the_best_rooms() {
+async fn k07_ask_answers_with_passages_of_the_best_rooms() {
     let dir = workdir("ask");
     let file = dir.join("minta.kapu");
     std::fs::copy(root().join("tests/vectors/minta.kapu"), &file).unwrap();
@@ -483,10 +483,11 @@ async fn k07_ask_opens_the_start_of_the_best_rooms() {
     .await;
     assert!(!err, "{reply}");
     let (n, body) = priced(&reply);
-    assert!(body.starts_with("<kapu-room "), "{reply}");
+    assert!(body.starts_with("<kapu-passages "), "{reply}");
     assert!(body.contains("backdrop-filter"), "{reply}");
-    assert!(n <= 2000);
-    // D159: the start of the best door of each room, one frame per room
+    // D175: one frame, about 700 tokens by default
+    assert!(n <= 700, "{n}");
+    // the best passage of each room, under a `[id Lfrom-to]` line
     let (_, two) = call(
         &client,
         "kapu_ask",
@@ -494,8 +495,9 @@ async fn k07_ask_opens_the_start_of_the_best_rooms() {
     )
     .await;
     let ids: Vec<&str> = two
-        .match_indices(" id=\"")
-        .filter_map(|(i, _)| two.get(i + 5..).and_then(|t| t.split('"').next()))
+        .lines()
+        .filter_map(|l| l.strip_prefix('['))
+        .filter_map(|l| l.split(' ').next())
         .collect();
     let rooms: std::collections::BTreeSet<&str> = ids
         .iter()

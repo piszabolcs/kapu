@@ -46,6 +46,7 @@ def evidence_share(evidence, text):
     return len(words & have) / len(words)
 
 
+PASSAGE_ID = re.compile(r"(?m)^\[([a-z0-9][a-z0-9/-]*) L\d+-\d+\] ")
 HIT_LINE = re.compile(r"^\S+ \| .* \| \d+t \| [\d.]+ \| (bm25|vec|both)$", re.M)
 
 
@@ -59,7 +60,8 @@ def ask_runs(exe, rank, kfile, questions, max_tokens=None):
             args["max_tokens"] = max_tokens
         text, tokens, ms = server.call("kapu_ask", args)
         share = evidence_share(q["evidence"], text) if q.get("evidence") else None
-        opened = FRAME_ID.findall(text)
+        # D175: an `answer` ask names each passage's door on a `[id Lfrom-to]` line
+        opened = FRAME_ID.findall(text) + PASSAGE_ID.findall(text)
         conf = re.search(r"^confidence: (high|low)$", text, re.M)
         s_text, s_tokens, s_ms = server.call("kapu_search", {"file": kfile, "query": q["kerdes"]})
         rows.append({

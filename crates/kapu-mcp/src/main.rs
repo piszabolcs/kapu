@@ -133,7 +133,7 @@ struct KapuServer {
     tuning: Arc<Tuning>,
 }
 
-/// How `kapu_ask` spends its budget (J12; `Spread` since D159).
+/// How `kapu_ask` spends its budget (J12; `Spread` since D159, `Answer` since D175).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum AskMode {
     /// Open the best hit, then more whole doors that fit (D146).
@@ -149,6 +149,9 @@ enum AskMode {
     /// J2a: only the best door, and of it the part where the query's words
     /// are ([`best_part`]), not its start.
     Focus,
+    /// Plan v4 (D175): the best passage of each of the best rooms
+    /// ([`kapu_core::answer`]), in one frame, about [`ANSWER_TOKENS`].
+    Answer,
 }
 
 /// Server settings from `kapu-mcp --rank <json>` (plan v2): the ranking
@@ -191,7 +194,7 @@ impl Default for Tuning {
     fn default() -> Self {
         Self {
             rank: RankOptions::default(),
-            ask: AskMode::Spread,
+            ask: AskMode::Answer,
             ask_ratio: ASK_RATIO,
             excerpt_lines: 1,
             focus_below: 0,
@@ -226,7 +229,12 @@ impl Tuning {
                 Some("excerpts") => AskMode::Excerpts,
                 Some("confidence") => AskMode::Confidence,
                 Some("focus") => AskMode::Focus,
-                _ => return Err(bad("ask: top, spread, excerpts, confidence or focus")),
+                Some("answer") => AskMode::Answer,
+                _ => {
+                    return Err(bad(
+                        "ask: top, spread, excerpts, confidence, focus or answer",
+                    ));
+                }
             };
         }
         if let Some(rooms) = obj.remove("spread_rooms") {
@@ -352,6 +360,13 @@ const ASK_OTHERS: usize = 8;
 const LEAN_LIST: usize = 3;
 /// J2a (D174): the `kapu_ask` budget from which a shared ask shows best parts.
 const BEST_FROM: u64 = 1000;
+/// Plan v4 (D175): the default budget of an `answer` ask: the size at which one
+/// reply answers most questions (the M1 one-call cost is about a third of grep's).
+const ANSWER_TOKENS: u64 = 700;
+/// Plan v4: the rooms of the search an `answer` ask draws its passages from.
+const ANSWER_ROOMS: usize = 20;
+/// Plan v4: an `answer` ask stops when less than this is left of the budget.
+const ANSWER_MIN_PASSAGE: u64 = 60;
 /// J12: rooms `kapu_ask` opens a part of when it is not sure, and the
 /// default score ratio of a sure best hit.
 const ASK_SPREAD: usize = 5;
@@ -739,7 +754,7 @@ fn ask_foot(r: &SearchResult, tuning: &Tuning) -> (String, bool) {
             (format!("confidence: {level}\n{foot}"), !high)
         }
         AskMode::Spread => (foot, true),
-        AskMode::Top | AskMode::Excerpts | AskMode::Focus => (foot, false),
+        AskMode::Top | AskMode::Excerpts | AskMode::Focus | AskMode::Answer => (foot, false),
     }
 }
 
@@ -1437,6 +1452,94 @@ impl KapuServer {
         fit("", &[item], &tail, budget, true, &|_| String::new())
     }
 
+    /// Plan v4 (D175): the best passage of each of the best rooms of the
+    /// hybrid search, in one frame, as many as fit the budget (default
+    /// [`ANSWER_TOKENS`]), then the other rooms' ids.
+    fn ask_answer(&self, args: &AskArgs) -> Outcome {
+        let checked = self.file(&args.file)?;
+        let s = checked.sections();
+        let budget = args.max_tokens.unwrap_or(ANSWER_TOKENS).max(MIN_TOKENS);
+        let options = SearchOptions {
+            k: ANSWER_ROOMS,
+            max_price: None,
+            kind: args.kind.clone(),
+            rank: RankOptions {
+                collapse: 1,
+                ..self.tuning.rank.clone()
+            },
+        };
+        let r = self.search_result(&s, &args.query, &options)?;
+        let foot = vector_line(&r);
+        if r.hits.is_empty() {
+            let foot = format!("no match\n{foot}");
+            return fit("", &[], &foot, budget, false, &|_| String::new());
+        }
+        let mut rooms: Vec<&str> = Vec::new();
+        for h in &r.hits {
+            let room = kapu_core::search::room_of(&h.id);
+            if !rooms.contains(&room) {
+                rooms.push(room);
+            }
+        }
+        let index = kapu_core::answer::index_for(&s)?;
+        let mut passages = index.answer(
+            &args.query,
+            &rooms,
+            &kapu_core::answer::AnswerOptions::default(),
+        );
+        if args.kind.is_some() {
+            // the search kept only rooms of that kind; BM25 alone does not know kinds
+            passages.retain(|p| rooms.contains(&kapu_core::search::room_of(&p.door)));
+        }
+        let name = name_of(&args.file);
+        let tail = |shown: &[kapu_core::answer::Passage]| -> String {
+            let more: Vec<&str> = rooms
+                .iter()
+                .filter(|room| {
+                    !shown
+                        .iter()
+                        .any(|p| kapu_core::search::room_of(&p.door) == **room)
+                })
+                .take(self.tuning.ask_others)
+                .copied()
+                .collect();
+            if more.is_empty() {
+                foot.clone()
+            } else {
+                format!(
+                    "more rooms (kapu_open ids=[...]): {}\n{foot}",
+                    more.join(", ")
+                )
+            }
+        };
+        let mut chosen: Vec<kapu_core::answer::Passage> = Vec::new();
+        for p in passages {
+            chosen.push(p);
+            let body = kapu_core::answer::frame_passages(&name, &chosen);
+            let cost = price(&body)? + price(&tail(&chosen))? + SLACK_TOKENS;
+            if cost > budget {
+                chosen.pop();
+                if !chosen.is_empty()
+                    && price(&kapu_core::answer::frame_passages(&name, &chosen))?
+                        + price(&tail(&chosen))?
+                        + SLACK_TOKENS
+                        + ANSWER_MIN_PASSAGE
+                        > budget
+                {
+                    break;
+                }
+            }
+        }
+        let body = if chosen.is_empty() {
+            String::new()
+        } else {
+            kapu_core::answer::frame_passages(&name, &chosen)
+        };
+        fit("", &[body], &tail(&chosen), budget, true, &|_| {
+            String::new()
+        })
+    }
+
     /// J12, third mode: no door opened, the first three hits with two-line
     /// excerpts.
     fn ask_excerpts(
@@ -1574,13 +1677,20 @@ impl KapuServer {
             idempotent_hint = true,
             open_world_hint = false
         ),
-        description = "Search and open in one call: the start of the best door of the first 5 rooms within max_tokens, then the other matches."
+        description = "Search and read in one call: the passages that answer best, from the best rooms, within max_tokens; then other rooms."
     )]
     async fn kapu_ask(
         &self,
         Parameters(args): Parameters<AskArgs>,
     ) -> Result<CallToolResult, ErrorData> {
-        self.run(move |s| s.ask_text(&args)).await
+        self.run(move |s| {
+            if s.tuning.ask == AskMode::Answer {
+                s.ask_answer(&args)
+            } else {
+                s.ask_text(&args)
+            }
+        })
+        .await
     }
 
     #[tool(

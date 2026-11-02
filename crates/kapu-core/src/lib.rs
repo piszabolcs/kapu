@@ -16,6 +16,7 @@
 )]
 
 pub mod about;
+pub mod answer;
 pub mod bert;
 pub mod build;
 pub mod catalog;
