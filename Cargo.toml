@@ -6,6 +6,7 @@ members = [
     "crates/kapu-mcp",
     "crates/kapu-bench",
     "crates/kapu-gui",
+    "crates/kapu-create",
 ]
 
 [workspace.package]

@@ -1,0 +1,51 @@
+[package]
+name = "kapu-create"
+description = "KAPU file maker: web sites, documents and folders to a KAPU file (KD1-KD16)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "kapu-create"
+path = "src/main.rs"
+
+[dependencies]
+kapu-core = { path = "../kapu-core" }
+clap = { version = "4", features = ["derive", "string"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+blake3 = "1"
+unicode-normalization = "0.1"
+pulldown-cmark = { version = "0.13", default-features = false }
+url = "2.5"
+chardetng = "1.0"
+encoding_rs = "0.8"
+# HTML: main content with scraper, then Markdown with htmd (KD9).
+scraper = "0.29"
+htmd = "0.5"
+# Office (KD6): Microsoft formats with office_oxide, ODF/RTF/EPUB/CSV with anydoc
+# (no network code; its hosted OCR is a separate product and never used).
+office_oxide = "0.1.16"
+anydoc = "0.2.4"
+# PDF (KD4): PDFium as a shared library next to the program, pdf-extract and
+# lopdf without it.
+pdfium-render = "0.9.5"
+pdf-extract = "0.12.1"
+lopdf = "0.46"
+# Mail (KD7) and archives (KD8).
+mail-parser = "1.0"
+msg_parser = "0.3"
+zip = { version = "9", default-features = false, features = ["deflate", "deflate64", "bzip2", "lzma", "zstd"] }
+sevenz-rust2 = { version = "0.24", default-features = false, features = ["bzip2", "ppmd", "deflate"] }
+# Web (KD9).
+ureq = "3.5"
+texting_robots = "0.2"
+
+[dev-dependencies]
+tiny_http = "0.12"
+
+[lints]
+workspace = true
