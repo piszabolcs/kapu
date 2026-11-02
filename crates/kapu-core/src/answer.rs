@@ -28,6 +28,10 @@ const RRF_K: f64 = 60.0;
 const BM25_CANDIDATES: usize = 100;
 /// A grep line is cut to this many characters.
 const GREP_LINE_CHARS: usize = 160;
+/// D177: a longer `kapu_grep` pattern is read as words.
+const GREP_PATTERN_CHARS: usize = 1000;
+/// D177: the compiled size a `kapu_grep` regex may take.
+const GREP_REGEX_BYTES: usize = 1 << 20;
 
 /// How the passages are picked.
 #[derive(Debug, Clone)]
@@ -92,6 +96,46 @@ pub struct GrepResult {
     pub total: usize,
     /// Doors with a line that matched.
     pub doors: usize,
+    /// The pattern was read as a regex (D177), not as `|`-separated words.
+    pub regex: bool,
+}
+
+/// D177: a `kapu_grep` pattern: a regex in any case, as for grep, or, when it
+/// is not a valid one, `|`-separated words.
+enum Matcher {
+    Regex(regex::Regex),
+    Words(Vec<String>),
+}
+
+impl Matcher {
+    fn new(pattern: &str) -> Self {
+        if pattern.chars().count() <= GREP_PATTERN_CHARS
+            && let Ok(r) = regex::RegexBuilder::new(pattern)
+                .case_insensitive(true)
+                .size_limit(GREP_REGEX_BYTES)
+                .dfa_size_limit(GREP_REGEX_BYTES)
+                .build()
+        {
+            return Self::Regex(r);
+        }
+        Self::Words(
+            pattern
+                .split('|')
+                .map(|w| w.trim().to_lowercase())
+                .filter(|w| !w.is_empty())
+                .collect(),
+        )
+    }
+
+    fn is_match(&self, line: &str) -> bool {
+        match self {
+            Self::Regex(r) => r.is_match(line),
+            Self::Words(words) => {
+                let low = line.to_lowercase();
+                words.iter().any(|w| low.contains(w.as_str()))
+            }
+        }
+    }
 }
 
 /// The passages of one file and their BM25 postings.
@@ -376,30 +420,39 @@ impl AnswerIndex {
 }
 
 impl AnswerIndex {
-    /// D176 (`kapu_grep`): the lines of the doors' served texts that hold one
-    /// of the `|`-separated alternatives of `pattern`, in any case; the first
-    /// `max` in file order, and how many lines and doors matched. An empty
-    /// pattern matches nothing.
+    /// V4-5 (D177): the title and the lines of a door's served text (a
+    /// room's own text only), numbered as in [`AnswerIndex::grep`] and the
+    /// passages; `None` for an unknown door or one without text of its own.
+    #[must_use]
+    pub fn door_lines(&self, door: &str) -> Option<(&str, Vec<&str>)> {
+        self.doors
+            .iter()
+            .find(|(id, _, _)| id == door)
+            .map(|(_, title, text)| (title.as_str(), text.lines().collect()))
+    }
+
+    /// D176 (`kapu_grep`): the lines of the doors' served texts that match
+    /// `pattern`, a regex in any case line by line, as grep reads it (D177),
+    /// or `|`-separated words when it is not a valid one; the first `max` in
+    /// file order, and how many lines and doors matched. An empty pattern
+    /// matches nothing.
     #[must_use]
     pub fn grep(&self, pattern: &str, max: usize) -> GrepResult {
-        let wants: Vec<String> = pattern
-            .split('|')
-            .map(|w| w.trim().to_lowercase())
-            .filter(|w| !w.is_empty())
-            .collect();
+        let pattern = pattern.trim();
+        let matcher = Matcher::new(pattern);
         let mut out = GrepResult {
             lines: Vec::new(),
             total: 0,
             doors: 0,
+            regex: matches!(matcher, Matcher::Regex(_)),
         };
-        if wants.is_empty() {
+        if pattern.is_empty() || matches!(&matcher, Matcher::Words(w) if w.is_empty()) {
             return out;
         }
         for (id, _, text) in &self.doors {
             let mut hit = false;
             for (i, line) in text.lines().enumerate() {
-                let low = line.to_lowercase();
-                if !wants.iter().any(|w| low.contains(w.as_str())) {
+                if !matcher.is_match(line) {
                     continue;
                 }
                 hit = true;

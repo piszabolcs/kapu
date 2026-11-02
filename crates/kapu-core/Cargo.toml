@@ -18,6 +18,8 @@ serde_json = "1"
 libm = "0.2"
 # D29: no network (no `http`), no C regex (`onig`): pure-Rust fancy-regex.
 tokenizers = { version = "0.22", default-features = false, features = ["fancy-regex"] }
+# D177: `kapu_grep` patterns as an agent writes them for grep; linear time.
+regex = "1.13"
 
 [lints]
 workspace = true

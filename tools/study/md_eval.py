@@ -24,7 +24,8 @@ MCP servers:
   Read tools only;
 - `pasted` (`session` only): the whole Markdown file in the first message,
   no tools.
-`run` asks every question on its own, `--runs` times; `--rank` goes to
+`run` asks every question on its own, `--runs` times, after one unrecorded call
+per form that warms the prompt cache; `--rank` goes to
 `kapu-mcp --rank` (the server switches) and `--tag` names that variant of the
 form (`kapu` + tag) in the records. `session` asks the
 first `--turns` questions one after the other in one conversation
@@ -66,6 +67,8 @@ DOMAIN = {
     "pixellab": ("the PixelLab documentation (a pixel-art tool)", "Request", ENDING_PX),
 }
 READ_DEFAULT_LINES = 2000
+WARM_PROMPT = "Reply with the word OK and nothing else."
+REPLY = re.compile(r"reply: (\d+) tokens")
 
 
 def first_prompt(form, domain, q, kfile, lines, doc):
@@ -113,7 +116,7 @@ def call(prompt, cmd, cwd, index):
     proc = subprocess.run(cmd, cwd=cwd, input=prompt, capture_output=True, text=True, encoding="utf-8",
                           timeout=1800, env=clean_env())
     seconds = time.perf_counter() - started
-    tools, opened, result = [], [], {}
+    tools, opened, result, inputs, replies = [], [], {}, [], []
     for line in proc.stdout.splitlines():
         try:
             event = json.loads(line)
@@ -125,6 +128,8 @@ def call(prompt, cmd, cwd, index):
                 if block.get("type") == "tool_use":
                     name = block.get("name", "").replace("mcp__kapu__", "")
                     tools.append(name)
+                    shown = {k: v for k, v in (block.get("input") or {}).items() if k not in ("file", "file_path")}
+                    inputs.append(json.dumps(shown, ensure_ascii=False)[:200])
                     if name == "Read":
                         args = block.get("input", {}) or {}
                         start = int(args.get("offset") or 1)
@@ -136,6 +141,8 @@ def call(prompt, cmd, cwd, index):
                     text = content if isinstance(content, str) else " ".join(
                         c.get("text", "") for c in content or [] if isinstance(c, dict))
                     opened += ROOM.findall(text)
+                    m = REPLY.match(text)
+                    replies.append(int(m.group(1)) if m else len(text) // 4)
         elif kind == "result":
             result = event
     text = result.get("result", "") or ""
@@ -144,6 +151,7 @@ def call(prompt, cmd, cwd, index):
     return {
         "answer": (m.group(1) if m else text[-1500:]).strip(),
         "tools": tools, "tool_calls": len(tools), "opened": sorted(set(opened)),
+        "inputs": inputs, "replies": replies,
         "seconds": round(seconds, 1),
         "uncached": usage.get("input_tokens") or 0,
         "cache_write": usage.get("cache_creation_input_tokens") or 0,
@@ -242,6 +250,11 @@ def run(argv):
                 "model": opts["--model"], "rank": opts["--rank"], **r,
                 "gold_read": gold_read(q, r.get("opened", []))}
 
+    # the first calls of a new tool list write its prefix to the cache; one
+    # unrecorded call does that first, so every recorded run starts warm
+    for f in sorted({f for _, f, _ in todo}):
+        r = call(WARM_PROMPT, command(f, opts["--model"], config), cwds[f], index)
+        print(f"warm-up {f}: {r.get('cost_usd')} $", flush=True)
     with ThreadPoolExecutor(int(opts["--jobs"])) as pool, open(out, "a", encoding="utf-8") as sink:
         for i, r in enumerate(pool.map(one, todo), 1):
             sink.write(json.dumps(r, ensure_ascii=False) + "\n")

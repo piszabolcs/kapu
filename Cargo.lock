@@ -2057,6 +2057,7 @@ version = "0.5.1"
 dependencies = [
  "blake3",
  "libm",
+ "regex",
  "rust-stemmers",
  "serde_json",
  "tiktoken-rs",

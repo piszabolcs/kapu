@@ -479,6 +479,67 @@ async fn a21_guide_names_the_content_language() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// D177: `kapu_grep` reads a regex as grep does (words when it is not one),
+/// and `kapu_open` with `line` shows the lines from a grep line.
+#[tokio::test]
+async fn d177_grep_reads_regexes_and_open_shows_lines() {
+    let dir = workdir("grep");
+    let file = dir.join("minta.kapu");
+    std::fs::copy(root().join("tests/vectors/minta.kapu"), &file).unwrap();
+    let f = file.to_str().unwrap();
+    let client = connect(&dir).await;
+    let (_, g) = call(
+        &client,
+        "kapu_grep",
+        json!({ "file": f, "pattern": "CONTEXTBRIDGE" }),
+    )
+    .await;
+    // D177: the pattern is a regex, as an agent writes it for grep
+    let (_, re) = call(
+        &client,
+        "kapu_grep",
+        json!({ "file": f, "pattern": "contextb.idge|qqq.{0,3}zzz" }),
+    )
+    .await;
+    assert!(
+        re.contains("contextBridge") && !re.contains("not a valid regex"),
+        "{re}"
+    );
+    let (_, words) = call(
+        &client,
+        "kapu_grep",
+        json!({ "file": f, "pattern": "contextBridge|(unclosed" }),
+    )
+    .await;
+    assert!(
+        words.contains("contextBridge") && words.contains("not a valid regex"),
+        "{words}"
+    );
+    // kapu_open with line (D177): the lines from a grep line, numbered the same
+    let at: u32 = g
+        .split("electron-leckek/preload-bridge:L")
+        .nth(1)
+        .and_then(|rest| rest.split(':').next())
+        .and_then(|n| n.parse().ok())
+        .expect("a grep line number");
+    let (_, span) = call(
+        &client,
+        "kapu_open",
+        json!({ "file": f, "ids": ["electron-leckek/preload-bridge"], "line": at }),
+    )
+    .await;
+    let from = at.saturating_sub(2).max(1);
+    assert!(
+        span.contains("<kapu-passages ")
+            && span.contains(&format!("[electron-leckek/preload-bridge L{from}-"))
+            && span.contains("contextBridge")
+            && !span.contains("neighbours"),
+        "{span}"
+    );
+    client.cancel().await.unwrap();
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// K-07 (D146, D159): `kapu_ask` searches and opens in one call: the start of
 /// the best door of each of the first rooms, and lists the other hits.
 #[tokio::test]
