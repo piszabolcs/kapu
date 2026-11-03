@@ -515,10 +515,20 @@ fn collect(
 /// A fetched page as a document; its site is the host (the boilerplate
 /// family).
 fn page_document(page: &web::Page) -> Document {
-    let name = page.url.clone();
+    // A page's Markdown twin (`intro.md` from `llms.txt`) stands for the
+    // page itself: the other pages link to `intro`, and that is its address.
+    let key = match page.kind {
+        web::PageKind::Markdown => page
+            .url
+            .strip_suffix("/index.md")
+            .or_else(|| page.url.strip_suffix(".md"))
+            .unwrap_or(&page.url)
+            .to_owned(),
+        web::PageKind::Html => page.url.clone(),
+    };
     let mut doc = match page.kind {
-        web::PageKind::Markdown => readers::text::markdown(&page.bytes, &page.url, &name),
-        web::PageKind::Html => readers::html::read(&page.bytes, &page.url, &name),
+        web::PageKind::Markdown => readers::text::markdown(&page.bytes, &key, &key),
+        web::PageKind::Html => readers::html::read(&page.bytes, &key, &key),
     };
     if !page.title.is_empty() {
         doc.title.clone_from(&page.title);

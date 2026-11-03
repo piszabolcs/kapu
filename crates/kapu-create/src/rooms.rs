@@ -821,6 +821,11 @@ fn prefix(doc: &Document) -> String {
         && matches!(url.scheme(), "http" | "https")
     {
         let path = url.path().trim_matches('/');
+        // `guide/intro.html` and `guide/intro` give the same id.
+        let path = match path.rsplit_once('.') {
+            Some((stem, ext)) if !ext.contains('/') && ext.len() <= 5 => stem,
+            _ => path,
+        };
         let base = if path.is_empty() {
             url.host_str().unwrap_or("index").to_owned()
         } else {

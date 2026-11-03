@@ -105,11 +105,7 @@ pub fn default_scope(start: &Url) -> String {
         segments.pop();
     }
     let first = segments.first().map_or(String::new(), |s| format!("{s}/"));
-    format!(
-        "{}://{}/{first}",
-        start.scheme(),
-        start.host_str().unwrap_or_default()
-    )
+    format!("{}/{first}", start.origin().ascii_serialization())
 }
 
 /// Fetches the pages of the site at `start`.
@@ -134,11 +130,8 @@ pub fn crawl(
     } else {
         options.scope.clone()
     };
-    let origin = format!(
-        "{}://{}",
-        start.scheme(),
-        start.host_str().unwrap_or_default()
-    );
+    // Scheme, host and port.
+    let origin = start.origin().ascii_serialization();
     let config = ureq::Agent::config_builder()
         .timeout_global(Some(Duration::from_secs(options.timeout.max(1))))
         .http_status_as_error(false)
