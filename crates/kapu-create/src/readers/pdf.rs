@@ -382,6 +382,34 @@ fn ocr_pages(
         return;
     };
     let workers = options.workers();
+    // With several languages, the document's one language reads better and
+    // faster: its text pages tell it, else the first image page read with
+    // all of them.
+    let mut options = options.clone();
+    let mut detected = false;
+    if options.langs.contains('+') {
+        let text = pages
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| !image_pages.contains(i))
+            .flat_map(|(_, lines)| lines.iter().map(|l| l.text.as_str()))
+            .take(2000)
+            .collect::<Vec<_>>()
+            .join(" ");
+        let mut lang = ocr::detect_language(&text, &options.langs);
+        if lang.is_none() {
+            lang = image_pages
+                .first()
+                .and_then(|&i| render(pdf, i, options.dpi))
+                .and_then(|png| ocr::image_bytes(&exe, &png, "png", &options).ok())
+                .and_then(|text| ocr::detect_language(&text, &options.langs));
+        }
+        if let Some(lang) = lang {
+            options.langs = lang;
+            detected = true;
+        }
+    }
+    let options = &options;
     let mut failed = 0usize;
     for batch in image_pages.chunks(workers * 2) {
         let images: Vec<(usize, Vec<u8>)> = batch
@@ -413,8 +441,13 @@ fn ocr_pages(
     }
     doc.reader = "pdfium+ocr".into();
     let read = image_pages.len() - failed;
+    let how = if detected {
+        ", the language recognised from the text"
+    } else {
+        ""
+    };
     doc.warnings.push(format!(
-        "{read} image pages read by OCR ({})",
+        "{read} image pages read by OCR ({}{how})",
         options.langs
     ));
     if failed > 0 {
@@ -511,7 +544,7 @@ fn assemble(doc: &mut Document, mut pages: Vec<Vec<Line>>, marks: &[Mark]) {
             .blocks
             .iter()
             .take_while(|b| b.page <= 2)
-            .find(|b| b.is_heading() && readable_title(&b.text))
+            .find(|b| b.is_heading() && numbering(&b.text).is_none() && readable_title(&b.text))
     {
         doc.title = h.text.clone();
     }

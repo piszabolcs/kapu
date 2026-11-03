@@ -19,7 +19,17 @@ pub fn read(bytes: &[u8], key: &str, name: &str, ctx: &Ctx<'_>) -> Result<Docume
     } else {
         "png".into()
     };
-    let text = ocr::image_bytes(&exe, bytes, &ext, options)?;
+    let mut text = ocr::image_bytes(&exe, bytes, &ext, options)?;
+    // Read again in its one language when the first pass shows it clearly.
+    if let Some(lang) = ocr::detect_language(&text, &options.langs) {
+        let one = ocr::Options {
+            langs: lang,
+            ..options.clone()
+        };
+        if let Ok(again) = ocr::image_bytes(&exe, bytes, &ext, &one) {
+            text = again;
+        }
+    }
     let mut doc = Document::new(key, name, "ocr");
     for paragraph in text.split("\n\n").map(str::trim).filter(|p| !p.is_empty()) {
         doc.blocks.push(Block::new(Kind::Image, paragraph));

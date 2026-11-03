@@ -907,7 +907,12 @@ fn assign_ids(
         let base = if single || matches!(draft.body, Body::Overview { .. }) {
             p
         } else {
-            let part = numbering(&draft.title).unwrap_or_else(|| slug(&draft.title, 40));
+            let part = numbering(&draft.title).unwrap_or_else(|| {
+                // `Manual, p. 3-5` in `manual`: `manual-p-3-5`, not `manual-manual-p-3-5`.
+                let s = slug(&draft.title, 40);
+                s.strip_prefix(&format!("{p}-"))
+                    .map_or(s.clone(), str::to_owned)
+            });
             let room = 63usize.saturating_sub(part.len()).max(8);
             let p = p
                 .get(..room.min(p.len()))

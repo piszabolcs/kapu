@@ -24,7 +24,7 @@ use crate::rooms::{self, DocPlan, Stats};
 use crate::{Error, Result, web};
 
 /// Bumped when a reader's output changes, so the cache is not reused.
-pub const READER_VERSION: u32 = 1;
+pub const READER_VERSION: u32 = 2;
 
 /// Everything a run can be told.
 #[derive(Debug, Clone, Default)]

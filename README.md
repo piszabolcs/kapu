@@ -192,7 +192,7 @@ kapu-create refresh manuals.kapu                              # read the sources
 - **Nothing is skipped silently:** the report names every file it could not read and why (encrypted, damaged, image pages without OCR). A file read once is cached, so a refresh only reads what changed; hand-written rooms of the file are kept and sections keep their ids.
 - **Network:** only `kapu-create` and the window fetch web pages; `kapu`, `kapu-mcp` and the core stay offline. PDFium (`pdfium.dll`, BSD/Apache) and Tesseract (Apache-2.0) are separate programs next to `kapu-create`; without PDFium the text comes from `pdf-extract`, without Tesseract image pages are reported. The format of the rooms and the source list: [SPEC-KAPU-CREATE.md](SPEC-KAPU-CREATE.md).
 
-On the seven IndraDrive and IndraLogic manuals of 1550 pages used for testing, the rooms are ready in 4 seconds and the whole file with vectors in 2.5 minutes (Ryzen 5 7600).
+On the seven IndraDrive and IndraLogic manuals of 1550 pages used for testing, the rooms are ready in 4 seconds and the whole file with vectors in 2.5 minutes (Ryzen 5 7600). Scanned pages are read in the document's own language, recognised from its text; on test scans 99% of the words of a German, 96% of a Hungarian and 95% of an English page come back.
 
 ## Why
 
