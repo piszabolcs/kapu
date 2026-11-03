@@ -11,7 +11,10 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
-use kapu_core::build::{PENDING_WINDOWS, RoomSource, missing_windows, rebuild_pending, rebuild_with_progress, write_atomic};
+use kapu_core::build::{
+    PENDING_WINDOWS, RoomSource, missing_windows, rebuild_pending, rebuild_with_progress,
+    write_atomic,
+};
 use kapu_core::embed::Model;
 use serde::{Deserialize, Serialize};
 
@@ -26,7 +29,7 @@ pub const READER_VERSION: u32 = 1;
 /// Everything a run can be told.
 #[derive(Debug, Clone, Default)]
 pub struct Settings {
-    /// Reader options (OCR, PDFium, archive limits).
+    /// Reader options (OCR, `PDFium`, archive limits).
     pub read: readers::Options,
     /// Room planner settings (KD11-KD13).
     pub rooms: rooms::Settings,
@@ -40,9 +43,17 @@ pub struct Settings {
 #[derive(Debug, Clone)]
 pub enum Progress<'a> {
     /// A web page fetched (`done` of `total`; `total` 0 while crawling).
-    Fetched { done: usize, total: usize, url: &'a str },
+    Fetched {
+        done: usize,
+        total: usize,
+        url: &'a str,
+    },
     /// A file read.
-    Read { done: usize, total: usize, name: &'a str },
+    Read {
+        done: usize,
+        total: usize,
+        name: &'a str,
+    },
     /// The rooms are planned.
     Planned { rooms: usize },
     /// Vector windows computed.
@@ -151,7 +162,8 @@ impl Manifest {
     /// When it is missing or not valid.
     pub fn read(file: &Path) -> Result<Self> {
         let path = manifest_path(file);
-        let bytes = std::fs::read(&path).map_err(|e| Error::new(format!("{}: {e}", path.display())))?;
+        let bytes =
+            std::fs::read(&path).map_err(|e| Error::new(format!("{}: {e}", path.display())))?;
         serde_json::from_slice(&bytes).map_err(|e| Error::new(format!("{}: {e}", path.display())))
     }
 
@@ -192,7 +204,15 @@ pub fn make(
     model: Option<&Model>,
     progress: OnProgress<'_>,
 ) -> Result<Report> {
-    run(sources, out, settings, model, progress, &Manifest::default(), &[])
+    run(
+        sources,
+        out,
+        settings,
+        model,
+        progress,
+        &Manifest::default(),
+        &[],
+    )
 }
 
 /// Reads the sources of `file` again and rebuilds it: unchanged documents
@@ -200,7 +220,12 @@ pub fn make(
 ///
 /// # Errors
 /// When the source list is missing, or as [`make`].
-pub fn refresh(file: &Path, base: &Settings, model: Option<&Model>, progress: OnProgress<'_>) -> Result<Report> {
+pub fn refresh(
+    file: &Path,
+    base: &Settings,
+    model: Option<&Model>,
+    progress: OnProgress<'_>,
+) -> Result<Report> {
     let manifest = Manifest::read(file)?;
     let settings = manifest.settings(base);
     let made: BTreeSet<&String> = manifest.rooms.iter().collect();
@@ -211,7 +236,15 @@ pub fn refresh(file: &Path, base: &Settings, model: Option<&Model>, progress: On
         .into_iter()
         .filter(|r| !made.contains(&r.id))
         .collect();
-    run(&manifest.sources, file, &settings, model, progress, &manifest, &kept)
+    run(
+        &manifest.sources,
+        file,
+        &settings,
+        model,
+        progress,
+        &manifest,
+        &kept,
+    )
 }
 
 /// Reads and plans `sources` without writing a file: the report and the
@@ -219,20 +252,33 @@ pub fn refresh(file: &Path, base: &Settings, model: Option<&Model>, progress: On
 ///
 /// # Errors
 /// When no document could be read.
-pub fn preview(sources: &[String], settings: &Settings, progress: OnProgress<'_>) -> Result<(Report, Vec<RoomSource>)> {
+pub fn preview(
+    sources: &[String],
+    settings: &Settings,
+    progress: OnProgress<'_>,
+) -> Result<(Report, Vec<RoomSource>)> {
     let start = Instant::now();
     let mut report = Report::default();
     let docs = collect(sources, settings, progress, &mut report);
     if docs.is_empty() {
-        let why: Vec<String> = report.failures().take(5).map(|d| format!("{}: {}", d.name, d.warnings.join("; "))).collect();
-        return Err(Error::new(format!("no text was read from the sources. {}", why.join(" | "))));
+        let why: Vec<String> = report
+            .failures()
+            .take(5)
+            .map(|d| format!("{}: {}", d.name, d.warnings.join("; ")))
+            .collect();
+        return Err(Error::new(format!(
+            "no text was read from the sources. {}",
+            why.join(" | ")
+        )));
     }
     let plan = rooms::plan(&docs, &settings.rooms, &BTreeMap::new(), &BTreeSet::new());
-    progress(Progress::Planned { rooms: plan.rooms.len() });
+    progress(Progress::Planned {
+        rooms: plan.rooms.len(),
+    });
     report.rooms = plan.rooms.len();
     report.plan = plan.docs;
     report.stats = plan.stats;
-    report.model = kapu_core::build::NO_MODEL.to_owned();
+    kapu_core::build::NO_MODEL.clone_into(&mut report.model);
     report.seconds = start.elapsed().as_secs_f64();
     Ok((report, plan.rooms))
 }
@@ -247,22 +293,37 @@ fn run(
     kept: &[RoomSource],
 ) -> Result<Report> {
     let start = Instant::now();
-    let mut report = Report { file: out.display().to_string(), ..Report::default() };
+    let mut report = Report {
+        file: out.display().to_string(),
+        ..Report::default()
+    };
     let docs = collect(sources, settings, progress, &mut report);
     if docs.iter().all(|d| d.blocks.is_empty()) && kept.is_empty() {
-        let why: Vec<String> = report.failures().take(5).map(|d| format!("{}: {}", d.name, d.warnings.join("; "))).collect();
-        return Err(Error::new(format!("no text was read from the sources. {}", why.join(" | "))));
+        let why: Vec<String> = report
+            .failures()
+            .take(5)
+            .map(|d| format!("{}: {}", d.name, d.warnings.join("; ")))
+            .collect();
+        return Err(Error::new(format!(
+            "no text was read from the sources. {}",
+            why.join(" | ")
+        )));
     }
     let reserved: BTreeSet<String> = kept.iter().map(|r| r.id.clone()).collect();
     let plan = rooms::plan(&docs, &settings.rooms, &previous.ids, &reserved);
-    progress(Progress::Planned { rooms: plan.rooms.len() });
+    progress(Progress::Planned {
+        rooms: plan.rooms.len(),
+    });
     let mut all = plan.rooms.clone();
     all.extend(kept.iter().cloned());
     report.kept = kept.len();
     report.rooms = all.len();
     report.plan = plan.docs;
     report.stats = plan.stats;
-    report.model = model.map_or_else(|| kapu_core::build::NO_MODEL.to_owned(), |m| m.name().to_owned());
+    report.model = model.map_or_else(
+        || kapu_core::build::NO_MODEL.to_owned(),
+        |m| m.name().to_owned(),
+    );
     write(out, &all, model, progress)?;
     let manifest = Manifest {
         version: 1,
@@ -287,11 +348,19 @@ fn run(
 
 /// Builds and writes the file; a model that has many windows to compute
 /// first writes the file without vectors (D173), then the whole one.
-fn write(out: &Path, rooms: &[RoomSource], model: Option<&Model>, progress: OnProgress<'_>) -> Result<()> {
+fn write(
+    out: &Path,
+    rooms: &[RoomSource],
+    model: Option<&Model>,
+    progress: OnProgress<'_>,
+) -> Result<()> {
     let base = kapu_core::build::build(rooms)?;
     let Some(model) = model else {
         write_atomic(out, &base.bytes)?;
-        progress(Progress::Written { path: out, pending: false });
+        progress(Progress::Written {
+            path: out,
+            pending: false,
+        });
         return Ok(());
     };
     if model.is_contextual() {
@@ -299,13 +368,19 @@ fn write(out: &Path, rooms: &[RoomSource], model: Option<&Model>, progress: OnPr
         if missing > PENDING_WINDOWS {
             let first = rebuild_pending(&base.bytes, model)?;
             write_atomic(out, &first.bytes)?;
-            progress(Progress::Written { path: out, pending: true });
+            progress(Progress::Written {
+                path: out,
+                pending: true,
+            });
         }
     }
     let report = |done: usize, total: usize| progress(Progress::Vectors { done, total });
     let built = rebuild_with_progress(&base.bytes, Some(model), Some(&report))?;
     write_atomic(out, &built.bytes)?;
-    progress(Progress::Written { path: out, pending: false });
+    progress(Progress::Written {
+        path: out,
+        pending: false,
+    });
     Ok(())
 }
 
@@ -318,15 +393,28 @@ struct Job {
 
 /// Reads every source into documents; failures go into the report as
 /// documents without blocks.
-fn collect(sources: &[String], settings: &Settings, progress: OnProgress<'_>, report: &mut Report) -> Vec<Document> {
+// Web addresses, folders and files, then the parallel read: one walk.
+#[allow(clippy::too_many_lines)]
+fn collect(
+    sources: &[String],
+    settings: &Settings,
+    progress: OnProgress<'_>,
+    report: &mut Report,
+) -> Vec<Document> {
     let mut docs: Vec<Document> = Vec::new();
     let mut jobs: Vec<Job> = Vec::new();
     for source in sources {
         if is_url(source) {
-            let on_page = |done: usize, total: usize, url: &str| progress(Progress::Fetched { done, total, url });
+            let on_page = |done: usize, total: usize, url: &str| {
+                progress(Progress::Fetched { done, total, url });
+            };
             match web::crawl(source, &settings.web, &on_page) {
                 Ok(crawl) => {
-                    report.web.push(format!("{source}: {} pages via {}", crawl.pages.len(), crawl.method));
+                    report.web.push(format!(
+                        "{source}: {} pages via {}",
+                        crawl.pages.len(),
+                        crawl.method
+                    ));
                     for w in &crawl.warnings {
                         docs.push(readers::archive::failed(source, source, w));
                     }
@@ -341,19 +429,37 @@ fn collect(sources: &[String], settings: &Settings, progress: OnProgress<'_>, re
             let mut files = Vec::new();
             walk(&path, &mut files);
             for file in files {
-                let rel = file.strip_prefix(&path).map_or_else(|_| file.clone(), Path::to_path_buf);
+                let rel = file
+                    .strip_prefix(&path)
+                    .map_or_else(|_| file.clone(), Path::to_path_buf);
                 let name = format!(
                     "{}/{}",
-                    path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
+                    path.file_name()
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or_default(),
                     rel.to_string_lossy().replace('\\', "/")
                 );
-                jobs.push(Job { key: key_of(&file), name, path: file });
+                jobs.push(Job {
+                    key: key_of(&file),
+                    name,
+                    path: file,
+                });
             }
         } else if path.is_file() {
-            let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| source.clone());
-            jobs.push(Job { key: key_of(&path), name, path });
+            let name = path
+                .file_name()
+                .map_or_else(|| source.clone(), |n| n.to_string_lossy().into_owned());
+            jobs.push(Job {
+                key: key_of(&path),
+                name,
+                path,
+            });
         } else {
-            docs.push(readers::archive::failed(source, source, "no such file or folder"));
+            docs.push(readers::archive::failed(
+                source,
+                source,
+                "no such file or folder",
+            ));
         }
     }
     let done = AtomicUsize::new(0);
@@ -363,7 +469,11 @@ fn collect(sources: &[String], settings: &Settings, progress: OnProgress<'_>, re
     let results = readers::ocr::parallel(&jobs, workers, |job| {
         let r = read_job(job, settings, &cached);
         let n = done.fetch_add(1, Ordering::Relaxed) + 1;
-        progress(Progress::Read { done: n, total, name: &job.name });
+        progress(Progress::Read {
+            done: n,
+            total,
+            name: &job.name,
+        });
         r
     });
     report.cached = cached.into_inner();
@@ -372,7 +482,11 @@ fn collect(sources: &[String], settings: &Settings, progress: OnProgress<'_>, re
         match result {
             Ok((hash, read)) => {
                 if let Some(first) = seen_hashes.get(&hash) {
-                    let mut doc = readers::archive::failed(&job.key, &job.name, &format!("the same file as {first}, read once"));
+                    let mut doc = readers::archive::failed(
+                        &job.key,
+                        &job.name,
+                        &format!("the same file as {first}, read once"),
+                    );
                     doc.reader = "same".into();
                     docs.push(doc);
                     continue;
@@ -412,7 +526,10 @@ fn page_document(page: &web::Page) -> Document {
     if !page.description.is_empty() {
         doc.description.clone_from(&page.description);
     }
-    doc.site = url::Url::parse(&page.url).ok().and_then(|u| u.host_str().map(str::to_owned)).unwrap_or_default();
+    doc.site = url::Url::parse(&page.url)
+        .ok()
+        .and_then(|u| u.host_str().map(str::to_owned))
+        .unwrap_or_default();
     doc
 }
 
@@ -424,21 +541,31 @@ fn key_of(path: &Path) -> String {
 
 /// The files under `dir`, sorted, without hidden folders and build output.
 fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
     let mut entries: Vec<PathBuf> = entries.flatten().map(|e| e.path()).collect();
     entries.sort();
     for path in entries {
-        let name = path.file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_lowercase())
+            .unwrap_or_default();
         if name.starts_with('.') || name.starts_with("~$") {
             continue;
         }
         if path.is_dir() {
-            if matches!(name.as_str(), "node_modules" | "target" | "__pycache__" | "venv" | ".venv") {
+            if matches!(
+                name.as_str(),
+                "node_modules" | "target" | "__pycache__" | "venv" | ".venv"
+            ) {
                 continue;
             }
             walk(&path, out);
         } else if !matches!(name.as_str(), "thumbs.db" | "desktop.ini")
-            && !name.ends_with(".kapu")
+            && !path
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("kapu"))
             && !name.ends_with(".sources.json")
         {
             out.push(path);
@@ -455,7 +582,11 @@ struct CacheEntry {
 
 /// Reads one file, from the cache when its bytes were read before with the
 /// same reader version and options. A panic of a parser is caught.
-fn read_job(job: &Job, settings: &Settings, cached: &AtomicUsize) -> Result<(String, Vec<Document>)> {
+fn read_job(
+    job: &Job,
+    settings: &Settings,
+    cached: &AtomicUsize,
+) -> Result<(String, Vec<Document>)> {
     let bytes = std::fs::read(&job.path).map_err(|e| Error::new(e.to_string()))?;
     let hash = blake3::hash(&bytes).to_hex().to_string();
     let fingerprint = format!(
@@ -463,19 +594,43 @@ fn read_job(job: &Job, settings: &Settings, cached: &AtomicUsize) -> Result<(Str
         settings.read.ocr.langs, settings.read.ocr.dpi, hash
     );
     let cache = (!settings.no_cache)
-        .then(|| kapu_core::embed::cache_root())
+        .then(kapu_core::embed::cache_root)
         .flatten()
-        .map(|root| root.join("create").join(format!("{}.json", blake3::hash(fingerprint.as_bytes()).to_hex())));
-    if let Some(entry) = cache.as_ref().and_then(|p| std::fs::read(p).ok()).and_then(|b| serde_json::from_slice::<CacheEntry>(&b).ok()) {
+        .map(|root| {
+            root.join("create").join(format!(
+                "{}.json",
+                blake3::hash(fingerprint.as_bytes()).to_hex()
+            ))
+        });
+    if let Some(entry) = cache
+        .as_ref()
+        .and_then(|p| std::fs::read(p).ok())
+        .and_then(|b| serde_json::from_slice::<CacheEntry>(&b).ok())
+    {
         cached.fetch_add(1, Ordering::Relaxed);
-        let docs = entry.docs.into_iter().map(|d| rekey(d, &entry.key, &job.key, &entry.name, &job.name)).collect();
+        let docs = entry
+            .docs
+            .into_iter()
+            .map(|d| rekey(d, &entry.key, &job.key, &entry.name, &job.name))
+            .collect();
         return Ok((hash, docs));
     }
-    let ctx = Ctx { options: &settings.read, depth: 0 };
-    let read = catch_unwind(AssertUnwindSafe(|| readers::read(&bytes, &job.key, &job.name, &ctx)))
-        .map_err(|_| Error::new("the reader stopped on this file (an internal error of its parser)"))??;
+    let ctx = Ctx {
+        options: &settings.read,
+        depth: 0,
+    };
+    let read = catch_unwind(AssertUnwindSafe(|| {
+        readers::read(&bytes, &job.key, &job.name, &ctx)
+    }))
+    .map_err(|_| {
+        Error::new("the reader stopped on this file (an internal error of its parser)")
+    })??;
     if let Some(path) = cache {
-        let entry = CacheEntry { key: job.key.clone(), name: job.name.clone(), docs: read.clone() };
+        let entry = CacheEntry {
+            key: job.key.clone(),
+            name: job.name.clone(),
+            docs: read.clone(),
+        };
         if let (Some(dir), Ok(json)) = (path.parent(), serde_json::to_vec(&entry)) {
             let _ = std::fs::create_dir_all(dir);
             let _ = write_atomic(&path, &json);
@@ -485,16 +640,22 @@ fn read_job(job: &Job, settings: &Settings, cached: &AtomicUsize) -> Result<(Str
 }
 
 /// A cached document of a file now at another place.
-fn rekey(mut doc: Document, old_key: &str, new_key: &str, old_name: &str, new_name: &str) -> Document {
-    if old_key != new_key {
-        if let Some(rest) = doc.key.strip_prefix(old_key) {
-            doc.key = format!("{new_key}{rest}");
-        }
+fn rekey(
+    mut doc: Document,
+    old_key: &str,
+    new_key: &str,
+    old_name: &str,
+    new_name: &str,
+) -> Document {
+    if old_key != new_key
+        && let Some(rest) = doc.key.strip_prefix(old_key)
+    {
+        doc.key = format!("{new_key}{rest}");
     }
-    if old_name != new_name {
-        if let Some(rest) = doc.name.strip_prefix(old_name) {
-            doc.name = format!("{new_name}{rest}");
-        }
+    if old_name != new_name
+        && let Some(rest) = doc.name.strip_prefix(old_name)
+    {
+        doc.name = format!("{new_name}{rest}");
     }
     doc
 }
@@ -505,7 +666,10 @@ mod tests {
 
     #[test]
     fn manifest_sits_beside_the_file() {
-        assert_eq!(manifest_path(Path::new("d/x.kapu")), PathBuf::from("d/x.sources.json"));
+        assert_eq!(
+            manifest_path(Path::new("d/x.kapu")),
+            PathBuf::from("d/x.sources.json")
+        );
     }
 
     #[test]
@@ -526,7 +690,10 @@ mod tests {
         assert!(std::fs::write(src.join("sub/b.md"), "# Beta\n\nThe beta text.\n").is_ok());
         assert!(std::fs::write(src.join("broken.pdf"), "%PDF-1.4 nothing").is_ok());
         let out = dir.join("docs.kapu");
-        let settings = Settings { no_cache: true, ..Settings::default() };
+        let settings = Settings {
+            no_cache: true,
+            ..Settings::default()
+        };
         let sources = vec![src.to_string_lossy().into_owned()];
         let report = make(&sources, &out, &settings, None, &|_| {});
         let report = match report {
@@ -537,20 +704,36 @@ mod tests {
         assert_eq!(report.failures().count(), 1, "{:?}", report.documents);
         let bytes = std::fs::read(&out).unwrap_or_default();
         let rooms = kapu_core::edit::rooms_of(&bytes).unwrap_or_default();
-        let alpha = rooms.iter().find(|r| r.id == "alpha").map(|r| r.content.clone()).unwrap_or_default();
+        let alpha = rooms
+            .iter()
+            .find(|r| r.id == "alpha")
+            .map(|r| r.content.clone())
+            .unwrap_or_default();
         assert!(alpha.contains("[beta](#beta)"), "{alpha}");
         // a hand-written room survives a refresh, and the ids stay
         let mut with_note = rooms.clone();
-        with_note.push(RoomSource { id: "my-note".into(), content: "# My note\n\nkept\n".into() });
-        let built = kapu_core::build::build(&with_note).map(|b| b.bytes).unwrap_or_default();
+        with_note.push(RoomSource {
+            id: "my-note".into(),
+            content: "# My note\n\nkept\n".into(),
+        });
+        let built = kapu_core::build::build(&with_note)
+            .map(|b| b.bytes)
+            .unwrap_or_default();
         assert!(write_atomic(&out, &built).is_ok());
         assert!(std::fs::write(src.join("c.md"), "# Gamma\n\nNew.\n").is_ok());
         let again = refresh(&out, &settings, None, &|_| {});
         assert!(again.is_ok(), "{:?}", again.err());
         let bytes = std::fs::read(&out).unwrap_or_default();
-        let ids: Vec<String> = kapu_core::edit::rooms_of(&bytes).unwrap_or_default().into_iter().map(|r| r.id).collect();
+        let ids: Vec<String> = kapu_core::edit::rooms_of(&bytes)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|r| r.id)
+            .collect();
         assert!(ids.contains(&"my-note".to_owned()), "{ids:?}");
-        assert!(ids.contains(&"alpha".to_owned()) && ids.contains(&"gamma".to_owned()), "{ids:?}");
+        assert!(
+            ids.contains(&"alpha".to_owned()) && ids.contains(&"gamma".to_owned()),
+            "{ids:?}"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

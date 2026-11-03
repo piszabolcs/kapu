@@ -5,7 +5,7 @@
 //! at most `max_pages` pages. Only this module and the window use the
 //! network (KD1).
 
-use std::collections::{BTreeSet, HashMap, VecDeque};
+use std::collections::{BTreeSet, HashSet, VecDeque};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -32,7 +32,13 @@ pub struct Options {
 
 impl Default for Options {
     fn default() -> Self {
-        Self { max_pages: 5000, parallel: 4, scope: String::new(), timeout: 30, max_bytes: 20 << 20 }
+        Self {
+            max_pages: 5000,
+            parallel: 4,
+            scope: String::new(),
+            timeout: 30,
+            max_bytes: 20 << 20,
+        }
     }
 }
 
@@ -75,7 +81,10 @@ pub struct Crawl {
 /// The `User-Agent` of every request.
 #[must_use]
 pub fn user_agent() -> String {
-    format!("KAPU/{} (kapu-create; +https://github.com/piszabolcs/kapu)", env!("CARGO_PKG_VERSION"))
+    format!(
+        "KAPU/{} (kapu-create; +https://github.com/piszabolcs/kapu)",
+        env!("CARGO_PKG_VERSION")
+    )
 }
 
 struct Client {
@@ -96,20 +105,40 @@ pub fn default_scope(start: &Url) -> String {
         segments.pop();
     }
     let first = segments.first().map_or(String::new(), |s| format!("{s}/"));
-    format!("{}://{}/{first}", start.scheme(), start.host_str().unwrap_or_default())
+    format!(
+        "{}://{}/{first}",
+        start.scheme(),
+        start.host_str().unwrap_or_default()
+    )
 }
 
 /// Fetches the pages of the site at `start`.
 ///
 /// # Errors
 /// When `start` is not an http(s) URL or nothing could be fetched.
-pub fn crawl(start: &str, options: &Options, progress: &(dyn Fn(usize, usize, &str) + Sync)) -> Result<Crawl> {
+// The four steps of the ladder read best in one place.
+#[allow(clippy::too_many_lines)]
+pub fn crawl(
+    start: &str,
+    options: &Options,
+    progress: &(dyn Fn(usize, usize, &str) + Sync),
+) -> Result<Crawl> {
     let start = Url::parse(start).map_err(|e| Error::new(format!("{start}: {e}")))?;
     if !matches!(start.scheme(), "http" | "https") {
-        return Err(Error::new(format!("{start}: only http and https addresses are fetched")));
+        return Err(Error::new(format!(
+            "{start}: only http and https addresses are fetched"
+        )));
     }
-    let scope = if options.scope.is_empty() { default_scope(&start) } else { options.scope.clone() };
-    let origin = format!("{}://{}", start.scheme(), start.host_str().unwrap_or_default());
+    let scope = if options.scope.is_empty() {
+        default_scope(&start)
+    } else {
+        options.scope.clone()
+    };
+    let origin = format!(
+        "{}://{}",
+        start.scheme(),
+        start.host_str().unwrap_or_default()
+    );
     let config = ureq::Agent::config_builder()
         .timeout_global(Some(Duration::from_secs(options.timeout.max(1))))
         .http_status_as_error(false)
@@ -125,13 +154,13 @@ pub fn crawl(start: &str, options: &Options, progress: &(dyn Fn(usize, usize, &s
         delay: Duration::from_millis(100),
     };
     let mut crawl = Crawl::default();
-    if let Ok((200, body, _)) = client.get(&format!("{origin}/robots.txt")) {
-        if let Ok(robot) = texting_robots::Robot::new("KAPU", &body) {
-            if let Some(d) = robot.delay {
-                client.delay = Duration::from_secs_f32(d.clamp(0.0, 30.0));
-            }
-            client.robots = Some(robot);
+    if let Ok((200, body, _)) = client.get(&format!("{origin}/robots.txt"))
+        && let Ok(robot) = texting_robots::Robot::new("KAPU", &body)
+    {
+        if let Some(d) = robot.delay {
+            client.delay = Duration::from_secs_f32(d.clamp(0.0, 30.0));
         }
+        client.robots = Some(robot);
     }
     let in_scope = |u: &str| u.starts_with(&scope) || format!("{u}/") == scope;
 
@@ -139,7 +168,9 @@ pub fn crawl(start: &str, options: &Options, progress: &(dyn Fn(usize, usize, &s
     let mut llms_candidates = vec![format!("{}llms.txt", scope), format!("{origin}/llms.txt")];
     llms_candidates.dedup();
     for candidate in &llms_candidates {
-        let Ok((200, body, kind)) = client.get(candidate) else { continue };
+        let Ok((200, body, kind)) = client.get(candidate) else {
+            continue;
+        };
         if kind.contains("html") {
             continue;
         }
@@ -151,23 +182,43 @@ pub fn crawl(start: &str, options: &Options, progress: &(dyn Fn(usize, usize, &s
             .collect();
         if entries.len() >= 2 {
             crawl.method = "llms.txt".into();
-            let pages = fetch_all(&client, &entries, options.parallel, progress, &mut crawl.warnings);
+            let pages = fetch_all(
+                &client,
+                &entries,
+                options.parallel,
+                progress,
+                &mut crawl.warnings,
+            );
             crawl.pages = pages;
             return finish(crawl);
         }
     }
     // 2. llms-full.txt
-    for candidate in [format!("{}llms-full.txt", scope), format!("{origin}/llms-full.txt")] {
-        let Ok((200, body, kind)) = client.get(&candidate) else { continue };
+    for candidate in [
+        format!("{scope}llms-full.txt"),
+        format!("{origin}/llms-full.txt"),
+    ] {
+        let Ok((200, body, kind)) = client.get(&candidate) else {
+            continue;
+        };
         if kind.contains("html") || body.len() < 200 {
             continue;
         }
         crawl.method = "llms-full.txt".into();
-        crawl.pages.push(Page { url: candidate, bytes: body, kind: PageKind::Markdown, ..Page::default() });
+        crawl.pages.push(Page {
+            url: candidate,
+            bytes: body,
+            kind: PageKind::Markdown,
+            ..Page::default()
+        });
         return finish(crawl);
     }
     // 3. sitemap
-    let mut sitemaps: Vec<String> = client.robots.as_ref().map(|r| r.sitemaps.clone()).unwrap_or_default();
+    let mut sitemaps: Vec<String> = client
+        .robots
+        .as_ref()
+        .map(|r| r.sitemaps.clone())
+        .unwrap_or_default();
     sitemaps.push(format!("{origin}/sitemap.xml"));
     sitemaps.dedup();
     let mut urls: BTreeSet<String> = BTreeSet::new();
@@ -177,23 +228,39 @@ pub fn crawl(start: &str, options: &Options, progress: &(dyn Fn(usize, usize, &s
         if depth > 2 || !seen_maps.insert(map.clone()) || seen_maps.len() > 50 {
             continue;
         }
-        let Ok((200, body, _)) = client.get(&map) else { continue };
+        let Ok((200, body, _)) = client.get(&map) else {
+            continue;
+        };
         let xml = String::from_utf8_lossy(&body);
         for loc in locs(&xml) {
-            if loc.ends_with(".xml") || loc.ends_with(".xml.gz") {
+            let lower = loc.to_lowercase();
+            if std::path::Path::new(&lower)
+                .extension()
+                .is_some_and(|e| e == "xml")
+                || lower.ends_with(".xml.gz")
+            {
                 queue.push_back((loc, depth + 1));
-            } else if let Some(u) = normalise(&loc) {
-                if in_scope(&u) {
-                    urls.insert(u);
-                }
+            } else if let Some(u) = normalise(&loc)
+                && in_scope(&u)
+            {
+                urls.insert(u);
             }
         }
     }
     if urls.len() >= 2 {
         crawl.method = "sitemap".into();
-        let entries: Vec<(String, String, String)> =
-            urls.into_iter().take(options.max_pages).map(|u| (u, String::new(), String::new())).collect();
-        crawl.pages = fetch_all(&client, &entries, options.parallel, progress, &mut crawl.warnings);
+        let entries: Vec<(String, String, String)> = urls
+            .into_iter()
+            .take(options.max_pages)
+            .map(|u| (u, String::new(), String::new()))
+            .collect();
+        crawl.pages = fetch_all(
+            &client,
+            &entries,
+            options.parallel,
+            progress,
+            &mut crawl.warnings,
+        );
         return finish(crawl);
     }
     // 4. crawl
@@ -209,11 +276,20 @@ pub fn crawl(start: &str, options: &Options, progress: &(dyn Fn(usize, usize, &s
             .take(options.parallel.max(1) * 4)
             .map(|u| (u, String::new(), String::new()))
             .collect();
-        let pages = fetch_all(&client, &batch, options.parallel, &|_, _, u| progress(seen.len(), 0, u), &mut crawl.warnings);
+        let pages = fetch_all(
+            &client,
+            &batch,
+            options.parallel,
+            &|_, _, u| progress(seen.len(), 0, u),
+            &mut crawl.warnings,
+        );
         for page in pages {
             if page.kind == PageKind::Html {
                 for link in html_links(&page.bytes, &page.url) {
-                    if in_scope(&link) && seen.len() < options.max_pages * 2 && seen.insert(link.clone()) {
+                    if in_scope(&link)
+                        && seen.len() < options.max_pages * 2
+                        && seen.insert(link.clone())
+                    {
                         frontier.push_back(link);
                     }
                 }
@@ -229,7 +305,11 @@ pub fn crawl(start: &str, options: &Options, progress: &(dyn Fn(usize, usize, &s
 
 fn finish(mut crawl: Crawl) -> Result<Crawl> {
     if crawl.pages.is_empty() {
-        let why = crawl.warnings.first().cloned().unwrap_or_else(|| "no pages".into());
+        let why = crawl
+            .warnings
+            .first()
+            .cloned()
+            .unwrap_or_else(|| "no pages".into());
         return Err(Error::new(format!("nothing fetched: {why}")));
     }
     crawl.pages.sort_by(|a, b| a.url.cmp(&b.url));
@@ -242,10 +322,10 @@ impl Client {
     /// retries 429 and 5xx up to three times, refuses what `robots.txt`
     /// forbids.
     fn get(&self, url: &str) -> Result<(u16, Vec<u8>, String)> {
-        if let Some(robot) = &self.robots {
-            if !robot.allowed(url) {
-                return Err(Error::new(format!("{url}: forbidden by robots.txt")));
-            }
+        if let Some(robot) = &self.robots
+            && !robot.allowed(url)
+        {
+            return Err(Error::new(format!("{url}: forbidden by robots.txt")));
         }
         for attempt in 0..4u32 {
             self.wait();
@@ -273,10 +353,12 @@ impl Client {
                 }
             }
             let final_url = response.get_uri().to_string();
-            if let (Ok(a), Ok(b)) = (Url::parse(url), Url::parse(&final_url)) {
-                if a.host_str() != b.host_str() {
-                    return Err(Error::new(format!("{url}: redirected to another host ({final_url}), not followed")));
-                }
+            if let (Ok(a), Ok(b)) = (Url::parse(url), Url::parse(&final_url))
+                && a.host_str() != b.host_str()
+            {
+                return Err(Error::new(format!(
+                    "{url}: redirected to another host ({final_url}), not followed"
+                )));
             }
             let kind = response
                 .headers()
@@ -292,12 +374,16 @@ impl Client {
                 .map_err(|e| Error::new(format!("{url}: {e}")))?;
             return Ok((status, body, kind));
         }
-        Err(Error::new(format!("{url}: the server kept refusing (429/5xx)")))
+        Err(Error::new(format!(
+            "{url}: the server kept refusing (429/5xx)"
+        )))
     }
 
     fn wait(&self) {
         let until = {
-            let Ok(mut next) = self.next.lock() else { return };
+            let Ok(mut next) = self.next.lock() else {
+                return;
+            };
             let now = Instant::now();
             let at = (*next).max(now);
             *next = at + self.delay;
@@ -326,32 +412,39 @@ fn fetch_all(
 ) -> Vec<Page> {
     let done = std::sync::atomic::AtomicUsize::new(0);
     let total = entries.len();
-    let results = crate::readers::ocr::parallel(entries, parallel.max(1), |(url, title, description)| {
-        let r = client.get(url);
-        let n = done.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
-        progress(n, total, url);
-        match r {
-            Ok((200..=299, bytes, kind)) => {
-                let markdown = kind.contains("markdown")
-                    || kind.starts_with("text/plain")
-                    || std::path::Path::new(url.split(['?', '#']).next().unwrap_or(url))
-                        .extension()
-                        .is_some_and(|e| e.eq_ignore_ascii_case("md") || e.eq_ignore_ascii_case("txt"));
-                Ok(Page {
-                    url: url.clone(),
-                    bytes,
-                    kind: if markdown { PageKind::Markdown } else { PageKind::Html },
-                    title: title.clone(),
-                    description: description.clone(),
-                })
+    let results =
+        crate::readers::ocr::parallel(entries, parallel.max(1), |(url, title, description)| {
+            let r = client.get(url);
+            let n = done.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+            progress(n, total, url);
+            match r {
+                Ok((200..=299, bytes, kind)) => {
+                    let markdown = kind.contains("markdown")
+                        || kind.starts_with("text/plain")
+                        || std::path::Path::new(url.split(['?', '#']).next().unwrap_or(url))
+                            .extension()
+                            .is_some_and(|e| {
+                                e.eq_ignore_ascii_case("md") || e.eq_ignore_ascii_case("txt")
+                            });
+                    Ok(Page {
+                        url: url.clone(),
+                        bytes,
+                        kind: if markdown {
+                            PageKind::Markdown
+                        } else {
+                            PageKind::Html
+                        },
+                        title: title.clone(),
+                        description: description.clone(),
+                    })
+                }
+                Ok((status, _, _)) if status == 401 || status == 403 => Err(format!(
+                    "{url}: {status}, the site refuses automated access or needs a login"
+                )),
+                Ok((status, _, _)) => Err(format!("{url}: HTTP {status}")),
+                Err(e) => Err(e.0),
             }
-            Ok((status, _, _)) if status == 401 || status == 403 => {
-                Err(format!("{url}: {status}, the site refuses automated access or needs a login"))
-            }
-            Ok((status, _, _)) => Err(format!("{url}: HTTP {status}")),
-            Err(e) => Err(e.0),
-        }
-    });
+        });
     let mut pages = Vec::new();
     for r in results {
         match r {
@@ -371,9 +464,25 @@ pub fn llms_links(text: &str, base: &str) -> Vec<(String, String, String)> {
     for line in text.lines() {
         let line = line.trim();
         let Some(open) = line.find('[') else { continue };
-        let Some(mid) = line.get(open..).and_then(|s| s.find("](")).map(|m| m + open) else { continue };
-        let Some(close) = line.get(mid + 2..).and_then(|s| s.find(')')).map(|c| c + mid + 2) else { continue };
-        let title = line.get(open + 1..mid).unwrap_or_default().trim().to_owned();
+        let Some(mid) = line
+            .get(open..)
+            .and_then(|s| s.find("]("))
+            .map(|m| m + open)
+        else {
+            continue;
+        };
+        let Some(close) = line
+            .get(mid + 2..)
+            .and_then(|s| s.find(')'))
+            .map(|c| c + mid + 2)
+        else {
+            continue;
+        };
+        let title = line
+            .get(open + 1..mid)
+            .unwrap_or_default()
+            .trim()
+            .to_owned();
         let target = line.get(mid + 2..close).unwrap_or_default().trim();
         let description = line
             .get(close + 1..)
@@ -385,7 +494,9 @@ pub fn llms_links(text: &str, base: &str) -> Vec<(String, String, String)> {
             Some(b) => b.join(target).ok().map(|u| u.to_string()),
             None => Url::parse(target).ok().map(|u| u.to_string()),
         };
-        let Some(url) = url.and_then(|u| normalise(&u)) else { continue };
+        let Some(url) = url.and_then(|u| normalise(&u)) else {
+            continue;
+        };
         if seen.insert(url.clone()) {
             out.push((url, title, description));
         }
@@ -418,7 +529,9 @@ pub fn normalise(url: &str) -> Option<String> {
     u.set_fragment(None);
     let kept: Vec<(String, String)> = u
         .query_pairs()
-        .filter(|(k, _)| !k.starts_with("utm_") && !matches!(k.as_ref(), "ref" | "fbclid" | "gclid"))
+        .filter(|(k, _)| {
+            !k.starts_with("utm_") && !matches!(k.as_ref(), "ref" | "fbclid" | "gclid")
+        })
         .map(|(k, v)| (k.into_owned(), v.into_owned()))
         .collect();
     if kept.is_empty() {
@@ -431,23 +544,31 @@ pub fn normalise(url: &str) -> Option<String> {
 
 /// The links of an HTML page, absolute and normalised; assets are left out.
 fn html_links(bytes: &[u8], base: &str) -> Vec<String> {
-    let Ok(base) = Url::parse(base) else { return Vec::new() };
+    let Ok(base) = Url::parse(base) else {
+        return Vec::new();
+    };
     let html = scraper::Html::parse_document(&String::from_utf8_lossy(bytes));
-    let Ok(sel) = scraper::Selector::parse("a[href]") else { return Vec::new() };
+    let Ok(sel) = scraper::Selector::parse("a[href]") else {
+        return Vec::new();
+    };
     let skip = [
-        "png", "jpg", "jpeg", "gif", "svg", "webp", "ico", "css", "js", "zip", "gz", "mp4", "mp3", "woff",
-        "woff2", "ttf", "exe", "msi", "dmg", "pdf",
+        "png", "jpg", "jpeg", "gif", "svg", "webp", "ico", "css", "js", "zip", "gz", "mp4", "mp3",
+        "woff", "woff2", "ttf", "exe", "msi", "dmg", "pdf",
     ];
     let mut out = Vec::new();
-    let mut seen: HashMap<String, ()> = HashMap::new();
+    let mut seen: HashSet<String> = HashSet::new();
     for a in html.select(&sel) {
-        let Some(href) = a.value().attr("href") else { continue };
-        let Some(u) = base.join(href).ok().and_then(|u| normalise(u.as_str())) else { continue };
+        let Some(href) = a.value().attr("href") else {
+            continue;
+        };
+        let Some(u) = base.join(href).ok().and_then(|u| normalise(u.as_str())) else {
+            continue;
+        };
         let path = u.split(['?', '#']).next().unwrap_or(&u).to_lowercase();
         if skip.iter().any(|e| path.ends_with(&format!(".{e}"))) {
             continue;
         }
-        if seen.insert(u.clone(), ()).is_none() {
+        if seen.insert(u.clone()) {
             out.push(u);
         }
     }
@@ -461,13 +582,25 @@ mod tests {
     #[test]
     fn scope_is_the_first_segment() {
         let u = Url::parse("https://elevenlabs.io/docs/overview/intro").ok();
-        assert_eq!(u.as_ref().map(default_scope).as_deref(), Some("https://elevenlabs.io/docs/"));
+        assert_eq!(
+            u.as_ref().map(default_scope).as_deref(),
+            Some("https://elevenlabs.io/docs/")
+        );
         let u = Url::parse("https://docs.python.org/3/library/asyncio.html").ok();
-        assert_eq!(u.as_ref().map(default_scope).as_deref(), Some("https://docs.python.org/3/"));
+        assert_eq!(
+            u.as_ref().map(default_scope).as_deref(),
+            Some("https://docs.python.org/3/")
+        );
         let u = Url::parse("https://example.org/").ok();
-        assert_eq!(u.as_ref().map(default_scope).as_deref(), Some("https://example.org/"));
+        assert_eq!(
+            u.as_ref().map(default_scope).as_deref(),
+            Some("https://example.org/")
+        );
         let u = Url::parse("https://example.org/guide.html").ok();
-        assert_eq!(u.as_ref().map(default_scope).as_deref(), Some("https://example.org/"));
+        assert_eq!(
+            u.as_ref().map(default_scope).as_deref(),
+            Some("https://example.org/")
+        );
     }
 
     #[test]
@@ -476,12 +609,18 @@ mod tests {
         let links = llms_links(text, "https://x.org/docs/llms.txt");
         assert_eq!(links.len(), 2);
         assert_eq!(links.first().map(|l| l.2.as_str()), Some("Start here"));
-        assert_eq!(links.get(1).map(|l| l.0.as_str()), Some("https://x.org/docs/api/voices.md"));
+        assert_eq!(
+            links.get(1).map(|l| l.0.as_str()),
+            Some("https://x.org/docs/api/voices.md")
+        );
     }
 
     #[test]
     fn tracking_parameters_go() {
-        assert_eq!(normalise("https://x.org/a?utm_source=b&page=2#top").as_deref(), Some("https://x.org/a?page=2"));
+        assert_eq!(
+            normalise("https://x.org/a?utm_source=b&page=2#top").as_deref(),
+            Some("https://x.org/a?page=2")
+        );
         assert_eq!(normalise("mailto:a@b"), None);
     }
 

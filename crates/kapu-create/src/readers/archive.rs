@@ -18,10 +18,20 @@ pub fn failed(key: &str, name: &str, why: &str) -> Document {
 }
 
 /// Reads one member and appends its documents (or its failure).
-fn member(out: &mut Vec<Document>, bytes: &[u8], outer_key: &str, outer_name: &str, inner: &str, ctx: &Ctx<'_>) {
+fn member(
+    out: &mut Vec<Document>,
+    bytes: &[u8],
+    outer_key: &str,
+    outer_name: &str,
+    inner: &str,
+    ctx: &Ctx<'_>,
+) {
     let key = format!("{outer_key}!{inner}");
     let name = format!("{outer_name} > {inner}");
-    match ctx.deeper().and_then(|deeper| read(bytes, &key, &name, &deeper)) {
+    match ctx
+        .deeper()
+        .and_then(|deeper| read(bytes, &key, &name, &deeper))
+    {
         Ok(docs) => out.extend(docs),
         Err(e) => out.push(failed(&key, &name, &e.0)),
     }
@@ -43,20 +53,28 @@ fn wanted(name: &str) -> bool {
 /// # Errors
 /// When the archive's directory cannot be read.
 pub fn zip(bytes: &[u8], key: &str, name: &str, ctx: &Ctx<'_>) -> Result<Vec<Document>> {
-    let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| Error::new(format!("ZIP: {e}")))?;
+    let mut archive =
+        zip::ZipArchive::new(Cursor::new(bytes)).map_err(|e| Error::new(format!("ZIP: {e}")))?;
     let mut out = Vec::new();
     let mut unpacked = 0u64;
     for i in 0..archive.len() {
         let mut file = match archive.by_index(i) {
             Ok(f) => f,
             Err(e) => {
-                out.push(failed(&format!("{key}!#{i}"), &format!("{name} > #{i}"), &format!("ZIP member: {e}")));
+                out.push(failed(
+                    &format!("{key}!#{i}"),
+                    &format!("{name} > #{i}"),
+                    &format!("ZIP member: {e}"),
+                ));
                 continue;
             }
         };
         let inner = file
             .name()
-            .map_or_else(|_| String::from_utf8_lossy(file.name_raw()).into_owned(), std::borrow::Cow::into_owned)
+            .map_or_else(
+                |_| String::from_utf8_lossy(file.name_raw()).into_owned(),
+                std::borrow::Cow::into_owned,
+            )
             .replace('\\', "/");
         if file.is_dir() || !wanted(&inner) {
             continue;
@@ -79,8 +97,15 @@ pub fn zip(bytes: &[u8], key: &str, name: &str, ctx: &Ctx<'_>) -> Result<Vec<Doc
             )));
         }
         let mut data = Vec::with_capacity(usize::try_from(size).unwrap_or(0).min(64 << 20));
-        if let Err(e) = (&mut file).take(ctx.options.max_member + 1).read_to_end(&mut data) {
-            out.push(failed(&format!("{key}!{inner}"), &format!("{name} > {inner}"), &format!("ZIP member: {e}")));
+        if let Err(e) = (&mut file)
+            .take(ctx.options.max_member + 1)
+            .read_to_end(&mut data)
+        {
+            out.push(failed(
+                &format!("{key}!{inner}"),
+                &format!("{name} > {inner}"),
+                &format!("ZIP member: {e}"),
+            ));
             continue;
         }
         drop(file);
@@ -94,8 +119,9 @@ pub fn zip(bytes: &[u8], key: &str, name: &str, ctx: &Ctx<'_>) -> Result<Vec<Doc
 /// # Errors
 /// When the archive cannot be opened (damaged, encrypted).
 pub fn sevenz(bytes: &[u8], key: &str, name: &str, ctx: &Ctx<'_>) -> Result<Vec<Document>> {
-    let mut reader = sevenz_rust2::ArchiveReader::new(Cursor::new(bytes), sevenz_rust2::Password::empty())
-        .map_err(|e| Error::new(format!("7z: {e}")))?;
+    let mut reader =
+        sevenz_rust2::ArchiveReader::new(Cursor::new(bytes), sevenz_rust2::Password::empty())
+            .map_err(|e| Error::new(format!("7z: {e}")))?;
     let mut members: Vec<(String, Vec<u8>)> = Vec::new();
     let mut skipped: Vec<(String, String)> = Vec::new();
     let (max_member, max_unpacked) = (ctx.options.max_member, ctx.options.max_unpacked);
@@ -108,7 +134,10 @@ pub fn sevenz(bytes: &[u8], key: &str, name: &str, ctx: &Ctx<'_>) -> Result<Vec<
                 return Ok(true);
             }
             if entry.size() > max_member {
-                skipped.push((inner, format!("not unpacked: {} bytes, over the limit", entry.size())));
+                skipped.push((
+                    inner,
+                    format!("not unpacked: {} bytes, over the limit", entry.size()),
+                ));
                 std::io::copy(data, &mut std::io::sink())?;
                 return Ok(true);
             }
@@ -124,13 +153,21 @@ pub fn sevenz(bytes: &[u8], key: &str, name: &str, ctx: &Ctx<'_>) -> Result<Vec<
         .map_err(|e| Error::new(format!("7z: {e}")))?;
     let mut out = Vec::new();
     for (inner, why) in skipped {
-        out.push(failed(&format!("{key}!{inner}"), &format!("{name} > {inner}"), &why));
+        out.push(failed(
+            &format!("{key}!{inner}"),
+            &format!("{name} > {inner}"),
+            &why,
+        ));
     }
     for (inner, data) in members {
         member(&mut out, &data, key, name, &inner, ctx);
     }
     if unpacked > max_unpacked {
-        out.push(failed(key, name, &format!("7z: more than {max_unpacked} bytes unpacked, the rest was left out")));
+        out.push(failed(
+            key,
+            name,
+            &format!("7z: more than {max_unpacked} bytes unpacked, the rest was left out"),
+        ));
     }
     Ok(out)
 }
@@ -161,9 +198,21 @@ mod tests {
         assert!(w.write_all(b"junk").is_ok());
         let bytes = w.finish().map(Cursor::into_inner).unwrap_or_default();
         let options = Options::default();
-        let docs = zip(&bytes, "p.zip", "p.zip", &Ctx { options: &options, depth: 0 }).unwrap_or_default();
+        let docs = zip(
+            &bytes,
+            "p.zip",
+            "p.zip",
+            &Ctx {
+                options: &options,
+                depth: 0,
+            },
+        )
+        .unwrap_or_default();
         let keys: Vec<&str> = docs.iter().map(|d| d.key.as_str()).collect();
         assert_eq!(keys, ["p.zip!a/readme.txt", "p.zip!inner.zip!deep.md"]);
-        assert_eq!(docs.get(1).map(|d| d.name.as_str()), Some("p.zip > inner.zip > deep.md"));
+        assert_eq!(
+            docs.get(1).map(|d| d.name.as_str()),
+            Some("p.zip > inner.zip > deep.md")
+        );
     }
 }

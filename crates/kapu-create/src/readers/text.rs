@@ -27,7 +27,11 @@ pub fn from_markdown(md: &str, key: &str, name: &str, reader: &str) -> Document 
 
 /// The text of the first heading if it is the only one at the top level.
 fn first_title(blocks: &[Block]) -> Option<String> {
-    let top = blocks.iter().filter(|b| b.is_heading()).map(|b| b.level).min()?;
+    let top = blocks
+        .iter()
+        .filter(|b| b.is_heading())
+        .map(|b| b.level)
+        .min()?;
     let mut at_top = blocks.iter().filter(|b| b.is_heading() && b.level == top);
     let first = at_top.next()?;
     at_top.next().is_none().then(|| first.text.clone())
@@ -42,7 +46,8 @@ pub fn plain(bytes: &[u8], key: &str, name: &str) -> Document {
     for line in text.lines().chain(std::iter::once("")) {
         if line.trim().is_empty() {
             if !paragraph.is_empty() {
-                doc.blocks.push(Block::new(Kind::Paragraph, paragraph.join("\n")));
+                doc.blocks
+                    .push(Block::new(Kind::Paragraph, paragraph.join("\n")));
                 paragraph.clear();
             }
         } else {

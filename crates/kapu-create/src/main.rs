@@ -58,6 +58,8 @@ enum Command {
     },
 }
 
+// Command-line switches are bools by nature.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Args, Clone)]
 struct Opts {
     /// Machine-readable JSON output.
@@ -72,7 +74,7 @@ struct Opts {
     /// Read every file again, without the document cache.
     #[arg(long)]
     no_cache: bool,
-    /// The PDFium library or its folder (default: next to the program).
+    /// The `PDFium` library or its folder (default: next to the program).
     #[arg(long)]
     pdfium: Option<PathBuf>,
     /// The tesseract program (default: next to the program, then PATH).
@@ -107,7 +109,10 @@ struct Opts {
 
 impl Opts {
     fn settings(&self) -> Settings {
-        let mut s = Settings { no_cache: self.no_cache, ..Settings::default() };
+        let mut s = Settings {
+            no_cache: self.no_cache,
+            ..Settings::default()
+        };
         s.read.pdfium.clone_from(&self.pdfium);
         s.read.ocr.tesseract.clone_from(&self.tesseract);
         s.read.ocr.langs.clone_from(&self.ocr_lang);
@@ -134,7 +139,9 @@ impl Opts {
         if let Some(dir) = find_default_model_dir() {
             return Model::load(&dir).map(Some).map_err(|e| e.to_string());
         }
-        notes.push(format!("vector model `{DEFAULT_MODEL}` not found; keyword search only (emb=none)"));
+        notes.push(format!(
+            "vector model `{DEFAULT_MODEL}` not found; keyword search only (emb=none)"
+        ));
         Ok(None)
     }
 }
@@ -152,18 +159,38 @@ impl Reporter {
         }
         let (kind, line, last_one) = match p {
             Progress::Fetched { done, total, url } => {
-                let of = if *total > 0 { format!("/{total}") } else { String::new() };
-                ("fetch", format!("fetched {done}{of}: {url}"), *total > 0 && done == total)
+                let of = if *total > 0 {
+                    format!("/{total}")
+                } else {
+                    String::new()
+                };
+                (
+                    "fetch",
+                    format!("fetched {done}{of}: {url}"),
+                    *total > 0 && done == total,
+                )
             }
-            Progress::Read { done, total, name } => ("read", format!("read {done}/{total}: {name}"), done == total),
+            Progress::Read { done, total, name } => (
+                "read",
+                format!("read {done}/{total}: {name}"),
+                done == total,
+            ),
             Progress::Planned { rooms } => ("plan", format!("{rooms} rooms planned"), true),
-            Progress::Vectors { done, total } => ("vec", format!("vectors {done}/{total}"), done == total),
+            Progress::Vectors { done, total } => {
+                ("vec", format!("vectors {done}/{total}"), done == total)
+            }
             Progress::Written { path, pending } => {
-                let more = if *pending { ", keyword search ready; computing the vectors" } else { "" };
+                let more = if *pending {
+                    ", keyword search ready; computing the vectors"
+                } else {
+                    ""
+                };
                 ("write", format!("written {}{more}", path.display()), true)
             }
         };
-        let Ok(mut last) = self.last.lock() else { return };
+        let Ok(mut last) = self.last.lock() else {
+            return;
+        };
         let now = Instant::now();
         if last_one || last.1 != kind || now.duration_since(last.0).as_secs() >= 2 {
             *last = (now, kind);
@@ -174,15 +201,32 @@ impl Reporter {
 
 fn summary(report: &Report, notes: &[String]) -> String {
     let mut out = String::new();
-    let read = report.documents.iter().filter(|d| d.reader != "none" && d.reader != "same").count();
+    let read = report
+        .documents
+        .iter()
+        .filter(|d| d.reader != "none" && d.reader != "same")
+        .count();
     let failed = report.failures().count();
-    let _ = write!(out, "{}: {} rooms from {read} documents", if report.file.is_empty() { "preview" } else { &report.file }, report.rooms);
+    let _ = write!(
+        out,
+        "{}: {} rooms from {read} documents",
+        if report.file.is_empty() {
+            "preview"
+        } else {
+            &report.file
+        },
+        report.rooms
+    );
     if failed > 0 {
         let _ = write!(out, " ({failed} not read)");
     }
     let _ = writeln!(out, ", model {}, {:.0} s", report.model, report.seconds);
     if report.kept > 0 || report.cached > 0 {
-        let _ = writeln!(out, "  kept hand-written rooms: {}, documents from the cache: {}", report.kept, report.cached);
+        let _ = writeln!(
+            out,
+            "  kept hand-written rooms: {}, documents from the cache: {}",
+            report.kept, report.cached
+        );
     }
     for w in &report.web {
         let _ = writeln!(out, "  web: {w}");
@@ -195,7 +239,13 @@ fn summary(report: &Report, notes: &[String]) -> String {
     );
     for d in &report.plan {
         let tokens: usize = d.rooms.iter().map(|r| r.tokens).sum();
-        let _ = writeln!(out, "  {} [{:?}]: {} rooms, {tokens} tokens", d.title, d.tier, d.rooms.len());
+        let _ = writeln!(
+            out,
+            "  {} [{:?}]: {} rooms, {tokens} tokens",
+            d.title,
+            d.tier,
+            d.rooms.len()
+        );
     }
     let problems: Vec<String> = report
         .documents
@@ -209,7 +259,11 @@ fn summary(report: &Report, notes: &[String]) -> String {
             let _ = writeln!(out, "    {p}");
         }
         if problems.len() > 50 {
-            let _ = writeln!(out, "    ... and {} more (--json lists all)", problems.len() - 50);
+            let _ = writeln!(
+                out,
+                "    ... and {} more (--json lists all)",
+                problems.len() - 50
+            );
         }
     }
     for n in notes {
@@ -237,11 +291,14 @@ fn write_rooms(dir: &Path, rooms: &[kapu_core::build::RoomSource]) -> Result<(),
 
 fn run(cli: &Cli) -> Result<String, String> {
     let (options, json_out) = match &cli.command {
-        Command::New { options, .. } | Command::Refresh { options, .. } | Command::Preview { options, .. } => {
-            (options, options.json)
-        }
+        Command::New { options, .. }
+        | Command::Refresh { options, .. }
+        | Command::Preview { options, .. } => (options, options.json),
     };
-    let reporter = Reporter { last: Mutex::new((Instant::now(), "")), quiet: false };
+    let reporter = Reporter {
+        last: Mutex::new((Instant::now(), "")),
+        quiet: false,
+    };
     let progress = |p: Progress<'_>| reporter.show(&p);
     let settings = options.settings();
     let mut notes = Vec::new();
@@ -254,16 +311,27 @@ fn run(cli: &Cli) -> Result<String, String> {
             let model = options.model(&mut notes)?;
             create::refresh(file, &settings, model.as_ref(), &progress).map_err(|e| e.0)?
         }
-        Command::Preview { sources, rooms_dir, .. } => {
-            let (report, rooms) = create::preview(sources, &settings, &progress).map_err(|e| e.0)?;
+        Command::Preview {
+            sources, rooms_dir, ..
+        } => {
+            let (report, rooms) =
+                create::preview(sources, &settings, &progress).map_err(|e| e.0)?;
             if let Some(dir) = rooms_dir {
                 write_rooms(dir, &rooms)?;
-                notes.push(format!("{} rooms written to {}", rooms.len(), dir.display()));
+                notes.push(format!(
+                    "{} rooms written to {}",
+                    rooms.len(),
+                    dir.display()
+                ));
             }
             report
         }
     };
-    Ok(if json_out { json(&report, &notes) } else { summary(&report, &notes) })
+    Ok(if json_out {
+        json(&report, &notes)
+    } else {
+        summary(&report, &notes)
+    })
 }
 
 fn main() -> ExitCode {

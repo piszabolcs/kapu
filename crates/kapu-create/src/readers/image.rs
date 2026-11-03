@@ -14,7 +14,11 @@ pub fn read(bytes: &[u8], key: &str, name: &str, ctx: &Ctx<'_>) -> Result<Docume
         Error::new("an image: its text needs OCR, and Tesseract was not found (--tesseract or KAPU_TESSERACT)")
     })?;
     let ext = crate::detect::extension(name);
-    let ext = if ext.len() <= 5 && ext.chars().all(|c| c.is_ascii_alphanumeric()) { ext } else { "png".into() };
+    let ext = if ext.len() <= 5 && ext.chars().all(|c| c.is_ascii_alphanumeric()) {
+        ext
+    } else {
+        "png".into()
+    };
     let text = ocr::image_bytes(&exe, bytes, &ext, options)?;
     let mut doc = Document::new(key, name, "ocr");
     for paragraph in text.split("\n\n").map(str::trim).filter(|p| !p.is_empty()) {

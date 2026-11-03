@@ -2637,6 +2637,7 @@ name = "kapu-gui"
 version = "0.5.1"
 dependencies = [
  "kapu-core",
+ "kapu-create",
  "open",
  "pulldown-cmark",
  "serde",

@@ -54,11 +54,18 @@ impl Options {
 /// The `tesseract` program to run, or `None`.
 #[must_use]
 pub fn find(options: &Options) -> Option<PathBuf> {
-    let exe = if cfg!(windows) { "tesseract.exe" } else { "tesseract" };
+    let exe = if cfg!(windows) {
+        "tesseract.exe"
+    } else {
+        "tesseract"
+    };
     let mut candidates: Vec<PathBuf> = Vec::new();
     candidates.extend(options.tesseract.clone());
     candidates.extend(std::env::var_os("KAPU_TESSERACT").map(PathBuf::from));
-    if let Some(dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(Path::to_path_buf)) {
+    if let Some(dir) = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(Path::to_path_buf))
+    {
         candidates.push(dir.join("tesseract").join(exe));
         candidates.push(dir.join(exe));
     }
@@ -66,7 +73,12 @@ pub fn find(options: &Options) -> Option<PathBuf> {
         for var in ["ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA"] {
             if let Some(base) = std::env::var_os(var) {
                 candidates.push(PathBuf::from(&base).join("Tesseract-OCR").join(exe));
-                candidates.push(PathBuf::from(base).join("Programs").join("Tesseract-OCR").join(exe));
+                candidates.push(
+                    PathBuf::from(base)
+                        .join("Programs")
+                        .join("Tesseract-OCR")
+                        .join(exe),
+                );
             }
         }
     }
@@ -74,7 +86,9 @@ pub fn find(options: &Options) -> Option<PathBuf> {
         return Some(found);
     }
     let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path).map(|d| d.join(exe)).find(|p| p.is_file())
+    std::env::split_paths(&path)
+        .map(|d| d.join(exe))
+        .find(|p| p.is_file())
 }
 
 static COUNTER: AtomicUsize = AtomicUsize::new(0);
@@ -95,11 +109,15 @@ pub fn image_file(exe: &Path, image: &Path, options: &Options) -> Result<String>
     let dir = scratch()?;
     let base = dir.join("out");
     let mut cmd = Command::new(exe);
-    cmd.arg(image).arg(&base).args(["-l", &options.langs, "--psm", "3"]);
+    cmd.arg(image)
+        .arg(&base)
+        .args(["-l", &options.langs, "--psm", "3"]);
     if let Some(data) = &options.tessdata {
         cmd.arg("--tessdata-dir").arg(data);
     }
-    cmd.stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::piped());
+    cmd.stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped());
     let result = run(cmd, Duration::from_secs(options.timeout.max(1)))
         .and_then(|()| std::fs::read(base.with_extension("txt")).map_err(Error::from))
         .map(|bytes| crate::text::clean(&String::from_utf8_lossy(&bytes)));
@@ -122,7 +140,9 @@ pub fn image_bytes(exe: &Path, bytes: &[u8], ext: &str, options: &Options) -> Re
 
 /// Runs `cmd`, stopping it after `limit`.
 fn run(mut cmd: Command, limit: Duration) -> Result<()> {
-    let mut child = cmd.spawn().map_err(|e| Error::new(format!("tesseract: {e}")))?;
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| Error::new(format!("tesseract: {e}")))?;
     let start = Instant::now();
     loop {
         match child.try_wait() {
@@ -132,13 +152,20 @@ fn run(mut cmd: Command, limit: Duration) -> Result<()> {
                 if let Some(mut stderr) = child.stderr.take() {
                     let _ = std::io::Read::read_to_string(&mut stderr, &mut err);
                 }
-                let last = err.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or_default();
+                let last = err
+                    .lines()
+                    .rev()
+                    .find(|l| !l.trim().is_empty())
+                    .unwrap_or_default();
                 return Err(Error::new(format!("tesseract failed ({status}): {last}")));
             }
             Ok(None) if start.elapsed() > limit => {
                 let _ = child.kill();
                 let _ = child.wait();
-                return Err(Error::new(format!("tesseract: no result in {} s, stopped", limit.as_secs())));
+                return Err(Error::new(format!(
+                    "tesseract: no result in {} s, stopped",
+                    limit.as_secs()
+                )));
             }
             Ok(None) => std::thread::sleep(Duration::from_millis(40)),
             Err(e) => return Err(Error::new(format!("tesseract: {e}"))),
@@ -148,9 +175,14 @@ fn run(mut cmd: Command, limit: Duration) -> Result<()> {
 
 /// Runs `job` on every item on `workers` threads; one failing item never
 /// stops the others (each result is kept with its item).
-pub fn parallel<T: Sync, R: Send>(items: &[T], workers: usize, job: impl Fn(&T) -> R + Sync) -> Vec<R> {
+pub fn parallel<T: Sync, R: Send>(
+    items: &[T],
+    workers: usize,
+    job: impl Fn(&T) -> R + Sync,
+) -> Vec<R> {
     let next = AtomicUsize::new(0);
-    let results: std::sync::Mutex<Vec<(usize, R)>> = std::sync::Mutex::new(Vec::with_capacity(items.len()));
+    let results: std::sync::Mutex<Vec<(usize, R)>> =
+        std::sync::Mutex::new(Vec::with_capacity(items.len()));
     std::thread::scope(|s| {
         for _ in 0..workers.clamp(1, items.len().max(1)) {
             s.spawn(|| {
@@ -185,8 +217,15 @@ mod tests {
 
     #[test]
     fn a_missing_program_is_an_error_not_a_hang() {
-        let options = Options { tesseract: Some(PathBuf::from("no-such-tesseract.exe")), ..Options::default() };
-        let r = image_file(Path::new("no-such-tesseract.exe"), Path::new("x.png"), &options);
+        let options = Options {
+            tesseract: Some(PathBuf::from("no-such-tesseract.exe")),
+            ..Options::default()
+        };
+        let r = image_file(
+            Path::new("no-such-tesseract.exe"),
+            Path::new("x.png"),
+            &options,
+        );
         assert!(r.is_err());
     }
 }

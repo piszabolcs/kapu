@@ -1,5 +1,5 @@
 //! Markdown to blocks. The Office, HTML, EPUB and Markdown readers all end
-//! here: the top-level blocks of the CommonMark parse, each kept as its own
+//! here: the top-level blocks of the `CommonMark` parse, each kept as its own
 //! source text, and the headings as level and title.
 
 use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
@@ -66,7 +66,12 @@ pub fn parse(md: &str) -> Parsed {
                 push(&mut out.blocks, kind, level, source);
             }
             Event::Text(_) | Event::Html(_) if depth == 0 => {
-                push(&mut out.blocks, Kind::Other, 0, md.get(range).unwrap_or_default());
+                push(
+                    &mut out.blocks,
+                    Kind::Other,
+                    0,
+                    md.get(range).unwrap_or_default(),
+                );
             }
             _ => {}
         }
@@ -123,7 +128,9 @@ fn heading_text(source: &str) -> String {
 
 fn front_matter(source: &str, out: &mut Parsed) {
     for line in source.lines() {
-        let Some((key, value)) = line.split_once(':') else { continue };
+        let Some((key, value)) = line.split_once(':') else {
+            continue;
+        };
         let value = value.trim().trim_matches(['"', '\'']).trim();
         if value.is_empty() {
             continue;
@@ -149,12 +156,32 @@ mod tests {
         let kinds: Vec<Kind> = p.blocks.iter().map(|b| b.kind).collect();
         assert_eq!(
             kinds,
-            [Kind::Heading, Kind::Paragraph, Kind::List, Kind::Table, Kind::Code, Kind::Heading, Kind::Quote]
+            [
+                Kind::Heading,
+                Kind::Paragraph,
+                Kind::List,
+                Kind::Table,
+                Kind::Code,
+                Kind::Heading,
+                Kind::Quote
+            ]
         );
-        assert_eq!(p.blocks.first().map(|b| (b.level, b.text.as_str())), Some((1, "Start")));
-        assert_eq!(p.blocks.get(1).map(|b| b.text.as_str()), Some("Some *text*\non two lines."));
-        assert_eq!(p.blocks.get(5).map(|b| (b.level, b.text.as_str())), Some((2, "Sub")));
-        assert_eq!(p.blocks.get(4).map(|b| b.text.as_str()), Some("```rust\nfn main() {}\n```"));
+        assert_eq!(
+            p.blocks.first().map(|b| (b.level, b.text.as_str())),
+            Some((1, "Start"))
+        );
+        assert_eq!(
+            p.blocks.get(1).map(|b| b.text.as_str()),
+            Some("Some *text*\non two lines.")
+        );
+        assert_eq!(
+            p.blocks.get(5).map(|b| (b.level, b.text.as_str())),
+            Some((2, "Sub"))
+        );
+        assert_eq!(
+            p.blocks.get(4).map(|b| b.text.as_str()),
+            Some("```rust\nfn main() {}\n```")
+        );
     }
 
     #[test]

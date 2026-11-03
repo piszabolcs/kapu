@@ -124,7 +124,8 @@ pub fn numbering(title: &str) -> Option<String> {
     let parts: Vec<&str> = first.split('.').collect();
     let mut digits = false;
     for (i, part) in parts.iter().enumerate() {
-        let numeric = !part.is_empty() && part.chars().all(|c| c.is_ascii_digit()) && part.len() <= 3;
+        let numeric =
+            !part.is_empty() && part.chars().all(|c| c.is_ascii_digit()) && part.len() <= 3;
         let letter = i == 0 && part.len() == 1 && part.chars().all(|c| c.is_ascii_uppercase());
         if !numeric && !letter {
             return None;
@@ -175,13 +176,19 @@ mod tests {
 
     #[test]
     fn clean_drops_what_the_body_forbids() {
-        assert_eq!(clean("a\r\nb\rc\u{1B}d\u{202E}e\u{AD}f\u{FB01}g"), "a\nb\ncdefg".replace("fg", "ffig"));
+        assert_eq!(
+            clean("a\r\nb\rc\u{1B}d\u{202E}e\u{AD}f\u{FB01}g"),
+            "a\nb\ncdefg".replace("fg", "ffig")
+        );
         assert_eq!(clean("e\u{301}"), "\u{e9}");
     }
 
     #[test]
     fn numbering_takes_section_numbers_only() {
-        assert_eq!(numbering("3.2.1 Encoder settings").as_deref(), Some("3-2-1"));
+        assert_eq!(
+            numbering("3.2.1 Encoder settings").as_deref(),
+            Some("3-2-1")
+        );
         assert_eq!(numbering("A.4 Appendix").as_deref(), Some("a-4"));
         assert_eq!(numbering("12 Parameters").as_deref(), Some("12"));
         assert_eq!(numbering("2026 was a year"), None);
@@ -191,7 +198,10 @@ mod tests {
 
     #[test]
     fn slug_is_cut_at_a_hyphen() {
-        assert_eq!(slug("IndraDrive Drive Controllers, Control Sections", 24), "indradrive-drive");
+        assert_eq!(
+            slug("IndraDrive Drive Controllers, Control Sections", 24),
+            "indradrive-drive"
+        );
         assert_eq!(slug("short", 24), "short");
     }
 

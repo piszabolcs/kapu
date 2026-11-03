@@ -1,6 +1,16 @@
 //! KAPU-készítő: web sites, documents and folders to a KAPU file
 //! (kapu-notes/TERV-KESZITO.md, KD1-KD16).
 #![forbid(unsafe_code)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::panic,
+        clippy::indexing_slicing,
+        clippy::many_single_char_names
+    )
+)]
 
 pub mod create;
 pub mod detect;

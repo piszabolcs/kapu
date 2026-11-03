@@ -11,11 +11,16 @@ use crate::{Error, Result};
 /// The most table rows kept from one spreadsheet table (plan L1/3).
 pub const MAX_ROWS: usize = 20_000;
 
-/// A Word, PowerPoint or Excel file, old or new.
+/// A Word, `PowerPoint` or Excel file, old or new.
 ///
 /// # Errors
 /// When the file cannot be parsed (damaged, encrypted).
-pub fn microsoft(bytes: &[u8], format: office_oxide::DocumentFormat, key: &str, name: &str) -> Result<Document> {
+pub fn microsoft(
+    bytes: &[u8],
+    format: office_oxide::DocumentFormat,
+    key: &str,
+    name: &str,
+) -> Result<Document> {
     let doc = office_oxide::Document::from_reader(Cursor::new(bytes.to_vec()), format)
         .map_err(|e| Error::new(format!("{format:?}: {e}")))?;
     let mut out = from_markdown(&doc.to_markdown(), key, name, "office");
@@ -28,7 +33,8 @@ pub fn microsoft(bytes: &[u8], format: office_oxide::DocumentFormat, key: &str, 
 /// # Errors
 /// When the file cannot be parsed.
 pub fn other(bytes: &[u8], format: anydoc::Format, key: &str, name: &str) -> Result<Document> {
-    let md = anydoc::to_markdown_bytes(bytes, format).map_err(|e| Error::new(format!("{format:?}: {e}")))?;
+    let md = anydoc::to_markdown_bytes(bytes, format)
+        .map_err(|e| Error::new(format!("{format:?}: {e}")))?;
     let mut out = from_markdown(&md, key, name, "anydoc");
     cap_tables(&mut out);
     Ok(out)
@@ -40,12 +46,19 @@ fn cap_tables(doc: &mut Document) {
     for block in doc.blocks.iter_mut().filter(|b| b.kind == Kind::Table) {
         let rows = block.text.lines().count();
         if rows > MAX_ROWS + 2 {
-            let kept: Vec<String> = block.text.lines().take(MAX_ROWS + 2).map(str::to_owned).collect();
+            let kept: Vec<String> = block
+                .text
+                .lines()
+                .take(MAX_ROWS + 2)
+                .map(str::to_owned)
+                .collect();
             cut += rows - kept.len();
             block.text = kept.join("\n");
         }
     }
     if cut > 0 {
-        doc.warnings.push(format!("{cut} table rows over the limit of {MAX_ROWS} per table were left out"));
+        doc.warnings.push(format!(
+            "{cut} table rows over the limit of {MAX_ROWS} per table were left out"
+        ));
     }
 }

@@ -178,7 +178,11 @@ pub fn title_from_name(name: &str) -> String {
     };
     let title = stem.replace('_', " ");
     let title = title.trim();
-    if title.is_empty() { name.to_owned() } else { title.to_owned() }
+    if title.is_empty() {
+        name.to_owned()
+    } else {
+        title.to_owned()
+    }
 }
 
 #[cfg(test)]
@@ -187,7 +191,10 @@ mod tests {
 
     #[test]
     fn titles_come_from_file_names() {
-        assert_eq!(title_from_name("F:/docs/Project_Planning.pdf"), "Project Planning");
+        assert_eq!(
+            title_from_name("F:/docs/Project_Planning.pdf"),
+            "Project Planning"
+        );
         assert_eq!(title_from_name("pack.zip > notes/read_me.txt"), "read me");
         assert_eq!(title_from_name("v1.2 release"), "v1.2 release");
     }

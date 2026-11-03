@@ -40,18 +40,62 @@ pub enum FileType {
 }
 
 const CODE: &[(&str, &str)] = &[
-    ("rs", "rust"), ("py", "python"), ("js", "javascript"), ("mjs", "javascript"),
-    ("ts", "typescript"), ("tsx", "tsx"), ("jsx", "jsx"), ("c", "c"), ("h", "c"),
-    ("cpp", "cpp"), ("cc", "cpp"), ("hpp", "cpp"), ("cs", "csharp"), ("java", "java"),
-    ("kt", "kotlin"), ("go", "go"), ("rb", "ruby"), ("php", "php"), ("swift", "swift"),
-    ("sh", "bash"), ("bash", "bash"), ("ps1", "powershell"), ("bat", "bat"), ("cmd", "bat"),
-    ("sql", "sql"), ("json", "json"), ("yaml", "yaml"), ("yml", "yaml"), ("toml", "toml"),
-    ("xml", "xml"), ("ini", "ini"), ("cfg", "ini"), ("lua", "lua"), ("r", "r"),
-    ("scala", "scala"), ("dart", "dart"), ("vue", "vue"), ("svelte", "svelte"),
-    ("css", "css"), ("scss", "scss"), ("st", "iecst"), ("scl", "iecst"), ("awl", "text"),
-    ("vhd", "vhdl"), ("v", "verilog"), ("m", "matlab"), ("pl", "perl"), ("ex", "elixir"),
-    ("zig", "zig"), ("nim", "nim"), ("hs", "haskell"), ("ml", "ocaml"), ("cmake", "cmake"),
-    ("gradle", "groovy"), ("dockerfile", "dockerfile"), ("makefile", "makefile"),
+    ("rs", "rust"),
+    ("py", "python"),
+    ("js", "javascript"),
+    ("mjs", "javascript"),
+    ("ts", "typescript"),
+    ("tsx", "tsx"),
+    ("jsx", "jsx"),
+    ("c", "c"),
+    ("h", "c"),
+    ("cpp", "cpp"),
+    ("cc", "cpp"),
+    ("hpp", "cpp"),
+    ("cs", "csharp"),
+    ("java", "java"),
+    ("kt", "kotlin"),
+    ("go", "go"),
+    ("rb", "ruby"),
+    ("php", "php"),
+    ("swift", "swift"),
+    ("sh", "bash"),
+    ("bash", "bash"),
+    ("ps1", "powershell"),
+    ("bat", "bat"),
+    ("cmd", "bat"),
+    ("sql", "sql"),
+    ("json", "json"),
+    ("yaml", "yaml"),
+    ("yml", "yaml"),
+    ("toml", "toml"),
+    ("xml", "xml"),
+    ("ini", "ini"),
+    ("cfg", "ini"),
+    ("lua", "lua"),
+    ("r", "r"),
+    ("scala", "scala"),
+    ("dart", "dart"),
+    ("vue", "vue"),
+    ("svelte", "svelte"),
+    ("css", "css"),
+    ("scss", "scss"),
+    ("st", "iecst"),
+    ("scl", "iecst"),
+    ("awl", "text"),
+    ("vhd", "vhdl"),
+    ("v", "verilog"),
+    ("m", "matlab"),
+    ("pl", "perl"),
+    ("ex", "elixir"),
+    ("zig", "zig"),
+    ("nim", "nim"),
+    ("hs", "haskell"),
+    ("ml", "ocaml"),
+    ("cmake", "cmake"),
+    ("gradle", "groovy"),
+    ("dockerfile", "dockerfile"),
+    ("makefile", "makefile"),
 ];
 
 /// The type of a file named `name` with content `bytes`.
@@ -112,11 +156,13 @@ fn by_magic(bytes: &[u8], ext: &str) -> Option<FileType> {
 }
 
 fn zip_package(bytes: &[u8], ext: &str) -> FileType {
-    match office_format(ext) {
-        Some(f @ (office_oxide::DocumentFormat::Docx
+    if let Some(
+        f @ (office_oxide::DocumentFormat::Docx
         | office_oxide::DocumentFormat::Xlsx
-        | office_oxide::DocumentFormat::Pptx)) => return FileType::Office(f),
-        _ => {}
+        | office_oxide::DocumentFormat::Pptx),
+    ) = office_format(ext)
+    {
+        return FileType::Office(f);
     }
     match anydoc::Format::from_bytes(bytes) {
         Some(anydoc::Format::Docx) => FileType::Office(office_oxide::DocumentFormat::Docx),
@@ -164,7 +210,9 @@ fn by_extension(ext: &str, bytes: &[u8]) -> FileType {
     match ext {
         "html" | "htm" | "xhtml" | "shtml" => return FileType::Html,
         "md" | "markdown" | "mdx" | "mkd" => return FileType::Markdown,
-        "txt" | "text" | "log" | "rst" | "adoc" | "asciidoc" | "org" | "nfo" => return FileType::Text,
+        "txt" | "text" | "log" | "rst" | "adoc" | "asciidoc" | "org" | "nfo" => {
+            return FileType::Text;
+        }
         "csv" | "tsv" => return FileType::Csv,
         "eml" | "mht" | "mhtml" => return FileType::Eml,
         "msg" => return FileType::Msg,
@@ -181,12 +229,19 @@ fn by_extension(ext: &str, bytes: &[u8]) -> FileType {
     if !crate::text::looks_like_text(bytes) {
         return FileType::Unknown;
     }
-    let head = String::from_utf8_lossy(bytes.get(..bytes.len().min(512)).unwrap_or(bytes)).to_lowercase();
+    let head =
+        String::from_utf8_lossy(bytes.get(..bytes.len().min(512)).unwrap_or(bytes)).to_lowercase();
     let head = head.trim_start();
     if head.starts_with("<!doctype html") || head.starts_with("<html") {
         return FileType::Html;
     }
-    let mail_headers = ["from:", "received:", "return-path:", "message-id:", "mime-version:"];
+    let mail_headers = [
+        "from:",
+        "received:",
+        "return-path:",
+        "message-id:",
+        "mime-version:",
+    ];
     if mail_headers.iter().any(|h| head.starts_with(h)) && head.contains("\nsubject:") {
         return FileType::Eml;
     }
@@ -212,7 +267,10 @@ mod tests {
     fn magic_wins_over_the_extension() {
         assert_eq!(detect(b"%PDF-1.7\n...", "notes.txt"), FileType::Pdf);
         assert_eq!(detect(b"\x89PNG\r\n\x1a\n", "x.dat"), FileType::Image);
-        assert_eq!(detect(b"{\\rtf1 hello}", "a.doc"), FileType::Anydoc(anydoc::Format::Rtf));
+        assert_eq!(
+            detect(b"{\\rtf1 hello}", "a.doc"),
+            FileType::Anydoc(anydoc::Format::Rtf)
+        );
         assert_eq!(detect(b"Rar!\x1A\x07\x00", "a.zip"), FileType::Rar);
     }
 
@@ -221,7 +279,10 @@ mod tests {
         assert_eq!(detect(b"# hi", "a.md"), FileType::Markdown);
         assert_eq!(detect(b"fn main() {}", "main.rs"), FileType::Code("rust"));
         assert_eq!(detect(b"<!DOCTYPE html><p>x", "page"), FileType::Html);
-        assert_eq!(detect(b"From: a@b\nSubject: x\n\nbody", "mail"), FileType::Eml);
+        assert_eq!(
+            detect(b"From: a@b\nSubject: x\n\nbody", "mail"),
+            FileType::Eml
+        );
         assert_eq!(detect(b"plain words", "README"), FileType::Text);
         assert_eq!(detect(&[0u8, 1, 2, 3, 0, 0], "blob.bin"), FileType::Unknown);
     }

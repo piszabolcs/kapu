@@ -22,7 +22,7 @@ use crate::{Error, Result};
 pub struct Options {
     /// OCR settings (KD5).
     pub ocr: ocr::Options,
-    /// The PDFium library, if not next to the program (KD4).
+    /// The `PDFium` library, if not next to the program (KD4).
     pub pdfium: Option<PathBuf>,
     /// Archive and attachment nesting limit (KD8).
     pub max_depth: usize,
@@ -65,7 +65,10 @@ impl Ctx<'_> {
                 self.options.max_depth
             )));
         }
-        Ok(Ctx { options: self.options, depth: self.depth + 1 })
+        Ok(Ctx {
+            options: self.options,
+            depth: self.depth + 1,
+        })
     }
 }
 

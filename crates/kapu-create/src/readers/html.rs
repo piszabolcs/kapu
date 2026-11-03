@@ -9,8 +9,8 @@ use crate::text::{decode, squash};
 
 /// Tags whose content never reaches a room.
 const SKIP: &[&str] = &[
-    "script", "style", "noscript", "svg", "template", "iframe", "nav", "aside", "footer",
-    "form", "button", "select", "input", "canvas", "dialog",
+    "script", "style", "noscript", "svg", "template", "iframe", "nav", "aside", "footer", "form",
+    "button", "select", "input", "canvas", "dialog",
 ];
 
 /// What an HTML page gives.
@@ -64,9 +64,9 @@ fn visible_len(e: ElementRef<'_>) -> usize {
     for node in e.descendants() {
         if let Some(t) = node.value().as_text() {
             let hidden = node.ancestors().any(|a| {
-                a.value()
-                    .as_element()
-                    .is_some_and(|el| matches!(el.name(), "script" | "style" | "noscript" | "template"))
+                a.value().as_element().is_some_and(|el| {
+                    matches!(el.name(), "script" | "style" | "noscript" | "template")
+                })
             });
             if !hidden {
                 n += t.trim().len();
@@ -93,12 +93,20 @@ pub fn convert(source: &str) -> Page {
     let body = first(&html, "body");
     let body_len = body.map_or(0, visible_len);
     let mut main = None;
-    for css in ["main", "[role=main]", "article", "#content", ".content", ".markdown-body"] {
-        if let Some(e) = first(&html, css) {
-            if visible_len(e) * 10 >= body_len * 3 && visible_len(e) > 0 {
-                main = Some(e);
-                break;
-            }
+    for css in [
+        "main",
+        "[role=main]",
+        "article",
+        "#content",
+        ".content",
+        ".markdown-body",
+    ] {
+        if let Some(e) = first(&html, css)
+            && visible_len(e) * 10 >= body_len * 3
+            && visible_len(e) > 0
+        {
+            main = Some(e);
+            break;
         }
     }
     let (root, skip_header) = match (main, body) {
@@ -123,10 +131,19 @@ pub fn convert(source: &str) -> Page {
         .convert(&inner)
         .unwrap_or_default();
     let scripts = selector("script").map_or(0, |s| html.select(&s).count());
-    let app_root = ["#root", "#app", "#__next", "#__nuxt", "#svelte", "[ng-app]", "[data-reactroot]"]
-        .iter()
-        .any(|css| first(&html, css).is_some());
-    let asks_for_js = first(&html, "noscript").is_some_and(|n| text_of(n).to_lowercase().contains("javascript"));
+    let app_root = [
+        "#root",
+        "#app",
+        "#__next",
+        "#__nuxt",
+        "#svelte",
+        "[ng-app]",
+        "[data-reactroot]",
+    ]
+    .iter()
+    .any(|css| first(&html, css).is_some());
+    let asks_for_js =
+        first(&html, "noscript").is_some_and(|n| text_of(n).to_lowercase().contains("javascript"));
     page.script_only = scripts > 0 && body_len < 200 && (app_root || asks_for_js || body_len < 40);
     page
 }
@@ -155,7 +172,9 @@ mod tests {
 
     #[test]
     fn a_script_shell_is_flagged() {
-        let p = convert(r#"<html><body><div id="root"></div><script src="app.js"></script></body></html>"#);
+        let p = convert(
+            r#"<html><body><div id="root"></div><script src="app.js"></script></body></html>"#,
+        );
         assert!(p.script_only);
     }
 }
