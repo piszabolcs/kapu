@@ -205,6 +205,9 @@ struct Tuning {
     /// Plan v4 V4-6 (D177): `kapu_ask` and `kapu_grep` end with a line on the
     /// next step (grep the exact term; open the lines; no match: not there).
     hints: bool,
+    /// D178: an `answer` passage goes on for this many non-blank lines
+    /// (default [`kapu_core::answer::PASSAGE_TAIL`]; 0: the passages of D177).
+    passage_tail: usize,
 }
 
 impl Default for Tuning {
@@ -227,6 +230,7 @@ impl Default for Tuning {
             answer_tokens: ANSWER_TOKENS,
             guide_answer: false,
             hints: false,
+            passage_tail: usize::try_from(kapu_core::answer::PASSAGE_TAIL).unwrap_or(0),
         }
     }
 }
@@ -234,7 +238,7 @@ impl Default for Tuning {
 impl Tuning {
     /// A JSON object: the keys of [`RankOptions::from_json`] and `ask`
     /// (`top`, `spread`, `excerpts`, `confidence`, `focus`), `ask_ratio`,
-    /// `excerpt_lines`, `focus_below`, `spread_rooms`, `spread_best`, `best_from`, `tail`,
+    /// `excerpt_lines`, `focus_below`, `spread_rooms`, `spread_best`, `best_from`, `tail`, `passage_tail`,
     /// `ask_tokens`, `open_tokens`, `answer_tokens`, `ask_others`, `neighbours`,
     /// `short_parts`, `lean` (the last three at [`LEAN_LIST`] and short, the
     /// default; false: 0.5.1), `dedup`, `guide_answer`, `hints`.
@@ -298,6 +302,7 @@ impl Tuning {
             ("ask_others", &mut t.ask_others),
             ("neighbours", &mut t.neighbours),
             ("tail", &mut t.tail),
+            ("passage_tail", &mut t.passage_tail),
         ] {
             if let Some(n) = obj.remove(key) {
                 *slot = n
@@ -1689,7 +1694,10 @@ impl KapuServer {
         let mut passages = index.answer(
             &args.query,
             &rooms,
-            &kapu_core::answer::AnswerOptions::default(),
+            &kapu_core::answer::AnswerOptions {
+                tail: u32::try_from(self.tuning.passage_tail).unwrap_or(u32::MAX),
+                ..kapu_core::answer::AnswerOptions::default()
+            },
         );
         if args.kind.is_some() {
             // the search kept only rooms of that kind; BM25 alone does not know kinds

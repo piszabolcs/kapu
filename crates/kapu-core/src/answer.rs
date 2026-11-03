@@ -32,6 +32,12 @@ const GREP_LINE_CHARS: usize = 160;
 const GREP_PATTERN_CHARS: usize = 1000;
 /// D177: the compiled size a `kapu_grep` regex may take.
 const GREP_REGEX_BYTES: usize = 1 << 20;
+/// D178: the tail after a passage stops once it holds this many characters.
+const TAIL_CHARS: usize = 600;
+/// D178: the non-blank lines a passage goes on for by default. Measured on
+/// the 60 PLC questions (3 runs each): fully correct 90.7% instead of 86.1%,
+/// answered in one call 26 of 36 instead of 21, 7% fewer dollars.
+pub const PASSAGE_TAIL: u32 = 3;
 
 /// How the passages are picked.
 #[derive(Debug, Clone)]
@@ -43,6 +49,10 @@ pub struct AnswerOptions {
     pub per_room: usize,
     /// The rooms of the hybrid ranking that count, in order.
     pub rooms: usize,
+    /// D178: a passage goes on for this many non-blank lines of its door,
+    /// up to the next heading or [`TAIL_CHARS`] (the sentence after a
+    /// passage often decides the answer).
+    pub tail: u32,
 }
 
 impl Default for AnswerOptions {
@@ -51,6 +61,7 @@ impl Default for AnswerOptions {
             room_weight: 4.0,
             per_room: 1,
             rooms: 20,
+            tail: PASSAGE_TAIL,
         }
     }
 }
@@ -187,6 +198,31 @@ fn blocks(text: &str) -> Vec<(u32, u32, usize, usize)> {
         && text.get(at..pos).is_some_and(|t| !t.trim().is_empty())
     {
         out.push((a, last.0, at, pos));
+    }
+    out
+}
+
+/// D178: where a passage ending at byte `end` (line `last`) of `text` ends
+/// with up to `lines` more non-blank lines: it stops before a heading, a
+/// line longer than [`HARD_CHARS`], or once the tail holds [`TAIL_CHARS`];
+/// blank lines count only between the lines taken.
+fn tail_end(text: &str, end: usize, last: u32, lines: u32) -> (usize, u32) {
+    let (mut out, mut at, mut n) = ((end, last), end, last);
+    let mut taken = 0u32;
+    for line in text.get(end..).unwrap_or("").split_inclusive('\n') {
+        if taken >= lines
+            || at - end >= TAIL_CHARS
+            || line.starts_with('#')
+            || line.len() > HARD_CHARS
+        {
+            break;
+        }
+        at += line.len();
+        n += 1;
+        if !line.trim().is_empty() {
+            taken += 1;
+            out = (at, n);
+        }
     }
     out
 }
@@ -328,14 +364,15 @@ impl AnswerIndex {
         score
     }
 
-    fn passage(&self, p: u32) -> Option<Passage> {
+    fn passage(&self, p: u32, tail: u32) -> Option<Passage> {
         let m = self.passages.get(p as usize)?;
         let (door, title, _) = self.doors.get(m.door as usize)?;
+        let (end, last) = tail_end(&m.text, m.span.1, m.lines.1, tail);
         Some(Passage {
             door: door.clone(),
             title: title.clone(),
-            lines: m.lines,
-            text: m.text.get(m.span.0..m.span.1).unwrap_or("").to_owned(),
+            lines: (m.lines.0, last),
+            text: m.text.get(m.span.0..end).unwrap_or("").to_owned(),
         })
     }
 
@@ -403,7 +440,7 @@ impl AnswerIndex {
         let mut per_room: HashMap<String, usize> = HashMap::new();
         let mut out = Vec::new();
         for (p, _) in fused {
-            let Some(passage) = self.passage(p) else {
+            let Some(passage) = self.passage(p, options.tail) else {
                 continue;
             };
             let n = per_room
@@ -541,5 +578,22 @@ mod tests {
     fn code_fences_hide_headings() {
         let text = "```\n# not a heading\n```\nafter\n";
         assert_eq!(blocks(text).len(), 1);
+    }
+
+    #[test]
+    fn tails_take_non_blank_lines_up_to_a_heading() {
+        let text = "one\n\ntwo\nthree\n\n# H\nfour\n";
+        // the passage is line 1; the tail skips the blank line 2
+        assert_eq!(tail_end(text, 4, 1, 0), (4, 1));
+        assert_eq!(tail_end(text, 4, 1, 1), (9, 3));
+        assert_eq!(tail_end(text, 4, 1, 2), (15, 4));
+        // the heading stops it, and the blank line before it is not taken
+        assert_eq!(tail_end(text, 4, 1, 9), (15, 4));
+        assert_eq!(&text[..15], "one\n\ntwo\nthree\n");
+        let long = format!("a\n{}\nb\n", "x".repeat(HARD_CHARS + 1));
+        assert_eq!(tail_end(&long, 2, 1, 3), (2, 1));
+        // lines of 101 bytes: the seventh would start past TAIL_CHARS
+        let many = format!("a\n{}", format!("{}\n", "z".repeat(100)).repeat(9));
+        assert_eq!(tail_end(&many, 2, 1, 20), (2 + 6 * 101, 7));
     }
 }
