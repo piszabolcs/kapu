@@ -440,7 +440,8 @@ Retention: the file durably holds only the body, everything else can be recomput
 3. **Markdown import:** `kapu import <folder> <file>`, every `.md` is a room, the identifier comes from the file name (rule FR-04/4), the order is by file name.
 4. **Skill import (v1.2, D147, K-10):** `kapu import --skills <folder> <file>`. A skill is every folder that contains a `SKILL.md` (at most 6 levels deep). A skill is a room: the `name` field of the YAML header is the title, the `description` is the `>` line, then `kind: skill`, `has_scripts: yes` in case of scripts, then the body of `SKILL.md` unchanged; the other Markdown files of the skill (outside the `scripts`, `assets`, `templates`, `evals`, `tests` folders) are separate rooms with `kind: skill`, and the `## References` section of the room of the skill links them; the files of `scripts/` are in the `## Scripts` section as code blocks (at most 256 KiB; binary and larger ones by name only). Nothing is run.
 5. **Export:** `kapu export <file> <folder>`, one `<id>.md` per room. Because of the FR-04/3 grammar, writing outside the target folder is not possible. In git the exported body can be the source, and the `.kapu` file is marked `-diff` (K-16, README).
-6. There is no network access in the core, the CLI or the MCP server. The model is part of the package (D29).
+6. There is no network access in the core, the CLI or the MCP server. The model is part of the package (D29). Only the maker (`kapu-create` and the window's Create view) fetches web pages, when a source is an http(s) address; it is specified in [SPEC-KAPU-CREATE.md](SPEC-KAPU-CREATE.md) (KD1).
+7. **The maker:** `kapu-create new <file> <source>...`, `refresh <file>`, `preview <source>...` make a file from web sites, documents and folders; the rooms it writes are ordinary rooms of this specification.
 
 ---
 

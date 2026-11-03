@@ -10,7 +10,7 @@ import json
 import subprocess
 import sys
 
-ROOTS = ("kapu-cli", "kapu-mcp", "kapu-gui")
+ROOTS = ("kapu-cli", "kapu-mcp", "kapu-gui", "kapu-create")
 
 
 def main() -> None:
@@ -43,7 +43,7 @@ def main() -> None:
     # with a path argument the file is written directly, LF only (FR-02 style)
     out = open(sys.argv[1], "w", encoding="utf-8", newline="\n") if len(sys.argv) > 1 else sys.stdout
     out.write("# Third-party components\n\n")
-    out.write("KAPU code is MIT (`LICENSE`), the specification CC BY 4.0. The binaries `kapu`, `kapu-mcp` and `kapu-gui` contain the crates below (for the build host's platform); every licence is on the allowlist of `deny.toml` (checked by `cargo deny` in CI).\n\n")
+    out.write("KAPU code is MIT (`LICENSE`), the specification CC BY 4.0. The binaries `kapu`, `kapu-mcp`, `kapu-gui` and `kapu-create` contain the crates below (for the build host's platform); every licence is on the allowlist of `deny.toml` (checked by `cargo deny` in CI).\n\n")
     out.write("## Vector model\n\n")
     out.write("| Component | Licence | Source |\n|---|---|---|\n")
     out.write("| potion-multilingual-128M (Model2Vec static embeddings; shipped as its int8 form, `tools/quantize.py`) | MIT | https://huggingface.co/minishlab/potion-multilingual-128M |\n")
