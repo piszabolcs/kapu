@@ -150,3 +150,31 @@ pub fn run(
     .map_err(|e| ApiError::gui(e.0))?;
     serde_json::to_value(&report).map_err(|e| ApiError::gui(e.to_string()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn preview_and_make_report_progress() {
+        let dir = std::env::temp_dir().join(format!("kapu-gui-create-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("a.md"), "# Alpha\n\nThe alpha text.\n").unwrap();
+        let sources = vec![dir.to_string_lossy().into_owned()];
+        let options = Options { vectors: false, ..Options::default() };
+        let steps = Mutex::new(Vec::new());
+        let emit = |v: Value| steps.lock().unwrap().push(v["step"].as_str().unwrap_or_default().to_owned());
+        let report = run("preview", None, &sources, &options, &emit).unwrap();
+        assert_eq!(report["rooms"], 1);
+        assert!(steps.lock().unwrap().contains(&"read".to_owned()));
+        assert!(run("make", None, &sources, &options, &emit).is_err(), "make needs a file");
+        let out = dir.join("out.kapu");
+        let report = run("make", Some(&out.to_string_lossy()), &sources, &options, &emit).unwrap();
+        assert_eq!(report["rooms"], 1);
+        assert!(out.is_file() && dir.join("out.sources.json").is_file());
+        let report = run("refresh", Some(&out.to_string_lossy()), &[], &options, &emit).unwrap();
+        assert_eq!(report["cached"], 1);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
