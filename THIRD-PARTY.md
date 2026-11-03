@@ -22,7 +22,7 @@ KAPU code is MIT (`LICENSE`), the specification CC BY 4.0. The binaries `kapu`, 
 | Component | Licence | Source |
 |---|---|---|
 | PDFium (`pdfium.dll`, `libpdfium.so`, `libpdfium.dylib`; builds of bblanchon/pdfium-binaries, chromium/8125), read through `pdfium-render` | BSD-3-Clause and Apache-2.0 (PDFium), MIT (the builds) | https://github.com/bblanchon/pdfium-binaries |
-| Tesseract OCR 5.5 and its `tessdata_fast` language files (eng, deu, hun), run as a separate program | Apache-2.0 | https://github.com/tesseract-ocr/tesseract |
+| Tesseract OCR 5 and its language files, run as a separate program; installed by the user, not in the package | Apache-2.0 | https://github.com/tesseract-ocr/tesseract |
 
 ## Rust crates (454)
 
