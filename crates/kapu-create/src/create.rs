@@ -214,6 +214,29 @@ pub fn refresh(file: &Path, base: &Settings, model: Option<&Model>, progress: On
     run(&manifest.sources, file, &settings, model, progress, &manifest, &kept)
 }
 
+/// Reads and plans `sources` without writing a file: the report and the
+/// rooms, for the preview of the window and `kapu-create preview`.
+///
+/// # Errors
+/// When no document could be read.
+pub fn preview(sources: &[String], settings: &Settings, progress: OnProgress<'_>) -> Result<(Report, Vec<RoomSource>)> {
+    let start = Instant::now();
+    let mut report = Report::default();
+    let docs = collect(sources, settings, progress, &mut report);
+    if docs.is_empty() {
+        let why: Vec<String> = report.failures().take(5).map(|d| format!("{}: {}", d.name, d.warnings.join("; "))).collect();
+        return Err(Error::new(format!("no text was read from the sources. {}", why.join(" | "))));
+    }
+    let plan = rooms::plan(&docs, &settings.rooms, &BTreeMap::new(), &BTreeSet::new());
+    progress(Progress::Planned { rooms: plan.rooms.len() });
+    report.rooms = plan.rooms.len();
+    report.plan = plan.docs;
+    report.stats = plan.stats;
+    report.model = kapu_core::build::NO_MODEL.to_owned();
+    report.seconds = start.elapsed().as_secs_f64();
+    Ok((report, plan.rooms))
+}
+
 fn run(
     sources: &[String],
     out: &Path,

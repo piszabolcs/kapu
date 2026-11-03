@@ -33,6 +33,7 @@ anydoc = "0.2.4"
 # PDF (KD4): PDFium as a shared library next to the program, pdf-extract and
 # lopdf without it.
 pdfium-render = "0.9.5"
+image = { version = "0.25", default-features = false, features = ["png"] }
 pdf-extract = "0.12.1"
 lopdf = "0.46"
 # Mail (KD7) and archives (KD8).

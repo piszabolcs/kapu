@@ -40,9 +40,9 @@ fn cap_tables(doc: &mut Document) {
     for block in doc.blocks.iter_mut().filter(|b| b.kind == Kind::Table) {
         let rows = block.text.lines().count();
         if rows > MAX_ROWS + 2 {
-            let kept: Vec<&str> = block.text.lines().take(MAX_ROWS + 2).collect();
-            block.text = kept.join("\n");
+            let kept: Vec<String> = block.text.lines().take(MAX_ROWS + 2).map(str::to_owned).collect();
             cut += rows - kept.len();
+            block.text = kept.join("\n");
         }
     }
     if cut > 0 {

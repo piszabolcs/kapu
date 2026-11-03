@@ -352,12 +352,22 @@ fn mark_duplicates(docs: &[Document], trees: &mut [Tree], settings: &Settings) -
             if node.total < settings.min_section.max(1) {
                 continue;
             }
-            let mut blocks = Vec::new();
-            tree.subtree_blocks(n, &mut blocks);
+            // The text with the titles of the sub-sections (not the node's
+            // own): a section with one sub-section is not a copy of it.
             let mut hasher = blake3::Hasher::new();
-            for b in blocks.iter().filter_map(|&b| doc.blocks.get(b)) {
-                hasher.update(squash(&b.text).to_lowercase().as_bytes());
-                hasher.update(b"\n");
+            let mut todo = vec![(n, false)];
+            while let Some((m, titled)) = todo.pop() {
+                let Some(x) = tree.node(m) else { continue };
+                if titled {
+                    hasher.update(b"#");
+                    hasher.update(squash(&x.title).to_lowercase().as_bytes());
+                    hasher.update(b"\n");
+                }
+                for b in x.blocks.iter().filter_map(|&b| doc.blocks.get(b)) {
+                    hasher.update(squash(&b.text).to_lowercase().as_bytes());
+                    hasher.update(b"\n");
+                }
+                todo.extend(x.children.iter().rev().map(|&c| (c, true)));
             }
             let hash = hasher.finalize();
             if let Some(&orig) = first.get(&hash) {

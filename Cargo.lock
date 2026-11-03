@@ -2285,6 +2285,7 @@ dependencies = [
  "byteorder-lite",
  "moxcms",
  "num-traits",
+ "png",
  "zune-core",
  "zune-jpeg",
 ]
@@ -2610,6 +2611,7 @@ dependencies = [
  "clap",
  "encoding_rs",
  "htmd",
+ "image",
  "kapu-core",
  "lopdf 0.46.0",
  "mail-parser",
@@ -3754,6 +3756,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a6394b9e965e73d0a289ee54f589087e2c676aedf60885baf52c76b771e4958"
 
 [[package]]
+name = "ppmd-rust"
+version = "1.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd4acc8d264ea385db64ccfdcdfd5909ee9eda0975666723d59f3bfec80b3611"
+
+[[package]]
 name = "ppv-lite86"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4578,9 +4586,12 @@ version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30146010a60b5773ef63f7b0033576c7a0487ecc87a30d97b787ca8e27c85140"
 dependencies = [
+ "bzip2",
  "crc32fast",
+ "flate2",
  "js-sys",
  "lzma-rust2",
+ "ppmd-rust",
  "wasm-bindgen",
 ]
 

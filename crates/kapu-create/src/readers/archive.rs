@@ -54,7 +54,10 @@ pub fn zip(bytes: &[u8], key: &str, name: &str, ctx: &Ctx<'_>) -> Result<Vec<Doc
                 continue;
             }
         };
-        let inner = file.name().replace('\\', "/");
+        let inner = file
+            .name()
+            .map_or_else(|_| String::from_utf8_lossy(file.name_raw()).into_owned(), std::borrow::Cow::into_owned)
+            .replace('\\', "/");
         if file.is_dir() || !wanted(&inner) {
             continue;
         }

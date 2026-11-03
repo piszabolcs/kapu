@@ -123,7 +123,11 @@ pub fn convert(source: &str) -> Page {
         .convert(&inner)
         .unwrap_or_default();
     let scripts = selector("script").map_or(0, |s| html.select(&s).count());
-    page.script_only = body_len < 200 && scripts > 0;
+    let app_root = ["#root", "#app", "#__next", "#__nuxt", "#svelte", "[ng-app]", "[data-reactroot]"]
+        .iter()
+        .any(|css| first(&html, css).is_some());
+    let asks_for_js = first(&html, "noscript").is_some_and(|n| text_of(n).to_lowercase().contains("javascript"));
+    page.script_only = scripts > 0 && body_len < 200 && (app_root || asks_for_js || body_len < 40);
     page
 }
 
