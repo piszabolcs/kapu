@@ -8,6 +8,7 @@
 )]
 
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -49,10 +50,10 @@ const HTML: &str = "text/html; charset=utf-8";
 const MD: &str = "text/markdown";
 
 fn page(title: &str, links: &[&str]) -> String {
-    let links: String = links
-        .iter()
-        .map(|l| format!("<a href=\"{l}\">{l}</a> "))
-        .collect();
+    let links = links.iter().fold(String::new(), |mut out, l| {
+        let _ = write!(out, "<a href=\"{l}\">{l}</a> ");
+        out
+    });
     format!(
         "<html><head><title>{title}</title></head><body><nav>menu</nav><main><h1>{title}</h1><p>Text of {title}, long enough to be the main part of the page.</p><p>{links}</p></main></body></html>"
     )
