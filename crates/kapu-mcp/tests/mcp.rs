@@ -540,8 +540,8 @@ async fn d177_grep_reads_regexes_and_open_shows_lines() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// K-07 (D146, D159): `kapu_ask` searches and opens in one call: the start of
-/// the best door of each of the first rooms, and lists the other hits.
+/// K-07 (D146, D175, D176): `kapu_ask` searches and reads in one call: the
+/// best passage of each of the best rooms, and in a session not the same again.
 #[tokio::test]
 async fn k07_ask_answers_with_passages_of_the_best_rooms() {
     let dir = workdir("ask");
