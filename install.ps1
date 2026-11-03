@@ -1,4 +1,4 @@
-# Install KAPU (kapu, kapu-mcp, kapu-gui and the embedding model) from the
+# Install KAPU (kapu, kapu-mcp, kapu-gui, kapu-create and the embedding model) from the
 # latest GitHub release, for the current user.
 #
 #   irm https://raw.githubusercontent.com/piszabolcs/kapu/main/install.ps1 | iex

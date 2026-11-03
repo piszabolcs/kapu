@@ -1,5 +1,6 @@
 # M9: portable packages for Windows, Linux and macOS (NFR-06), on a version tag.
-# Each package: kapu, kapu-mcp, kapu-gui, models/multilingual-e5-small-q8
+# Each package: kapu, kapu-mcp, kapu-gui, kapu-create with the PDFium library
+# (bblanchon/pdfium-binaries chromium/8125, KD4), models/multilingual-e5-small-q8
 # (the int8 ONNX file of intfloat/multilingual-e5-small, downloaded from Hugging
 # Face at a fixed commit and converted with tools/onnx_to_kapu.py, D172), the
 # demo files in examples/, licences, README, spec.
@@ -23,12 +24,21 @@ jobs:
           - os: windows-latest
             target: windows-x64
             exe: .exe
+            pdfium: pdfium-win-x64.tgz
+            pdfium_sha: 9a964261760cff52570aabf038ab346d3a5034dd8b30d0d5fe8861235d356b8b
+            pdfium_lib: bin/pdfium.dll
           - os: ubuntu-latest
             target: linux-x64
             exe: ""
+            pdfium: pdfium-linux-x64.tgz
+            pdfium_sha: e1c3ce6e270cb5e0c20816b379ad9f2c1309972697c505f508de92bf5e7d6659
+            pdfium_lib: lib/libpdfium.so
           - os: macos-latest
             target: macos-arm64
             exe: ""
+            pdfium: pdfium-mac-arm64.tgz
+            pdfium_sha: 4939bd935ac83ddc09a3a4f038bc43a19cea1660316a3667f26cb07a070e139d
+            pdfium_lib: lib/libpdfium.dylib
     runs-on: ${{ matrix.os }}
     # D142: the release binaries come from the toolchain CI tests with.
     env:
@@ -55,7 +65,7 @@ jobs:
       - run: rustup toolchain install 1.99.1 --profile minimal
       - run: rustup show
       - uses: Swatinem/rust-cache@v2
-      - run: cargo build --release --locked -p kapu-cli -p kapu-mcp -p kapu-gui --bins
+      - run: cargo build --release --locked -p kapu-cli -p kapu-mcp -p kapu-gui -p kapu-create --bins
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -77,6 +87,13 @@ jobs:
           python tools/onnx_to_kapu.py "$src" models/multilingual-e5-small-q8
           # the same weights on every platform, so every file has the same embhash
           check models/multilingual-e5-small-q8/model.safetensors f8d8ddf5f56f8e3b68b49674cc9471f1f1a8201e0677b3172ba519444367b938
+      - name: PDFium (download, verify)
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSfL -o pdfium.tgz "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium%2F8125/${{ matrix.pdfium }}"
+          python -c "import hashlib,sys; sys.exit(hashlib.sha256(open('pdfium.tgz','rb').read()).hexdigest()!=sys.argv[1])" "${{ matrix.pdfium_sha }}"
+          mkdir -p pdfium && tar xzf pdfium.tgz -C pdfium
       # D46, D171: the encoder gives the same file bits on every platform (golden hash)
       - run: cargo test --release --locked -p kapu-core --test bert
       - name: package
@@ -86,13 +103,17 @@ jobs:
           v="${GITHUB_REF_NAME#v}"
           name="kapu-$v-${{ matrix.target }}"
           mkdir -p "dist/$name/models/multilingual-e5-small-q8"
-          cp "target/release/kapu${{ matrix.exe }}" "target/release/kapu-mcp${{ matrix.exe }}" "target/release/kapu-gui${{ matrix.exe }}" "dist/$name/"
+          cp "target/release/kapu${{ matrix.exe }}" "target/release/kapu-mcp${{ matrix.exe }}" "target/release/kapu-gui${{ matrix.exe }}" "target/release/kapu-create${{ matrix.exe }}" "dist/$name/"
+          cp "pdfium/${{ matrix.pdfium_lib }}" "dist/$name/"
+          cp pdfium/LICENSE "dist/$name/LICENSE-PDFIUM.txt" && cp -r pdfium/licenses "dist/$name/licenses-pdfium"
           mkdir -p "dist/$name/examples" && cp examples/kapu-spec.kapu examples/kapu-docs.kapu "dist/$name/examples/"
           cp models/multilingual-e5-small-q8/* "dist/$name/models/multilingual-e5-small-q8/"
-          cp LICENSE README.md SPEC-KAPU.md SPEC-KAPU.hu.md THIRD-PARTY.md "dist/$name/"
+          cp LICENSE README.md SPEC-KAPU.md SPEC-KAPU.hu.md SPEC-KAPU-CREATE.md THIRD-PARTY.md "dist/$name/"
           printf 'SPEC-KAPU.md, SPEC-KAPU.hu.md: CC BY 4.0, https://creativecommons.org/licenses/by/4.0/\n' > "dist/$name/LICENSE-SPEC.txt"
           "dist/$name/kapu${{ matrix.exe }}" new "dist/smoke.kapu"
           "dist/$name/kapu${{ matrix.exe }}" validate --full "dist/smoke.kapu"
+          "dist/$name/kapu-create${{ matrix.exe }}" new "dist/smoke-create.kapu" README.md CHANGELOG.md --no-model --no-cache
+          "dist/$name/kapu${{ matrix.exe }}" validate --full "dist/smoke-create.kapu"
           cd dist && if [ "${{ matrix.exe }}" = ".exe" ]; then f="$name.zip"; 7z a "$f" "$name" >/dev/null; else f="$name.tar.gz"; tar czf "$f" "$name"; fi
           # install.sh and install.ps1 check the archive against this
           if command -v sha256sum >/dev/null; then sha256sum "$f" > "$f.sha256"; else shasum -a 256 "$f" > "$f.sha256"; fi
