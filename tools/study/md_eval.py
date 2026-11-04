@@ -407,11 +407,21 @@ def spend(rows):
                                                        "cost_usd", "tool_calls", "seconds")}
 
 
+def per_turn(rows):
+    """`claude --resume` reports the dollars of the whole session so far: each session row gets its turn's own."""
+    so_far = {}
+    for r in sorted((r for r in rows if r["mode"] == "session"), key=lambda r: r["turn"]):
+        total = r.get("cost_usd") or 0
+        r["cost_usd"] = total - so_far.get(r["session"], 0)
+        so_far[r["session"]] = total
+
+
 def report(argv):
     work, out = Path(argv[0]), Path(argv[1])
     qs = {q["qid"]: q for q in json.loads((work / "questions.json").read_text(encoding="utf-8"))}
     rows = [r for name in ("runs.jsonl", "sessions.jsonl") if (work / name).exists() for r in load(work / name)
             if not r.get("error")]
+    per_turn(rows)
     grades = {(j["mode"], j["qid"], j["form"], j["run"]): j["grade"] for j in load(work / "judged.jsonl")}
     result = {"questions": {"answerable": sum(q["kind"] == "answerable" for q in qs.values()),
                             "absent": sum(q["kind"] == "absent" for q in qs.values())},
