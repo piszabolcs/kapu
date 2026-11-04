@@ -134,7 +134,7 @@ def call(prompt, cmd, cwd, index):
     proc = subprocess.run(cmd, cwd=cwd, input=prompt, capture_output=True, text=True, encoding="utf-8",
                           timeout=1800, env=clean_env())
     seconds = time.perf_counter() - started
-    tools, opened, result, inputs, replies, hook = [], [], {}, [], [], None
+    tools, opened, result, inputs, replies, hook, turns = [], [], {}, [], [], None, {}
     for line in proc.stdout.splitlines():
         try:
             event = json.loads(line)
@@ -142,6 +142,7 @@ def call(prompt, cmd, cwd, index):
             continue
         kind = event.get("type")
         if kind == "assistant":
+            turns[event.get("message", {}).get("id")] = event.get("message", {}).get("usage") or {}
             for block in event.get("message", {}).get("content", []):
                 if block.get("type") == "tool_use":
                     name = block.get("name", "").replace("mcp__kapu__", "")
@@ -172,6 +173,9 @@ def call(prompt, cmd, cwd, index):
         "answer": (m.group(1) if m else text[-1500:]).strip(),
         "tools": tools, "tool_calls": len(tools), "opened": sorted(set(opened)),
         "inputs": inputs, "replies": replies, "hook": hook,
+        # per API call: cache writes, cache reads (the sums are the fields below)
+        "turns": [[u.get("cache_creation_input_tokens") or 0, u.get("cache_read_input_tokens") or 0]
+                  for u in turns.values()],
         "seconds": round(seconds, 1),
         "uncached": usage.get("input_tokens") or 0,
         "cache_write": usage.get("cache_creation_input_tokens") or 0,
