@@ -10,7 +10,11 @@
 //! the whole body (FR-15/1). Errors come back as tool results with the FR-20
 //! code, so the AI can read them. The work of a call runs on a blocking
 //! thread, so a large file does not stall the stdio loop (A24, D149).
+//! `kapu-mcp hook <file.kapu>` runs once as a Claude Code `UserPromptSubmit`
+//! hook instead of a server (plan v5, [`hook`]).
 #![forbid(unsafe_code)]
+
+mod hook;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -208,6 +212,13 @@ struct Tuning {
     /// D178: an `answer` passage goes on for this many non-blank lines
     /// (default [`kapu_core::answer::PASSAGE_TAIL`]; 0: the passages of D177).
     passage_tail: usize,
+    /// Plan v5 (V5-1): `kapu-mcp hook` speaks only when the prompt's best
+    /// vector similarity reaches this (default [`hook::SIMILARITY`]; 0: always,
+    /// also without vectors).
+    hook_similarity: f64,
+    /// Plan v5 (V5-2): the hook's lead line also says when to stop looking
+    /// (one `kapu_grep`, then the file does not cover it).
+    hook_stop: bool,
 }
 
 impl Default for Tuning {
@@ -231,6 +242,8 @@ impl Default for Tuning {
             guide_answer: false,
             hints: false,
             passage_tail: usize::try_from(kapu_core::answer::PASSAGE_TAIL).unwrap_or(0),
+            hook_similarity: hook::SIMILARITY,
+            hook_stop: false,
         }
     }
 }
@@ -241,7 +254,8 @@ impl Tuning {
     /// `excerpt_lines`, `focus_below`, `spread_rooms`, `spread_best`, `best_from`, `tail`, `passage_tail`,
     /// `ask_tokens`, `open_tokens`, `answer_tokens`, `ask_others`, `neighbours`,
     /// `short_parts`, `lean` (the last three at [`LEAN_LIST`] and short, the
-    /// default; false: 0.5.1), `dedup`, `guide_answer`, `hints`.
+    /// default; false: 0.5.1), `dedup`, `guide_answer`, `hints`,
+    /// `hook_similarity`, `hook_stop`.
     fn from_json(text: &str) -> Result<Self, Error> {
         let bad = |what: &str| Error::new(kapu_core::ErrorCode::E012, format!("--rank: {what}"));
         let mut v: serde_json::Value =
@@ -335,6 +349,7 @@ impl Tuning {
                 .filter(|r| r.is_finite() && *r >= 1.0)
                 .ok_or_else(|| bad("ask_ratio: a number of at least 1"))?;
         }
+        t.hook_keys(obj, &bad)?;
         if let Some(lines) = obj.remove("excerpt_lines") {
             t.excerpt_lines = match lines.as_u64() {
                 Some(1) => 1,
@@ -344,6 +359,26 @@ impl Tuning {
         }
         t.rank = RankOptions::from_json(&v)?;
         Ok(t)
+    }
+
+    /// Plan v5: `hook_similarity` and `hook_stop`.
+    fn hook_keys(
+        &mut self,
+        obj: &mut serde_json::Map<String, serde_json::Value>,
+        bad: &dyn Fn(&str) -> Error,
+    ) -> Result<(), Error> {
+        if let Some(sim) = obj.remove("hook_similarity") {
+            self.hook_similarity = sim
+                .as_f64()
+                .filter(|s| s.is_finite())
+                .ok_or_else(|| bad("hook_similarity: a number"))?;
+        }
+        if let Some(stop) = obj.remove("hook_stop") {
+            self.hook_stop = stop
+                .as_bool()
+                .ok_or_else(|| bad("hook_stop: true or false"))?;
+        }
+        Ok(())
     }
 }
 
@@ -1658,6 +1693,19 @@ impl KapuServer {
         }
     }
 
+    /// The search behind an `answer` ask: [`ANSWER_ROOMS`] rooms, one door each.
+    fn answer_options(&self, kind: Option<String>) -> SearchOptions {
+        SearchOptions {
+            k: ANSWER_ROOMS,
+            max_price: None,
+            kind,
+            rank: RankOptions {
+                collapse: 1,
+                ..self.tuning.rank.clone()
+            },
+        }
+    }
+
     /// Plan v4 (D175): the best passage of each of the best rooms of the
     /// hybrid search, in one frame, as many as fit the budget (default
     /// [`ANSWER_TOKENS`]), then the other rooms' ids.
@@ -1668,15 +1716,7 @@ impl KapuServer {
             .max_tokens
             .unwrap_or(self.tuning.answer_tokens)
             .max(MIN_TOKENS);
-        let options = SearchOptions {
-            k: ANSWER_ROOMS,
-            max_price: None,
-            kind: args.kind.clone(),
-            rank: RankOptions {
-                collapse: 1,
-                ..self.tuning.rank.clone()
-            },
-        };
+        let options = self.answer_options(args.kind.clone());
         let r = self.search_result(&s, &args.query, &options)?;
         let foot = vector_line(&r);
         if r.hits.is_empty() {
@@ -2001,6 +2041,10 @@ async fn main() -> std::process::ExitCode {
                 return std::process::ExitCode::FAILURE;
             }
         };
+    }
+    // plan v5: `kapu-mcp hook <file.kapu>`, a UserPromptSubmit hook
+    if args.first().map(String::as_str) == Some("hook") {
+        return hook::run(&args, tuning);
     }
     let server = match KapuServer::new(tuning)
         .serve(rmcp::transport::stdio())

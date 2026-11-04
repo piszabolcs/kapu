@@ -588,6 +588,9 @@ pub struct SearchResult {
     pub hits: Vec<SearchHit>,
     /// Whether vectors were used.
     pub vector: VectorStatus,
+    /// Plan v5 (V5-1): the query's best vector similarity to an allowed door
+    /// (its best window), `None` without vectors. The `kapu-mcp hook` gate.
+    pub similarity: Option<f64>,
 }
 
 /// Search options (FR-15 `kapu_search`).
@@ -641,9 +644,12 @@ pub fn search_in(
     cache: Option<&crate::embed::VectorCache<'_>>,
 ) -> Result<SearchResult> {
     let ranked = ranked_in(s, query, options, cache, options.k)?;
+    // the vector ranking is best first
+    let similarity = ranked.vector.as_ref().and_then(|v| v.first()).map(|v| v.0);
     Ok(SearchResult {
         hits: ranked.hits,
         vector: ranked.status,
+        similarity,
     })
 }
 
