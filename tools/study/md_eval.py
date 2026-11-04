@@ -20,6 +20,10 @@ reference answer each (`pixellab-questions`).
 Forms, each an isolated `claude -p` run with no user settings and no other
 MCP servers:
 - `kapu`: the kapu MCP tools on the file (tools of this repository);
+- `kapu-hook`: the same tools and prompt, and `kapu-mcp hook` as a
+  UserPromptSubmit hook in the folder's project settings, so the passages are
+  there before the first turn (plan v5); `--rank` goes to the hook as well, and
+  each call records what the hook did (`hook`: similarity, why, chars, ms, tokens);
 - `md`: the one Markdown file in an otherwise empty folder, with the Grep and
   Read tools only;
 - `pasted` (`session` only): the whole Markdown file in the first message,
@@ -73,7 +77,7 @@ REPLY = re.compile(r"reply: (\d+) tokens")
 
 def first_prompt(form, domain, q, kfile, lines, doc):
     what, label, ending = DOMAIN[domain]
-    if form == "kapu":
+    if form in ("kapu", "kapu-hook"):
         lead = f"The KAPU knowledge file {kfile} holds {what}; reach it with the kapu MCP tools."
     elif form == "md":
         lead = (f"The Markdown file docs.md in the current folder ({lines} lines) holds {what}; "
@@ -97,7 +101,9 @@ def command(form, model, config, session=None, resume=False):
         cmd += ["--resume", session]
     else:
         cmd += ["--session-id", session]
-    if form == "kapu":
+    if form == "kapu-hook":
+        cmd.append("--include-hook-events")
+    if form in ("kapu", "kapu-hook"):
         return cmd + ["--mcp-config", config, "--tools", "",
                       "--allowedTools", " ".join(f"mcp__kapu__{t}" for t in KAPU_TOOLS)]
     if form == "md":
@@ -111,12 +117,24 @@ def rooms_in(index, start, count):
     return [r for a, b, r in index if a < end and b >= start]
 
 
+def hook_record(event):
+    """What the hook of a `kapu-hook` call did: its `--explain` line and the tokens it put in."""
+    try:
+        record = json.loads((event.get("stderr") or "").strip().splitlines()[-1])
+    except (IndexError, ValueError):
+        # a killed hook must not stop the run; the record shows it
+        record = {"why": "no explain line"}
+    # the reply sits inside the JSON of the hook's stdout, its newlines escaped
+    m = re.search(r"\\nreply: (\d+) tokens", event.get("stdout") or "")
+    return {**record, "tokens": int(m.group(1)) if m else 0, "exit": event.get("exit_code")}
+
+
 def call(prompt, cmd, cwd, index):
     started = time.perf_counter()
     proc = subprocess.run(cmd, cwd=cwd, input=prompt, capture_output=True, text=True, encoding="utf-8",
                           timeout=1800, env=clean_env())
     seconds = time.perf_counter() - started
-    tools, opened, result, inputs, replies = [], [], {}, [], []
+    tools, opened, result, inputs, replies, hook = [], [], {}, [], [], None
     for line in proc.stdout.splitlines():
         try:
             event = json.loads(line)
@@ -143,6 +161,8 @@ def call(prompt, cmd, cwd, index):
                     opened += ROOM.findall(text)
                     m = REPLY.match(text)
                     replies.append(int(m.group(1)) if m else len(text) // 4)
+        elif kind == "system" and event.get("subtype") == "hook_response":
+            hook = hook_record(event)
         elif kind == "result":
             result = event
     text = result.get("result", "") or ""
@@ -151,7 +171,7 @@ def call(prompt, cmd, cwd, index):
     return {
         "answer": (m.group(1) if m else text[-1500:]).strip(),
         "tools": tools, "tool_calls": len(tools), "opened": sorted(set(opened)),
-        "inputs": inputs, "replies": replies,
+        "inputs": inputs, "replies": replies, "hook": hook,
         "seconds": round(seconds, 1),
         "uncached": usage.get("input_tokens") or 0,
         "cache_write": usage.get("cache_creation_input_tokens") or 0,
@@ -178,7 +198,30 @@ def options(argv, defaults):
     return opts, pos
 
 
-def setup(work, kfile, mcp, model_dir, rank=""):
+def hook_settings(cwd, kfile, mcp, model_dir, rank):
+    """The project settings of the `kapu-hook` form; the hook line goes through Claude Code's shell."""
+    line = f'"{Path(mcp).resolve().as_posix()}" hook "{kfile.resolve().as_posix()}" --explain'
+    if rank:
+        line += f" --rank '{rank}'"
+    settings = {"env": {"KAPU_MODEL_DIR": str(Path(model_dir).resolve())},
+                "hooks": {"UserPromptSubmit": [{"hooks": [{"type": "command", "command": line, "timeout": 10}]}]}}
+    (cwd / ".claude").mkdir(exist_ok=True)
+    (cwd / ".claude/settings.json").write_text(json.dumps(settings, indent=1) + "\n", encoding="utf-8")
+
+
+def hook_check(kfile, mcp, model_dir, rank, prompt):
+    """A quiet hook (no model, no vectors) would pay for a plain `kapu` run: stop before the first call."""
+    args = ["--rank", rank] if rank else []
+    proc = subprocess.run([str(mcp), "hook", str(kfile), "--explain", *args], input=json.dumps({"prompt": prompt}),
+                          capture_output=True, text=True, encoding="utf-8", timeout=60,
+                          env={**clean_env(), "KAPU_MODEL_DIR": str(Path(model_dir).resolve())})
+    line = json.loads(proc.stderr.strip().splitlines()[-1])
+    if not line.get("context"):
+        sys.exit(f"the hook stays quiet on the first question: {line}")
+    print(f"hook: {line}", flush=True)
+
+
+def setup(work, kfile, mcp, model_dir, rank="", tag=""):
     """The MCP config, the empty folders the forms run in, the docs and its index."""
     if not Path(mcp).is_file():
         sys.exit(f"no kapu-mcp at {mcp}")
@@ -189,9 +232,12 @@ def setup(work, kfile, mcp, model_dir, rank=""):
         json.dump(cfg, f)
     docs = work / "docs.md"
     index = json.loads((work / "docs-index.json").read_text(encoding="utf-8"))
-    cwds = {"kapu": work / "cwd-kapu", "md": work / "cwd-md", "pasted": work / "cwd-pasted"}
+    # a folder per tag: the settings carry the tag's --rank
+    cwds = {"kapu": work / "cwd-kapu", "kapu-hook": work / f"cwd-kapu-hook{tag}", "md": work / "cwd-md",
+            "pasted": work / "cwd-pasted"}
     for c in cwds.values():
         c.mkdir(exist_ok=True)
+    hook_settings(cwds["kapu-hook"], kfile, mcp, model_dir, rank)
     md_copy = cwds["md"] / "docs.md"
     if not md_copy.exists() or md_copy.stat().st_size != docs.stat().st_size:
         md_copy.write_bytes(docs.read_bytes())
@@ -230,8 +276,11 @@ def run(argv):
     opts, pos = options(argv, {"--domain": "plc", "--forms": "kapu,md", "--runs": "3", "--model": "sonnet",
                                "--jobs": "3", "--rank": "", "--tag": ""})
     work, qfile, kfile, mcp, model_dir = (Path(p) for p in pos)
-    config, cwds, index, _, lines = setup(work, kfile, mcp, model_dir, opts["--rank"])
+    config, cwds, index, _, lines = setup(work, kfile, mcp, model_dir, opts["--rank"], opts["--tag"])
     qs = json.loads(qfile.read_text(encoding="utf-8"))
+    if "kapu-hook" in opts["--forms"].split(","):
+        hook_check(kfile, mcp, model_dir, opts["--rank"],
+                   first_prompt("kapu-hook", opts["--domain"], qs[0]["kerdes"], kfile.resolve().as_posix(), lines, ""))
     (work / "questions.json").write_text(json.dumps(qs, ensure_ascii=False, indent=1), encoding="utf-8")
     out = work / "runs.jsonl"
     done = {(r["qid"], r["form"], r["run"]) for r in load(out) if not r.get("error")} if out.exists() else set()
@@ -267,9 +316,12 @@ def session(argv):
     opts, pos = options(argv, {"--domain": "plc", "--forms": "kapu,md,pasted", "--runs": "1", "--turns": "25",
                                "--model": "sonnet", "--rank": "", "--tag": ""})
     work, qfile, kfile, mcp, model_dir = (Path(p) for p in pos)
-    config, cwds, index, text, lines = setup(work, kfile, mcp, model_dir, opts["--rank"])
+    config, cwds, index, text, lines = setup(work, kfile, mcp, model_dir, opts["--rank"], opts["--tag"])
     tag = opts["--tag"]
     qs = json.loads(qfile.read_text(encoding="utf-8"))[: int(opts["--turns"])]
+    if "kapu-hook" in opts["--forms"].split(","):
+        hook_check(kfile, mcp, model_dir, opts["--rank"],
+                   first_prompt("kapu-hook", opts["--domain"], qs[0]["kerdes"], kfile.resolve().as_posix(), lines, ""))
     out = work / "sessions.jsonl"
     done = {(r["form"], r["run"]) for r in load(out) if r.get("turn") == len(qs) and not r.get("error")} \
         if out.exists() else set()
