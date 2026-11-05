@@ -2573,7 +2573,7 @@ dependencies = [
 
 [[package]]
 name = "kapu-bench"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "clap",
  "kapu-core",
@@ -2581,7 +2581,7 @@ dependencies = [
 
 [[package]]
 name = "kapu-cli"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "clap",
  "kapu-core",
@@ -2590,7 +2590,7 @@ dependencies = [
 
 [[package]]
 name = "kapu-core"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "blake3",
  "libm",
@@ -2604,7 +2604,7 @@ dependencies = [
 
 [[package]]
 name = "kapu-create"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "anydoc",
  "blake3",
@@ -2635,7 +2635,7 @@ dependencies = [
 
 [[package]]
 name = "kapu-gui"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "kapu-core",
  "kapu-create",
@@ -2651,7 +2651,7 @@ dependencies = [
 
 [[package]]
 name = "kapu-mcp"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "kapu-core",
  "rmcp",
