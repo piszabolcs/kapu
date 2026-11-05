@@ -171,7 +171,7 @@ mod tests {
             steps
                 .lock()
                 .unwrap()
-                .push(v["step"].as_str().unwrap_or_default().to_owned())
+                .push(v["step"].as_str().unwrap_or_default().to_owned());
         };
         let report = run("preview", None, &sources, &options, &emit).unwrap();
         assert_eq!(report["rooms"], 1);
