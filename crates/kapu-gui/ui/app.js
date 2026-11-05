@@ -18,6 +18,7 @@ const state = {
   graph: null,
   graphLoaded: false,
   busyOpen: false,
+  create: { sources: [], busy: false, status: null },
 };
 
 /* --------------------------------------------------------------- bridge */
@@ -111,6 +112,10 @@ function show(view) {
 }
 
 function route() {
+  if (location.hash === "#create") {
+    show("create");
+    return;
+  }
   if (!state.file) {
     show("start");
     return;
@@ -539,9 +544,220 @@ function renderAbout(about) {
   $("about-sign").textContent = about.signature;
 }
 
+/* --------------------------------------------------------------- create */
+
+const isUrl = (s) => /^https?:\/\//i.test(s);
+
+function sourceKind(path, folder) {
+  if (isUrl(path)) return "web";
+  if (folder) return "folder";
+  const name = path.split(/[\\/]/).pop() ?? "";
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? name.slice(dot + 1).toLowerCase() : "folder";
+}
+
+function addSources(paths, folder = false) {
+  const list = state.create.sources;
+  for (const raw of paths) {
+    const path = String(raw).trim();
+    if (!path || list.some((s) => s.path === path)) continue;
+    list.push({ path, kind: sourceKind(path, folder) });
+    // A first local source suggests where the file goes.
+    if (!$("create-out").value.trim() && !isUrl(path)) {
+      const base = path.replace(/[\\/]+$/, "");
+      const out = folder || sourceKind(path) === "folder" ? `${base}.kapu` : base.replace(/\.[^.\\/]+$/, "") + ".kapu";
+      $("create-out").value = out;
+    }
+  }
+  renderSources();
+}
+
+function renderSources() {
+  const list = $("create-sources");
+  list.replaceChildren(
+    ...state.create.sources.map((s, i) =>
+      el(
+        "li",
+        {},
+        el("span", { class: "kind", text: s.kind }),
+        el("span", { class: "path", title: s.path, text: s.path }),
+        el("button", { type: "button", class: "remove", "data-index": i, "aria-label": `Remove ${s.path}`, text: "×" }),
+      ),
+    ),
+  );
+  $("create-empty").hidden = state.create.sources.length > 0;
+}
+
+function createOptions() {
+  const langs = [...document.querySelectorAll(".create-langs input[type=checkbox]:checked")].map((i) => i.value);
+  const more = $("create-lang-more").value.trim().replace(/[\s,]+/g, "+");
+  if (more) langs.push(...more.split("+").filter(Boolean));
+  return {
+    ocr_lang: langs.join("+") || "eng",
+    room_max: Number($("create-room-max").value) || 4000,
+    overview: $("create-overview").checked,
+    dedupe: $("create-dedupe").checked,
+    max_pages: Number($("create-max-pages").value) || 5000,
+    scope: $("create-scope").value.trim(),
+    vectors: $("create-vectors").checked,
+  };
+}
+
+function progressText(p) {
+  const of = p.total ? `${fmt(p.done)}/${fmt(p.total)}` : fmt(p.done);
+  switch (p.step) {
+    case "fetch": return `Fetching web pages ${of}: ${p.what}`;
+    case "read": return `Reading ${of}: ${p.what}`;
+    case "plan": return `${fmt(p.done)} rooms planned, building the file`;
+    case "vectors": return `Vectors ${of}; keyword search already works`;
+    case "written": return p.pending ? "Written; keyword search works, computing the vectors" : `Written: ${p.what}`;
+    default: return "";
+  }
+}
+
+async function pickFor(kind) {
+  if (!tauri) return [];
+  try {
+    return await tauri.core.invoke("create_pick", { kind });
+  } catch {
+    return [];
+  }
+}
+
+async function runCreate(mode) {
+  const status = mode === "refresh" ? $("refresh-status") : $("create-status");
+  if (!tauri) {
+    status.textContent = "Making files works in the KAPU window, not in a browser.";
+    return;
+  }
+  if (state.create.busy) return;
+  const sources = state.create.sources.map((s) => s.path);
+  const file = mode === "refresh" ? state.file?.path : $("create-out").value.trim();
+  if (mode !== "refresh" && !sources.length) {
+    status.textContent = "Add a file, a folder or a web address first.";
+    return;
+  }
+  if (mode !== "preview" && !file) {
+    status.textContent = "Choose the file to write.";
+    return;
+  }
+  state.create.busy = true;
+  state.create.status = status;
+  for (const b of ["create-preview", "create-run", "check-refresh-run"]) $(b).disabled = true;
+  status.textContent = mode === "refresh" ? "Reading the sources again" : "Starting";
+  $("create-result").hidden = true;
+  try {
+    const report = await tauri.core.invoke("create", { mode, file, sources, options: createOptions() });
+    if (mode === "refresh") {
+      status.textContent = `Refreshed: ${fmt(report.rooms)} rooms (${fmt(report.cached)} documents unchanged, ${fmt(report.kept)} hand-written rooms kept).`;
+      await openFile(file, true);
+    } else {
+      status.textContent = "";
+      renderCreateResult(report, mode, file);
+    }
+  } catch (e) {
+    const { code, detail } = errorText(e);
+    status.replaceChildren(el("strong", { text: code }), " ", detail);
+  } finally {
+    state.create.busy = false;
+    for (const b of ["create-preview", "create-run", "check-refresh-run"]) $(b).disabled = false;
+  }
+}
+
+function renderCreateResult(r, mode, file) {
+  const box = $("create-result");
+  const read = r.documents.filter((d) => d.reader !== "none" && d.reader !== "same").length;
+  const failed = r.documents.filter((d) => d.reader === "none");
+  const removed = r.documents.reduce((n, d) => n + (d.removed ?? 0), 0);
+  const verdict = el(
+    "p",
+    { class: "verdict" },
+    el("span", { class: failed.length ? "warn" : "ok", text: mode === "preview" ? "Preview" : "Written" }),
+    mode === "preview" ? `: ${fmt(r.rooms)} rooms from ${fmt(read)} documents` : `: ${file}`,
+  );
+  const facts = [
+    ["Rooms", fmt(r.rooms)],
+    ["Documents read", fmt(read)],
+    ["Not read", fmt(failed.length)],
+    ["Lines dropped", `${fmt(removed)} (running heads, contents and index pages)`],
+    ["Copied sections kept once", fmt(r.stats.duplicates)],
+    ["Links to rooms", fmt(r.stats.links)],
+    ["Vector model", r.model],
+    ["Time", `${Math.round(r.seconds)} s`],
+    ...r.web.map((w) => ["Web", w]),
+  ];
+  const dl = el("dl", {}, ...facts.flatMap(([k, v]) => [el("dt", { text: k }), el("dd", { text: v })]));
+  const docs = el(
+    "ul",
+    { class: "docs" },
+    ...r.plan.map((d) => {
+      const total = d.rooms.reduce((n, x) => n + x.tokens, 0);
+      return el(
+        "li",
+        {},
+        el(
+          "details",
+          {},
+          el("summary", { text: d.title }),
+          el("ul", { class: "rooms" }, ...d.rooms.slice(0, 300).map((x) => el("li", { text: `${x.title}  ·  ${tokens(x.tokens)}` }))),
+        ),
+        el("span", { class: "meta", text: `${d.tier} structure · ${fmt(d.rooms.length)} rooms · ${tokens(total)}` }),
+      );
+    }),
+  );
+  const notes = r.documents
+    .filter((d) => d.warnings?.length)
+    .flatMap((d) => d.warnings.map((w) => `${d.name}: ${w}`));
+  const parts = [verdict, dl, el("h3", { text: "Documents" }), docs];
+  if (notes.length) {
+    parts.push(el("h3", { text: "Notes" }), el("ul", { class: "notes" }, ...notes.slice(0, 100).map((n) => el("li", { text: n }))));
+  }
+  if (mode === "make") {
+    parts.push(el("div", { class: "check-actions" }, el("button", { type: "button", class: "button primary", id: "create-open-file", text: "Open the file" })));
+  }
+  box.replaceChildren(...parts);
+  box.hidden = false;
+  $("create-open-file")?.addEventListener("click", () => openFile(file));
+}
+
+function wireCreate() {
+  $("create-add-files").addEventListener("click", async () => addSources(await pickFor("files")));
+  $("create-add-folder").addEventListener("click", async () => addSources(await pickFor("folder"), true));
+  $("create-out-pick").addEventListener("click", async () => {
+    const [path] = await pickFor("save");
+    if (path) $("create-out").value = path.toLowerCase().endsWith(".kapu") ? path : `${path}.kapu`;
+  });
+  $("create-url-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const url = $("create-url").value.trim();
+    if (!isUrl(url)) {
+      $("create-status").textContent = "A web address starts with http:// or https://.";
+      return;
+    }
+    addSources([url]);
+    $("create-url").value = "";
+  });
+  $("create-sources").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-index]");
+    if (!b) return;
+    state.create.sources.splice(Number(b.dataset.index), 1);
+    renderSources();
+  });
+  $("create-preview").addEventListener("click", () => runCreate("preview"));
+  $("create-run").addEventListener("click", () => runCreate("make"));
+  $("check-refresh-run").addEventListener("click", () => runCreate("refresh"));
+  if (tauri?.event) {
+    tauri.event.listen("create-progress", (e) => {
+      if (state.create.status) state.create.status.textContent = progressText(e.payload ?? {});
+    });
+  }
+  renderSources();
+}
+
 /* --------------------------------------------------------------- wiring */
 
 function wire() {
+  wireCreate();
   window.addEventListener("hashchange", route);
   $("open").addEventListener("click", pickAndOpen);
   $("start-open").addEventListener("click", pickAndOpen);
@@ -637,9 +853,15 @@ function wire() {
     tauri.event.listen("tauri://drag-leave", () => body.classList.remove("dropping"));
     tauri.event.listen("tauri://drag-drop", (e) => {
       body.classList.remove("dropping");
-      const path = (e.payload?.paths ?? []).find((p) => p.toLowerCase().endsWith(".kapu"));
-      if (path) openFile(path);
-      else if ((e.payload?.paths ?? []).length) startError({ code: "GUI", detail: "Only .kapu files can be opened." });
+      const paths = e.payload?.paths ?? [];
+      const kapu = paths.find((p) => p.toLowerCase().endsWith(".kapu"));
+      // On the maker, everything dropped is a source; elsewhere a .kapu
+      // file opens and other files start the maker.
+      if (location.hash !== "#create" && kapu) openFile(kapu);
+      else if (paths.length) {
+        if (location.hash !== "#create") go("create");
+        addSources(paths);
+      }
     });
   } else {
     $("drop-hint").textContent = "or type a path below";

@@ -175,6 +175,25 @@ The release archives include it (`kapu-gui examples/kapu-docs.kapu`); from sourc
 
 On Linux the window needs WebKitGTK: `sudo apt install libwebkit2gtk-4.1-dev libxdo-dev libssl-dev librsvg2-dev`.
 
+## Make a file from documents and web sites
+
+`kapu-create` (and the window's **Create** view) turns documentation into a KAPU file in one step, with no agent and no tokens spent:
+
+```sh
+kapu-create new manuals.kapu ./manuals                         # a folder: PDF, Office, mail, archives, ...
+kapu-create new elevenlabs.kapu https://elevenlabs.io/docs/   # a documentation site
+kapu-create preview ./manuals --rooms-dir ./rooms             # the rooms, without writing a file
+kapu-create refresh manuals.kapu                              # read the sources again
+```
+
+- **Inputs:** PDF (with PDFium: bookmarks, headings from type size and section numbers, running heads, contents and index pages dropped, tables), Word, Excel and PowerPoint (old and new), OpenDocument, RTF, EPUB, HTML, Markdown, text, CSV, source code, e-mail (EML, MSG, with attachments), ZIP and 7z archives, CHM help files (Windows), and images and scanned pages through Tesseract OCR.
+- **Web sites:** `llms.txt` with a Markdown page per link first, then `llms-full.txt`, then the sitemap, then a crawl; inside the address's first folder (`--scope` sets it), polite (`robots.txt`, four requests at a time, waiting on 429), at most 5000 pages. Pages built only by JavaScript are reported, not run.
+- **Rooms:** cut at the headings so a room stays under 4000 tokens and a `##` section under about 1500; small sections are packed together, a long section without headings is split at paragraph boundaries. Every room starts with its `Source:` (file and pages, or URL) and `Path:` (the rooms of its chapters); a larger document gets an overview room; sections copied word for word between documents are kept once; links between pages and files become room links.
+- **Nothing is skipped silently:** the report names every file it could not read and why (encrypted, damaged, image pages without OCR). A file read once is cached, so a refresh only reads what changed; hand-written rooms of the file are kept and sections keep their ids.
+- **Network:** only `kapu-create` and the window fetch web pages; `kapu`, `kapu-mcp` and the core stay offline. PDFium (`pdfium.dll`, BSD/Apache) comes in the package next to `kapu-create`; without it the text comes from `pdf-extract`. Tesseract (Apache-2.0) is installed separately (on Windows the [UB Mannheim build](https://github.com/UB-Mannheim/tesseract/wiki), with the German and Hungarian language files if you need them; on Linux and macOS the system package) and found in its usual place or with `--tesseract`; its Windows build loads GPL libraries, so it is not in the package. Without Tesseract image pages are reported. The format of the rooms and the source list: [SPEC-KAPU-CREATE.md](SPEC-KAPU-CREATE.md).
+
+On the seven IndraDrive and IndraLogic manuals of 1550 pages used for testing, the rooms are ready in 4 seconds and the whole file with vectors in 2.5 minutes (Ryzen 5 7600). Scanned pages are read in the document's own language, recognised from its text; on test scans 99% of the words of a German, 96% of a Hungarian and 95% of an English page come back.
+
 ## Why
 
 AI agents get their working knowledge as Markdown: a manual, a specification, a library of skills, project notes. Pasting all of it costs tokens on every turn and pushes the useful part out of the context window. A vector database needs a server and an embedding service, cuts the text into chunks and loses the structure. Many small files lose the overview, and the agent has to guess which one to read.
@@ -369,6 +388,8 @@ A nyilvános dokumentációkon (Rust Book, Kubernetes, MDN) a keresés 35-320 ms
 **Amire nem való:** kicsi, jól szétszedett Markdown-mappára (ott a grep is olcsó), naponta változó csapatos dokumentációra (a git diff zajos, ilyenkor a Markdown a forrás), és futtatandó skillekre (a KAPU a tudást adja, a szkriptet nem futtatja).
 
 **Kipróbálás:** telepítés előre fordított binárissal és a beágyazó modellel, Rust és Python nélkül: Linuxon és macOS-en `curl -fsSL https://raw.githubusercontent.com/piszabolcs/kapu/main/install.sh | sh`, Windowson `irm https://raw.githubusercontent.com/piszabolcs/kapu/main/install.ps1 | iex` (vagy a kiadás archívuma a [Releases](https://github.com/piszabolcs/kapu/releases) oldalról), majd `kapu map examples/kapu-docs.kapu`; forrásból: Rust 1.90 vagy újabb, `cargo build --release -p kapu-cli -p kapu-mcp`. Saját fájl egy Markdown-mappából: `kapu import ./jegyzetek jegyzetek.kapu`, skillekből: `kapu import --skills ~/.claude/skills skillek.kapu`, projektkártya: `kapu template --kind project`. Claude Code-hoz: `claude mcp add kapu -- kapu-mcp`; a Codex és a VS Code beállítása fent, a [Connect an agent](#connect-an-agent) részben. Az x64-es binárisokhoz AVX2-t tudó processzor kell (Intel 2013-tól, AMD 2015-től).
+
+**Fájl dokumentumokból és weboldalakból:** a `kapu-create` (és az ablak **Create** nézete) egy lépésben, ügynök és token nélkül készít KAPU-fájlt: `kapu-create new kezikonyvek.kapu ./kezikonyvek` egy mappából, `kapu-create new elevenlabs.kapu https://elevenlabs.io/docs/` egy dokumentációs oldalból, `kapu-create preview` a szobákat mutatja fájlírás nélkül, `kapu-create refresh kezikonyvek.kapu` újraolvassa a forrásokat. Olvas PDF-et (PDFiummal könyvjelzők, betűméretből és számozásból címsorok, élőfej, tartalomjegyzék és tárgymutató nélkül), Word, Excel és PowerPoint fájlt (régit és újat), OpenDocumentet, RTF-et, EPUB-ot, HTML-t, Markdownt, szöveget, CSV-t, forráskódot, levelet (EML, MSG, mellékletekkel), ZIP- és 7z-archívumot, CHM-súgót (Windowson), és képet vagy szkennelt oldalt Tesseract OCR-rel. Weboldalnál előbb az `llms.txt`, utána az `llms-full.txt`, a sitemap, végül bejárás, a cím első mappáján belül, udvariasan (`robots.txt`, egyszerre 4 kérés), legfeljebb 5000 oldal. A szobák a címsoroknál vágódnak (szoba legfeljebb 4000, alajtó kb. 1500 token), mindegyik `Source:` és `Path:` sorral kezdődik; a nagyobb dokumentum áttekintő szobát kap, a szó szerint ismétlődő fejezet egyszer marad meg, a lapok és fájlok közötti linkek szobalinkek lesznek. Ami nem olvasható, azt a jelentés megnevezi. Hálózatot csak a `kapu-create` és az ablak használ; a `kapu`, a `kapu-mcp` és a mag offline marad. A szobák és a forráslista leírása: [SPEC-KAPU-CREATE.md](SPEC-KAPU-CREATE.md).
 
 **Hogyan működik:** a `.kapu` fájl sima UTF-8 szöveg. A Markdown törzs az egyetlen igazságforrás; a térkép a tokenárakkal, a keresőindex, a keresés vektorai, a gráf és az ujjlenyomatok bájtra azonosan újraépülnek belőle. A formátum specifikációja magyarul: [SPEC-KAPU.hu.md](SPEC-KAPU.hu.md), angolul: [SPEC-KAPU.md](SPEC-KAPU.md).
 

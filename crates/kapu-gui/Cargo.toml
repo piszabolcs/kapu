@@ -21,6 +21,8 @@ tauri-build = { version = "2.7", features = [] }
 
 [dependencies]
 kapu-core = { path = "../kapu-core" }
+# The KAPU maker (KD1): the window is, with `kapu-create`, the only place that fetches web pages.
+kapu-create = { path = "../kapu-create" }
 # D115: Tauri 2 window with the system webview; the interface is plain HTML, CSS
 # and JavaScript in ui/, embedded in the binary at build time (no Node build).
 tauri = { version = "2.12", features = [] }

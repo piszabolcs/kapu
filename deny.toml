@@ -18,6 +18,16 @@ ignore = [
     # D119: proc-macro-error comes with the GTK3 bindings (glib-macros) of Tauri's Linux webview.
     # Compile-time only, Linux only; Tauri 2 has no GTK4 port to move to.
     { id = "RUSTSEC-2024-0370", reason = "compile-time proc-macro of Tauri's Linux GTK3 stack, no runtime code (D119)" },
+    # KD8 (kapu-create): anydoc 0.2.4, the newest, pins zip 8.6. The four advisories are
+    # about `ZipArchive::extract` writing to disk (symlinks, SUID bits); anydoc and the
+    # maker only read members into memory (`by_name`, `by_index`) and never extract.
+    { id = "RUSTSEC-2026-0367", reason = "zip 8.6 via anydoc: extract() to disk is never called (KD8)" },
+    { id = "RUSTSEC-2026-0368", reason = "zip 8.6 via anydoc: extract() to disk is never called (KD8)" },
+    { id = "RUSTSEC-2026-0369", reason = "zip 8.6 via anydoc: extract() to disk is never called (KD8)" },
+    { id = "RUSTSEC-2026-0429", reason = "zip 8.6 via anydoc: extract() to disk is never called (KD8)" },
+    # ttf-parser is unmaintained (no vulnerability); pdf-extract's lopdf and anydoc's
+    # pdf-inspector read PDF fonts with it, and no maintained release replaces it yet.
+    { id = "RUSTSEC-2026-0192", reason = "unmaintained font parser under pdf-extract and anydoc, no safe upgrade (KD4)" },
 ]
 
 [licenses]
@@ -35,6 +45,10 @@ allow = [
     "Zlib",
     "BSL-1.0",
     "MPL-2.0",
+    # KD3 (kapu-create): bzip2 (libbz2-rs-sys) in the ZIP and 7z readers, BSD-like.
+    "bzip2-1.0.6",
+    # KD3 (kapu-create): webpki-roots, the Mozilla CA list ureq checks HTTPS with.
+    "CDLA-Permissive-2.0",
 ]
 confidence-threshold = 0.8
 exceptions = []

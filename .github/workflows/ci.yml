@@ -84,6 +84,8 @@ jobs:
       - uses: rustsec/audit-check@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          # The same reasons as in deny.toml (KD8): anydoc's zip 8.6 is never asked to extract.
+          ignore: RUSTSEC-2026-0367,RUSTSEC-2026-0368,RUSTSEC-2026-0369,RUSTSEC-2026-0429
 
   # NFR-03/5: short fuzz run of every target on each push.
   # The one-hour-per-target gate runs before a release (scripts/fuzz.ps1 -Seconds 3600).

@@ -452,7 +452,8 @@ Megőrzés: a fájl csak a törzset tartalmazza tartósan, minden más újraszá
 3. **Markdown import:** `kapu import <mappa> <fájl>`, minden `.md` egy szoba, az azonosító a fájlnévből (FR-04/4 szabály), a sorrend fájlnév szerinti.
 4. **Skill import (v1.2, D147, K-10):** `kapu import --skills <mappa> <fájl>`. Skill minden mappa, amelyben `SKILL.md` van (legfeljebb 6 szint mélyen). A skill egy szoba: a YAML-fejléc `name` mezője a cím, a `description` a `>` sor, utána `kind: skill`, szkriptek esetén `has_scripts: yes`, aztán a `SKILL.md` törzse változatlanul; a skill többi Markdown-fájlja (a `scripts`, `assets`, `templates`, `evals`, `tests` mappán kívül) külön szoba `kind: skill`-lel, a skill szobájának `## References` szakasza linkeli őket; a `scripts/` fájljai a `## Scripts` szakaszban kódblokként (legfeljebb 256 KiB, a bináris és a nagyobb csak névvel). Semmi nem fut le.
 5. **Export:** `kapu export <fájl> <mappa>`, szobánként `<id>.md`. A FR-04/3 nyelvtan miatt fájlrendszeren kívülre írás nem lehetséges. Gitben a kiexportált törzs lehet a forrás, a `.kapu` fájl `-diff` jelölést kap (K-16, README).
-6. Hálózati hozzáférés a magban, a CLI-ben és az MCP szerverben nincs. A modell a csomag része (D29).
+6. Hálózati hozzáférés a magban, a CLI-ben és az MCP szerverben nincs. A modell a csomag része (D29). Weboldalt csak a készítő (a `kapu-create` és az ablak Create nézete) tölt le, ha egy forrás http(s)-cím; leírása: [SPEC-KAPU-CREATE.md](SPEC-KAPU-CREATE.md) (KD1).
+7. **A készítő:** `kapu-create new <fájl> <forrás>...`, `refresh <fájl>`, `preview <forrás>...` weboldalakból, dokumentumokból és mappákból készít fájlt; az általa írt szobák e specifikáció közönséges szobái.
 
 ---
 

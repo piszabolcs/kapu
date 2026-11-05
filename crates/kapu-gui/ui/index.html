@@ -36,6 +36,7 @@
     </form>
     <div class="actions">
       <button type="button" class="button ghost" id="reload" hidden title="Read the file again from disk">Reload</button>
+      <a class="button ghost" id="create-nav" href="#create" title="Make a knowledge file from documents or a web site">Create</a>
       <button type="button" class="button" id="open" aria-keyshortcuts="Control+O">Open<kbd aria-hidden="true">Ctrl O</kbd></button>
     </div>
   </header>
@@ -61,6 +62,7 @@
             <button type="button" class="button primary" id="start-open">Open file<kbd aria-hidden="true">Ctrl O</kbd></button>
             <span class="start-hint" id="drop-hint">or drop a .kapu file on the window</span>
           </div>
+          <p class="start-create">No file yet? <a href="#create">Make one from documents or a web site</a>.</p>
           <form class="path-form" id="path-form" hidden>
             <label for="path-input">Path to a .kapu file</label>
             <div class="path-row">
@@ -180,6 +182,71 @@
             <button type="button" class="button primary" id="check-full">Full check</button>
           </div>
           <div class="check-result" id="check-result" role="status" hidden></div>
+          <section class="check-refresh" id="check-refresh" aria-labelledby="refresh-title">
+            <h2 id="refresh-title">Read the sources again</h2>
+            <p class="check-lead">A file made here keeps its source list beside it (<span class="mono">.sources.json</span>). Reading them again updates the rooms; unchanged documents come from the cache, sections keep their ids, and rooms written by hand stay.</p>
+            <div class="check-actions">
+              <button type="button" class="button" id="check-refresh-run">Refresh from sources</button>
+            </div>
+            <p class="search-status" id="refresh-status" role="status"></p>
+          </section>
+        </div>
+      </section>
+
+      <section class="view view-create" data-view="create" aria-labelledby="create-title" hidden>
+        <div class="create">
+          <h1 id="create-title">Make a knowledge file</h1>
+          <p class="check-lead">Add web addresses, files and folders: PDF, Word, Excel, PowerPoint, OpenDocument, RTF, EPUB, HTML, Markdown, text, CSV, code, e-mail, ZIP and 7z archives, help files and images. They are read on this computer, cut into rooms by their headings and written into one <span class="mono">.kapu</span> file. Web pages are fetched from their own site; nothing is sent anywhere else.</p>
+
+          <section class="create-block" aria-labelledby="sources-title">
+            <h2 id="sources-title">Sources</h2>
+            <ul class="sources" id="create-sources" aria-live="polite"></ul>
+            <p class="create-empty" id="create-empty">Nothing added yet. Drop files or folders on the window, or use the buttons.</p>
+            <div class="create-row">
+              <button type="button" class="button" id="create-add-files">Add files</button>
+              <button type="button" class="button" id="create-add-folder">Add folder</button>
+              <form class="create-url" id="create-url-form">
+                <label class="visually-hidden" for="create-url">Web address</label>
+                <input id="create-url" type="url" placeholder="https://docs.example.com/guide/" autocomplete="off" spellcheck="false">
+                <button type="submit" class="button">Add address</button>
+              </form>
+            </div>
+          </section>
+
+          <section class="create-block" aria-labelledby="out-title">
+            <h2 id="out-title">File to write</h2>
+            <div class="create-row">
+              <label class="visually-hidden" for="create-out">Path of the new .kapu file</label>
+              <input id="create-out" class="mono create-out" type="text" placeholder="C:\path\to\docs.kapu" spellcheck="false" autocomplete="off">
+              <button type="button" class="button" id="create-out-pick">Choose</button>
+            </div>
+          </section>
+
+          <details class="create-block create-options">
+            <summary>Options</summary>
+            <fieldset class="create-langs">
+              <legend>Text in images (OCR) in</legend>
+              <label><input type="checkbox" value="eng" checked> English</label>
+              <label><input type="checkbox" value="deu" checked> German</label>
+              <label><input type="checkbox" value="hun" checked> Hungarian</label>
+              <label class="field"><span>Other Tesseract codes, + joined</span><input id="create-lang-more" type="text" placeholder="fra+ita" spellcheck="false"></label>
+            </fieldset>
+            <div class="create-grid">
+              <label class="field"><span>Largest room, tokens</span><input id="create-room-max" type="number" min="300" step="100" value="4000" inputmode="numeric"></label>
+              <label class="field"><span>Most web pages per address</span><input id="create-max-pages" type="number" min="1" step="100" value="5000" inputmode="numeric"></label>
+              <label class="field create-scope"><span>Web pages must start with (empty: the address's first folder)</span><input id="create-scope" type="url" placeholder="https://docs.example.com/guide/" spellcheck="false"></label>
+            </div>
+            <label class="create-check"><input type="checkbox" id="create-overview" checked> An overview room with the contents of every larger document</label>
+            <label class="create-check"><input type="checkbox" id="create-dedupe" checked> Keep sections copied word for word once, and link them</label>
+            <label class="create-check"><input type="checkbox" id="create-vectors" checked> Vectors for meaning search (minutes for a large set; keyword search is ready at once)</label>
+          </details>
+
+          <div class="check-actions">
+            <button type="button" class="button" id="create-preview">Preview</button>
+            <button type="button" class="button primary" id="create-run">Create file</button>
+          </div>
+          <p class="search-status" id="create-status" role="status"></p>
+          <div class="check-result create-result" id="create-result" hidden></div>
         </div>
       </section>
     </main>

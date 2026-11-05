@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install KAPU (kapu, kapu-mcp, kapu-gui and the embedding model) from the
+# Install KAPU (kapu, kapu-mcp, kapu-gui, kapu-create and the embedding model) from the
 # latest GitHub release.
 #
 #   curl -fsSL https://raw.githubusercontent.com/piszabolcs/kapu/main/install.sh | sh
@@ -58,7 +58,7 @@ rm -f "$HOME_DIR/current"
 ln -s "$HOME_DIR/$name" "$HOME_DIR/current"
 
 # small launchers, so each program finds the model next to its real path
-for prog in kapu kapu-mcp kapu-gui; do
+for prog in kapu kapu-mcp kapu-gui kapu-create; do
   [ -x "$HOME_DIR/$name/$prog" ] || continue
   printf '#!/bin/sh\nexec "%s/current/%s" "$@"\n' "$HOME_DIR" "$prog" > "$BIN_DIR/$prog"
   chmod +x "$BIN_DIR/$prog"
