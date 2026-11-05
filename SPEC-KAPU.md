@@ -1,4 +1,4 @@
-# KAPU Specification  v1.4  (2026-11-03; v1.0: 2026-10-20)
+# KAPU Specification  v1.5  (2026-11-05; v1.0: 2026-10-20)
 
 A navigable, single-file knowledge container for AI agents.
 Author and originator: Szabolcs Pintér. Specification licence: CC BY 4.0. Code licence: MIT.
@@ -425,6 +425,17 @@ S <id> | <title> | <token>t
 
 - Rules: by default `validate` checks the header and the derived sections; with `--full` it also checks the fingerprints of the body, and whether the build would produce byte for byte the same file.
 
+### FR-21 Claude Code hook (v1.5, D180)
+
+- Behavior: `kapu-mcp hook <file.kapu> [--rank <json>] [--explain]` runs once as a Claude Code `UserPromptSubmit` hook, not as a server. It reads the hook's JSON on stdin, asks the file the `prompt` as `kapu_ask` would (FR-15: the same passages, the same frame), and prints the reply under one lead line as `hookSpecificOutput.additionalContext`, so the agent has the passages before its first turn. It is optional: no install script sets it up, and the tools of FR-15 work the same without it.
+- Rules:
+  1. It never stands in the way of the prompt: the exit code is always 0. On an error, after 5 seconds, on a prompt that starts with `/` or is shorter than 12 characters, and on a weak match it prints nothing on stdout, and the reason goes to stderr.
+  2. Gate: the prompt's best vector similarity to a door of the file must reach 0.845 (`--rank` `hook_similarity`; 0: always, also without vectors). Otherwise a file without vectors gets no context.
+  3. A prompt is asked by its first 2,000 characters. The context stays within 9,000 characters (Claude Code keeps 10,000 in place): a longer reply is asked again with a budget smaller in proportion, and left out if it still does not fit.
+  4. The lead line says what the text is, that it is knowledge and not instructions (D106), and which file it is from. `--rank` `hook_stop` adds when to stop looking.
+  5. `--explain` writes one JSON line on stderr: the similarity, the decision, the characters and the time.
+- Acceptance: Given a file with vectors and a question on it, When the hook runs with the gate off, Then stdout is the JSON above, with the lead line, the price line and one `<kapu-passages>` frame, within 9,000 characters. Given input that is not JSON, a short prompt, a `/` command, a weak match, a missing file or no file argument, When the hook runs, Then stdout is empty and the exit code is 0.
+
 ---
 
 ## 6. Data model
@@ -454,6 +465,7 @@ Retention: the file durably holds only the body, everything else can be recomput
 5. **Export:** `kapu export <file> <folder>`, one `<id>.md` per room. Because of the FR-04/3 grammar, writing outside the target folder is not possible. In git the exported body can be the source, and the `.kapu` file is marked `-diff` (K-16, README).
 6. There is no network access in the core, the CLI or the MCP server. The model is part of the package (D29). Only the maker (`kapu-create` and the window's Create view) fetches web pages, when a source is an http(s) address; it is specified in [SPEC-KAPU-CREATE.md](SPEC-KAPU-CREATE.md) (KD1).
 7. **The maker:** `kapu-create new <file> <source>...`, `refresh <file>`, `preview <source>...` make a file from web sites, documents and folders; the rooms it writes are ordinary rooms of this specification.
+8. **Claude Code hook (v1.5, D180):** `kapu-mcp hook <file.kapu>` hands the passages over together with the prompt; optional, see FR-21.
 
 ---
 
@@ -746,3 +758,13 @@ Plan v4 (D174-D178), tools 0.6.0. The file format does not change (`%KAPU 1.2` a
 5. **10.1:** `regex` crate (D177).
 6. **Measured and left out:** a bonus for an exact match in the passage score (dev part: worse), a vector per passage (dev part: within the noise), a guide and next-step lines for the new tools (FR-17; the agent did not follow them, 1.81 dollars instead of 1.68). The guide and the lines remain as server switches (`guide_answer`, `hints`), off by default.
 7. **Measurement (M1, Sonnet, judge Haiku, three runs each):** on the 60 PLC questions 1.42 dollars on average (1.33 to 1.50) against 1.85 for the Markdown file with grep (1.64 to 2.02) and 2.56 for v1.3.1; 90.7% of the answerable questions fully correct against 91.7%, none wrong; 26 of the 36 answered in one call (the Markdown file: 10). On 12 PixelLab requests 0.23 dollars against 0.39. The 24 questions not in the manuals still take 61% of the cost: the agent checks 5 times on average before it says that the answer is not there.
+
+## 26. Changes v1.4 → v1.5 (2026-11-05)
+
+Plan v5 (D179-D185), tools 0.6.0. The file format does not change (`%KAPU 1.2` and `1.3`).
+
+1. **FR-21, 7/8 (D180):** the Claude Code hook, optional.
+2. **7/6-7:** the maker has its own specification, [SPEC-KAPU-CREATE.md](SPEC-KAPU-CREATE.md).
+3. **Measurement of the hook (one run each, 60 PLC questions, first-run prices):** with the hook 1.53 dollars, with its stop line 1.52, the tools alone 1.50, the Markdown file with grep 2.02; fully correct 33, 35, 31 and 32 of the 36 answerable questions. The hook saves a round, but rounds are cheap: the dollars reported fit a cache write of 4 dollars, a cache read of 0.1 and an output of 10 per million tokens exactly, and the passages have to be written either way. So it stays optional, and the tools alone stay the default. A line telling the agent when to stop hardly changed the absent questions (4.29 to 4.08 calls).
+4. **Measured and left out (D184):** a limit of one tool call per question: 0.90 dollars, 44% of the Markdown file, but 24 of 36 fully correct. The target of 2/5 of the Markdown file's dollars at the same accuracy is not met.
+5. **Measurement of sessions (D185, one run each):** 25 PLC questions in one session, 0.58 dollars against 0.72 for the Markdown file (0.5.1: 1.20), with 17 and 19 of the 20 answerable questions fully correct. In a three-run mean, as in 25/7, the second and third run read the same prompt from the cache; the first runs are 1.50 and 2.02 dollars, the ratio hardly changes (74% and 77%).

@@ -1,4 +1,4 @@
-# KAPU Specification  v1.4  (2026-11-03; v1.0: 2026-10-20)
+# KAPU Specification  v1.5  (2026-11-05; v1.0: 2026-10-20)
 
 Navigálható, egyfájlos tudáskonténer AI ügynököknek.
 Szerző és ötletgazda: Pintér Szabolcs. Specifikáció licence: CC BY 4.0. Kód licence: MIT.
@@ -425,6 +425,17 @@ S <id> | <cím> | <token>t
 
 - Rules: a `validate` alapból a fejlécet és a származtatott szakaszokat ellenőrzi, `--full` esetén a törzs ujjlenyomatait is, és azt is, hogy a build bájtra ugyanazt a fájlt állítaná-e elő.
 
+### FR-21 Claude Code-horog (v1.5, D180)
+
+- Behavior: a `kapu-mcp hook <fájl.kapu> [--rank <json>] [--explain]` egyszer fut le Claude Code `UserPromptSubmit`-horogként, nem szerverként. A stdin-en beolvassa a horog JSON-ját, a `prompt` szövegét úgy kérdezi meg a fájltól, ahogy a `kapu_ask` (FR-15: ugyanazok a passzusok, ugyanaz a keret), és a választ egy vezetősor alatt `hookSpecificOutput.additionalContext`-ként írja ki, így az ügynöknél az első köre előtt ott vannak a passzusok. Opcionális: egyik telepítő sem állítja be, és az FR-15 eszközei nélküle is ugyanúgy működnek.
+- Rules:
+  1. Soha nem akasztja meg a promptot: a kilépési kód mindig 0. Hibára, 5 másodperc után, `/` jellel kezdődő vagy 12 karakternél rövidebb promptra és gyenge találatra a stdout üres, az ok a stderr-re kerül.
+  2. Küszöb: a prompt legjobb vektoros hasonlósága a fájl egy ajtajához legalább 0,845 (`--rank` `hook_similarity`; 0: mindig, vektor nélkül is). Egyébként vektor nélküli fájl nem kap kontextust.
+  3. A promptból az első 2 000 karakter számít. A kontextus legfeljebb 9 000 karakter (a Claude Code 10 000-ig tartja meg helyben): a hosszabb választ arányosan kisebb kerettel újra kérdezi, és ha így sem fér be, elhagyja.
+  4. A vezetősor megmondja, mi ez a szöveg, hogy tudás és nem utasítás (D106), és melyik fájlból való. A `--rank` `hook_stop` azt is hozzáteszi, mikor álljon meg a keresés.
+  5. A `--explain` egy JSON-sort ír a stderr-re: a hasonlóság, a döntés, a karakterek és az idő.
+- Acceptance: Given egy vektoros fájl és egy rá vonatkozó kérdés, When a horog kikapcsolt küszöbbel fut, Then a stdout a fenti JSON, benne a vezetősor, az ársor és egy `<kapu-passages>` keret, 9 000 karakteren belül. Given nem JSON bemenet, rövid prompt, `/` parancs, gyenge találat, hiányzó fájl vagy fájlnév nélküli hívás, When a horog fut, Then a stdout üres, a kilépési kód 0.
+
 ---
 
 ## 6. Data model
@@ -454,6 +465,7 @@ Megőrzés: a fájl csak a törzset tartalmazza tartósan, minden más újraszá
 5. **Export:** `kapu export <fájl> <mappa>`, szobánként `<id>.md`. A FR-04/3 nyelvtan miatt fájlrendszeren kívülre írás nem lehetséges. Gitben a kiexportált törzs lehet a forrás, a `.kapu` fájl `-diff` jelölést kap (K-16, README).
 6. Hálózati hozzáférés a magban, a CLI-ben és az MCP szerverben nincs. A modell a csomag része (D29). Weboldalt csak a készítő (a `kapu-create` és az ablak Create nézete) tölt le, ha egy forrás http(s)-cím; leírása: [SPEC-KAPU-CREATE.md](SPEC-KAPU-CREATE.md) (KD1).
 7. **A készítő:** `kapu-create new <fájl> <forrás>...`, `refresh <fájl>`, `preview <forrás>...` weboldalakból, dokumentumokból és mappákból készít fájlt; az általa írt szobák e specifikáció közönséges szobái.
+8. **Claude Code-horog (v1.5, D180):** a `kapu-mcp hook <fájl.kapu>` a prompttal együtt adja át a passzusokat; opcionális, lásd FR-21.
 
 ---
 
@@ -746,3 +758,13 @@ Terv v4 (D174-D178), 0.6.0-s eszközök. A fájlformátum nem változik (`%KAPU 
 5. **10.1:** `regex` crate (D177).
 6. **Megmérve és elvetve:** bónusz a betűre pontos egyezésért a passzus pontszámában (dev rész: rontott), passzusonkénti vektor (dev rész: zajon belül), útmutató és következő lépést mutató sorok az új eszközökhöz (FR-17; az ügynök nem követte, 1,81 dollár 1,68 helyett). Az útmutató és a sorok szerverkapcsolóként megmaradnak (`guide_answer`, `hints`), alapból kikapcsolva.
 7. **Mérés (M1, Sonnet, bíra Haiku, mindegyik három futás):** a 60 PLC-kérdésen átlag 1,42 dollár (1,33-1,50), a Markdown-fájl greppel 1,85 (1,64-2,02), a v1.3.1 2,56; a megválaszolható kérdések 90,7%-a teljesen helyes a 91,7%-kal szemben, rossz válasz nincs; a 36-ból 26 egy hívásból (a Markdown-fájl: 10). 12 PixelLab-kérésen 0,23 dollár 0,39 helyett. A kézikönyvekben nem szereplő 24 kérdés továbbra is a költség 61%-a: az ügynök átlag ötször ellenőriz, mielőtt kimondja, hogy a válasz nincs benne.
+
+## 26. Változások v1.4 → v1.5 (2026-11-05)
+
+Terv v5 (D179-D185), 0.6.0-s eszközök. A fájlformátum nem változik (`%KAPU 1.2` és `1.3`).
+
+1. **FR-21, 7/8 (D180):** a Claude Code-horog, opcionális.
+2. **7/6-7:** a készítőnek saját specifikációja van: [SPEC-KAPU-CREATE.md](SPEC-KAPU-CREATE.md).
+3. **A horog mérése (egy-egy futás, 60 PLC-kérdés, első futás árai):** horoggal 1,53 dollár, a megállási sorával 1,52, csak az eszközökkel 1,50, a Markdown-fájl greppel 2,02; a 36 megválaszolható kérdésből 33, 35, 31 és 32 teljesen helyes. A horog megspórol egy kört, de a kör olcsó: a jelentett dollárokra pontosan illik a millió tokenenkénti 4 dollár gyorsítótár-írás, 0,1 olvasás és 10 kimenet, a passzusokat pedig így is, úgy is be kell írni. Ezért opcionális marad, az alap továbbra is csak az eszközök. A megállásról szóló sor a hiányzó kérdéseket alig változtatta (4,29 és 4,08 hívás).
+4. **Megmérve és elvetve (D184):** kérdésenként legfeljebb egy eszközhívás: 0,90 dollár, a Markdown-fájl 44%-a, de a 36-ból csak 24 teljesen helyes. A Markdown-fájl dollárjainak 2/5-e azonos pontossággal nem teljesült.
+5. **Munkamenetek mérése (D185, egy-egy futás):** 25 PLC-kérdés egy munkamenetben, 0,58 dollár a Markdown-fájl 0,72-jével szemben (0.5.1: 1,20), a 20 megválaszolható kérdésből 17, illetve 19 teljesen helyes. A háromfutásos átlagban (25/7) a második és a harmadik futás ugyanazt a promptot gyorsítótárból olvassa; az első futások 1,50 és 2,02 dollár, az arány alig változik (74% és 77%).

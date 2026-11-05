@@ -672,7 +672,50 @@ The forms: closed book; KAPU tools (the model calls them); KAPU prefetch and too
 
 Open, not decided: a `kapu_ask` that gives the best door whole below a small budget (for example under 1500 tokens) and shares a larger one; it has to pass the M0 rule of chapter 12 on a larger question set first.
 
-## 15. Reproduce
+## 15. One Markdown file with grep against KAPU (plan v4 and v5)
+
+Measured from 2026-11-02 to 2026-11-04 with `tools/study/md_eval.py`: Claude Sonnet through `claude -p`, judge Haiku, no user settings, one unrecorded call first that warms the prompt cache. The PLC manuals of chapter 12 as one KAPU file and as one Markdown file; 36 answerable questions, 24 whose answer is not in the manuals. The PixelLab documentation is third-party and not published. The manuals and the raw runs are not in this repository.
+
+**Each question on its own, three runs:**
+
+| Form | Dollars for 60 questions (range) | First run | Fully correct of 108 | Partly | Made up of 72 | Calls: answerable, absent |
+|---|---:|---:|---:|---:|---:|---:|
+| One Markdown file, Grep and Read | 1.85 (1.64-2.02) | 2.02 | 99 | 9 | 5 | 2.54, 8.22 |
+| KAPU 0.5.1 | 2.56 (2.40-2.66) | 2.61 | 99 | 9 | 2 | 2.56, 6.01 |
+| **KAPU 0.6.0** | **1.42 (1.33-1.50)** | **1.50** | 98 | 9 | 2 | 1.59, 5.17 |
+
+The first run is the fresh price: in the second and third run the same prompt is already in the prompt cache (a KAPU answer with one call costs 0.0138 dollars in the first run, 0.0100 after it). The ratio hardly changes: 74% on first runs, 77% on the means. On 12 requests about a pixel-art tool, three runs: 0.23 dollars against 0.39, with 5 and 7 of 36 fully correct, 28 and 27 partly, 3 and 2 wrong; that judge is noisy.
+
+**The hook and the limit, one run each (first-run prices, plan v5):**
+
+| Form | Dollars | Of the Markdown file | Fully correct of 36 | Made up of 24 | Calls: answerable, absent |
+|---|---:|---:|---:|---:|---:|
+| One Markdown file, Grep and Read | 2.02 | 100% | 32 | 1 | 2.50, 8.62 |
+| KAPU 0.6.0, tools alone | 1.50 | 74% | 31 | 1 | 1.64, 4.71 |
+| The hook (FR-21) | 1.53 | 76% | 33 | 1 | 0.94, 4.29 |
+| The hook with its stop line | 1.52 | 75% | 35 | 1 | 1.11, 4.08 |
+| The hook and at most one tool call (left out) | 0.90 | 44% | 24 | 0 | 0.69, 1.42 |
+
+- **What costs money is new text, not rounds.** The dollars `claude` reports fit exactly, on 600 calls: input 2, cache write 4, cache read 0.1, output 10 dollars per million tokens. The hook saves a round, but the passages have to be written either way, on the absent questions too. An answer without a tool call costs 0.0118 dollars, one with one call in a fresh run 0.0138.
+- **The agent does not stop when asked to.** With a line that says when to stop, the absent questions went from 4.29 to 4.08 calls.
+- **A hard limit stops it, at the price of accuracy.** With one tool call per question all 24 absent questions were declined at 0.0163 dollars each (the Markdown file: 0.0546), but 8 answerable questions became a false "not found" and one wrong. In 13 of the 15 questions that used a tool the agent spent its call on `kapu_grep`, as its lead line suggested. At 5 of those 8 the evidence, by word overlap, was already in the passages. The limit is not in the code.
+- **The passages cannot simply shrink.** Without an agent: evidence for 29 of 36 at 1,000 tokens, 22 at 800, 21 at 700 and 600, 17 at 500.
+
+**Sessions, one run each:**
+
+| Questions one after the other | Dollars | Of the Markdown file | Calls | Fully correct | Partly | Not found | Wrong |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 25 PLC: one Markdown file | 0.72 | 100% | 70 | 19 of 20 | 0 | 1 | 0 |
+| 25 PLC: KAPU 0.5.1 | 1.20 | 167% | 64 | 19 of 20 | 1 | 0 | 0 |
+| **25 PLC: KAPU 0.6.0** | **0.58** | **81%** | 38 | 17 of 20 | 2 | 1 | 0 |
+| 12 pixel-art: one Markdown file | 0.52 | 100% | 33 | 2 of 12 | 9 | 0 | 1 |
+| 12 pixel-art: KAPU 0.5.1 | 0.42 | 82% | 26 | 4 of 12 | 6 | 0 | 2 |
+| **12 pixel-art: KAPU 0.6.0 before the passage tail** | **0.26** | **50%** | 15 | 4 of 12 | 8 | 0 | 0 |
+| 12 pixel-art: the whole Markdown file pasted | 1.68 | 324% | 0 | 2 of 12 | 10 | 0 | 0 |
+
+All 5 absent PLC questions were declined by all three forms. One run each cannot tell whether 17 and 19 of 20 differ. `claude --resume` reports the session's running total, so a session's dollars are those of its last turn.
+
+## 16. Reproduce
 
 ```bash
 python tools/collect_skills.py bench/korpusz/rooms           # the installed skills as rooms (local only)
@@ -684,3 +727,5 @@ python tools/kapu_mcp_call.py call kapu_search '{"file": "...", "query": "..."}'
 ```
 
 Chapter 14: the Vellum client's KAPU branch (`feat/kapu-knowledge`, 028d7e6, `--kapu-dir` and `--kapu-rank`) with Ollama, and the scripts of the study folder (`prepare.py`, `run_*.sh`, `judge.py` with a logged-in `claude` CLI, `report.py`), which are not in this repository. Chapter 13: `tools/study/model_candidates.py` (`run` per set, `@<form>` for the storage forms, `report`), `tools/onnx_to_kapu.py` (the model folder), `kapu --model <folder> build` on a copy of each set file, `ablation.py run` with the matrix `bench/ablation/v1.json` (`KAPU_MODEL_DIR` and `KAPU_CACHE_DIR` set), `ablation.py report` with `--base ml-base` on the runs of both models side by side, and `collect_v3.py` (the results file). Chapter 12: `tools/study/split_questions.py` (the dev/test split), `ablation.py run` and `report` (the matrices `bench/ablation/m0.json`, `m1.json`, `m2.json`; set `KAPU_MODEL_DIR` for a copied binary, `--chunk 50` for MDN), `chunk_baseline.py` (with `--chunks` in the report), `ask_eval.py` (`bench/ablation/ask-modes*.json`), `title_weight.py`, `neighbour_follow.py`, `group_quality.py`, `oracle_eval.py` (needs a logged-in `claude` CLI), `collect_v2.py` (the results file) and `v2_tables.py` (these tables). Chapter 11: `tools/study/skill_pool.py` collects the skills of the machine, `tools/study/skill_eval.py` prepares the three forms (`prepare`), runs the tasks of `tools/study/skill_tasks.json` (`run`), measures the fixed cost (`baseline`) and writes the results file (`report`); it needs a logged-in `claude` CLI. Chapter 10: `tools/study/measure_v12.py` (reply prices, `kapu_ask`, open times over MCP), `tools/study/measure_scale.py` (a file of a given size), `tools/study/translate_hu.py` (the translated questions) and `tools/study/collect_v12.py` (the results file). Chapters 8 and 9 (public documentation): `tools/study/prepare_corpus.py` and `so_questions.py` prepare the corpora and questions, `scale_probe.py` measures a size, `chunk_baseline.py` the chunk baselines, `collect_results.py` writes `results/2026-10-23-study-pilot.json`, and `results_page.py` turns that and the format 1.2 results file into the results page.
+
+Chapter 15: `python tools/study/md_eval.py prepare`, `run` (`--forms kapu,md`, `kapu-hook` for the hook), `session`, `judge` and `report`; the usage is at the top of the script.

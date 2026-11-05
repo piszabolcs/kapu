@@ -86,6 +86,8 @@ The skill import keeps every skill's name as the title and its description as th
 | PLC manuals of six vendors, 36 questions | the model alone: 28% correct | **92% correct** (97% with the right page pasted in) |
 | 24 questions those manuals do not answer | the model alone made up 11 answers | made up **1** |
 | 91 agent skills, 12 development tasks | native Claude Code skills: $0.236 per task, 14,081 tokens fixed per session, 39 of 39 found | **$0.099** per task, **4,775** tokens fixed, 38 of 39 found |
+| The same PLC manuals, 60 questions, three runs | one Markdown file with grep: $1.85, 92% of the answerable ones fully correct | **$1.42**, 91% fully correct |
+| 25 of those questions in one session, one run | one Markdown file with grep: $0.72, 19 of 20 fully correct | **$0.58**, 17 of 20 fully correct |
 
 Not every number favours KAPU: on public documentation with Stack Overflow questions the usual chunked hybrid search with the same embedding model is level with KAPU on the Rust book and ahead of it on MDN, and the native skills find one more skill than the KAPU file. The details, the method and every limit are below and on the **[results page](https://piszabolcs.github.io/kapu/results/)** ([source](docs/results/index.html); PDF in [English](docs/results/kapu-measurements-en.pdf) and [Hungarian](docs/results/kapu-measurements-hu.pdf)).
 
@@ -117,6 +119,8 @@ Retrieval is room-level recall@10 on the test part of the questions (60%, fixed 
 - with no knowledge file, 28%.
 
 For questions the manuals do not answer, the KAPU agent said so for **23 of 24**; the model alone made an answer up for 11 of 24. Full results with charts, method and limits: **[results page](https://piszabolcs.github.io/kapu/results/)** ([source](docs/results/index.html); as PDF in [English](docs/results/kapu-measurements-en.pdf) and [Hungarian](docs/results/kapu-measurements-hu.pdf)) and [bench/RESULTS.md](bench/RESULTS.md); raw numbers in [bench/results/](bench/results/).
+
+**Against one Markdown file with grep (0.6.0).** Claude Sonnet on the PLC manuals, each question on its own, three runs: $1.42 against $1.85 (first runs $1.50 and $2.02), 98 and 99 of 108 fully correct, 2 and 5 of 72 absent answers made up. In one session of 25 questions, one run each: $0.58 against $0.72, 17 and 19 of 20 fully correct. On 12 requests about a pixel-art tool: $0.23 against $0.39. KAPU did not reach its target of 2/5 of the Markdown file's dollars at the same accuracy: a limit of one tool call per question costs $0.90, but only 24 of 36 stay fully correct ([chapter 15](bench/RESULTS.md#15-one-markdown-file-with-grep-against-kapu-plan-v4-and-v5)).
 
 **Finding skills.** 12 development tasks with 39 relevant skills fixed in advance, Claude Opus, a prompt that asks for the skills ([chapter 11](bench/RESULTS.md#11-finding-skills-native-skills-one-kapu-file-a-markdown-folder)):
 
@@ -268,6 +272,16 @@ If the `.kapu` file is in the agent's working directory, the agent may read it d
 
 A shell command can still print the file; the instruction line covers that case for every client.
 
+### Hand the passages over with the prompt (optional)
+
+In Claude Code, `kapu-mcp hook` runs on every prompt and puts the `kapu_ask` passages next to it, so a question can be answered without a tool call. In the project's `.claude/settings.json`:
+
+```json
+{ "hooks": { "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "kapu-mcp hook notes.kapu", "timeout": 10 } ] } ] } }
+```
+
+It is off unless you add it, and it does not make KAPU cheaper: on the 60 PLC questions it cost $1.52 against $1.50 for the tools alone, with 35 and 31 of 36 fully correct in one run each, which is within the spread of the runs. Use it when a session is mostly about the file. It takes about 1.5 s per prompt on a 13 MB file, and it stays quiet on a weak match, but on coding prompts unrelated to the file about a third still passes the gate and adds about 1,500 tokens.
+
 ## Project cards and kinds
 
 A room can name its kind on a `kind:` line in its head: `skill`, `project`, `pattern` or `note`. The map and the search filter by it, and the map's totals line counts them (`kinds=project:4,skill:30`). A project card is a room for one project you did, at most about 600 tokens:
@@ -359,6 +373,8 @@ KAPU is a working pre-release: the format, the command line, the MCP server and 
 - [ ] Plan v2, phases 4 to 7: document and query expansion, smaller vector windows, a re-ranker, the filtered catalog, task runs with agents, repeated runs
 - [ ] The same at 250 skills, and with a prompt that does not mention skills
 - [x] The specification in English (v0.3.0)
+- [x] Cheaper than one Markdown file with grep at about the same accuracy, on single questions and in sessions (0.6.0); the target of 2/5 of its dollars is not met
+- [ ] A hook gate that keeps unrelated prompts out (now about a third passes)
 - [ ] Better search when the question and the text are in different languages without translation (a Hungarian question on English text: 0.55 recall@10; translated by the agent: 0.78)
 - [ ] The desktop window tested by hand on Linux and macOS
 
@@ -388,6 +404,10 @@ A nyilvános dokumentációkon (Rust Book, Kubernetes, MDN) a keresés 35-320 ms
 **Amire nem való:** kicsi, jól szétszedett Markdown-mappára (ott a grep is olcsó), naponta változó csapatos dokumentációra (a git diff zajos, ilyenkor a Markdown a forrás), és futtatandó skillekre (a KAPU a tudást adja, a szkriptet nem futtatja).
 
 **Kipróbálás:** telepítés előre fordított binárissal és a beágyazó modellel, Rust és Python nélkül: Linuxon és macOS-en `curl -fsSL https://raw.githubusercontent.com/piszabolcs/kapu/main/install.sh | sh`, Windowson `irm https://raw.githubusercontent.com/piszabolcs/kapu/main/install.ps1 | iex` (vagy a kiadás archívuma a [Releases](https://github.com/piszabolcs/kapu/releases) oldalról), majd `kapu map examples/kapu-docs.kapu`; forrásból: Rust 1.90 vagy újabb, `cargo build --release -p kapu-cli -p kapu-mcp`. Saját fájl egy Markdown-mappából: `kapu import ./jegyzetek jegyzetek.kapu`, skillekből: `kapu import --skills ~/.claude/skills skillek.kapu`, projektkártya: `kapu template --kind project`. Claude Code-hoz: `claude mcp add kapu -- kapu-mcp`; a Codex és a VS Code beállítása fent, a [Connect an agent](#connect-an-agent) részben. Az x64-es binárisokhoz AVX2-t tudó processzor kell (Intel 2013-tól, AMD 2015-től).
+
+**Egy Markdown-fájllal és greppel szemben (0.6.0):** Claude Sonnet a PLC-kézikönyveken, kérdésenként külön, három futással 1,42 $ az 1,85 $-ral szemben, 98 és 99 teljesen helyes válasz a 108-ból; egy 25 kérdéses munkamenetben, egy-egy futással 0,58 $ a 0,72 $-ral szemben, 17 és 19 teljesen helyes a 20-ból. A kitűzött 2/5-ös költség azonos pontossággal nem teljesült.
+
+**Opcionális horog:** Claude Code-ban a `kapu-mcp hook <fájl.kapu>` minden prompt mellé odateszi a `kapu_ask` passzusait. Nem teszi olcsóbbá a KAPU-t, és csak akkor fut, ha beállítod.
 
 **Fájl dokumentumokból és weboldalakból:** a `kapu-create` (és az ablak **Create** nézete) egy lépésben, ügynök és token nélkül készít KAPU-fájlt: `kapu-create new kezikonyvek.kapu ./kezikonyvek` egy mappából, `kapu-create new elevenlabs.kapu https://elevenlabs.io/docs/` egy dokumentációs oldalból, `kapu-create preview` a szobákat mutatja fájlírás nélkül, `kapu-create refresh kezikonyvek.kapu` újraolvassa a forrásokat. Olvas PDF-et (PDFiummal könyvjelzők, betűméretből és számozásból címsorok, élőfej, tartalomjegyzék és tárgymutató nélkül), Word, Excel és PowerPoint fájlt (régit és újat), OpenDocumentet, RTF-et, EPUB-ot, HTML-t, Markdownt, szöveget, CSV-t, forráskódot, levelet (EML, MSG, mellékletekkel), ZIP- és 7z-archívumot, CHM-súgót (Windowson), és képet vagy szkennelt oldalt Tesseract OCR-rel. Weboldalnál előbb az `llms.txt`, utána az `llms-full.txt`, a sitemap, végül bejárás, a cím első mappáján belül, udvariasan (`robots.txt`, egyszerre 4 kérés), legfeljebb 5000 oldal. A szobák a címsoroknál vágódnak (szoba legfeljebb 4000, alajtó kb. 1500 token), mindegyik `Source:` és `Path:` sorral kezdődik; a nagyobb dokumentum áttekintő szobát kap, a szó szerint ismétlődő fejezet egyszer marad meg, a lapok és fájlok közötti linkek szobalinkek lesznek. Ami nem olvasható, azt a jelentés megnevezi. Hálózatot csak a `kapu-create` és az ablak használ; a `kapu`, a `kapu-mcp` és a mag offline marad. A szobák és a forráslista leírása: [SPEC-KAPU-CREATE.md](SPEC-KAPU-CREATE.md).
 
