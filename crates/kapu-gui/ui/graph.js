@@ -26,6 +26,7 @@ export class Graph {
     this.onOpen = onOpen;
     this.nodes = [];
     this.edges = [];
+    this.structure = [];
     this.kinds = new Set(["link", "term", "sim"]);
     this.view = { x: 0, y: 0, k: 1 };
     this.hover = null;
