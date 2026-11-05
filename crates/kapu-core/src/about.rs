@@ -18,7 +18,8 @@ pub const REPOSITORY: &str = "https://github.com/piszabolcs/kapu";
 
 /// One or two sentences on what the tools are for.
 pub const PURPOSE: &str = "A personal knowledge base in one text file that any MCP agent searches \
-for a few hundred tokens: skills, code patterns and project notes, for coding agents and local models.";
+for a few hundred tokens: manuals, web documentation, skills, code patterns and project notes, for \
+coding agents and local models.";
 
 /// The layers the tools are built from, with their role.
 pub const LAYERS: [(&str, &str); 3] = [
@@ -28,11 +29,11 @@ pub const LAYERS: [(&str, &str); 3] = [
     ),
     (
         "tools",
-        "kapu (command line) and kapu-mcp (MCP server over stdio)",
+        "kapu (command line), kapu-mcp (MCP server over stdio) and kapu-create (file maker)",
     ),
     (
         "window",
-        "kapu-gui: desktop window (Tauri) for the map, rooms, search, graph and checks",
+        "kapu-gui: desktop window (Tauri) for the map, rooms, search, graph, checks and making files",
     ),
 ];
 

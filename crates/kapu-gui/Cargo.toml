@@ -1,6 +1,6 @@
 [package]
 name = "kapu-gui"
-description = "Desktop window for KAPU files: map, rooms, search, graph, checks (M10)"
+description = "Desktop window for KAPU files: map, rooms, search, graph, checks, file maker (M10)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

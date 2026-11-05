@@ -17,7 +17,7 @@ FILE = "examples/kapu-docs.kapu"
 SCENES = [
     (["map", FILE], 13, lambda lines: [l for l in lines if l[:2] in ("G ", "R ", "S ")]),
     (["search", FILE, "how do I connect it to Claude Code", "--k", "3"], 6, lambda lines: lines),
-    (["open", FILE, "overview/use-it-from-claude-code"], 13, lambda lines: lines),
+    (["open", FILE, "overview/connect-an-agent"], 13, lambda lines: lines),
 ]
 WIDTH, LINE, TOP, LEFT, CHARS = 900, 19, 58, 20, 104
 SCENE_S, TYPE_S, SHOW_S = 5.0, 1.3, 1.5

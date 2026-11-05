@@ -8,8 +8,9 @@ The page is one self-contained HTML file (English and Hungarian, d3 from
 cdnjs). Every number on it comes from the results files; the template is
 `results_template.html` next to this script. The third to fifth arguments,
 the format 1.2 results, the skill-finding results and the skill-finding
-results before the catalog (D154), are optional, and so are the sixth and
-seventh, the plan v2 and the plan v3 results.
+results before the catalog (D154), are optional, and so are the sixth to
+ninth, the plan v2 and the plan v3 results, one Markdown file against KAPU
+(chapter 15) and the small local model (chapter 14).
 """
 
 import json
@@ -203,8 +204,11 @@ def skills_block(r, before=None):
 
 
 def main(results: Path, out: Path, v12_results: Path | None = None, skills_results: Path | None = None,
-         skills_before: Path | None = None, v2_results: Path | None = None, v3_results: Path | None = None):
+         skills_before: Path | None = None, v2_results: Path | None = None, v3_results: Path | None = None,
+         m1_results: Path | None = None, j2_results: Path | None = None):
     r = json.loads(results.read_text(encoding="utf-8"))
+    m1 = json.loads(m1_results.read_text(encoding="utf-8")) if m1_results else None
+    j2 = json.loads(j2_results.read_text(encoding="utf-8")) if j2_results else None
     v3 = v3_block(json.loads(v3_results.read_text(encoding="utf-8"))) if v3_results else None
     v2 = v2_block(json.loads(v2_results.read_text(encoding="utf-8"))) if v2_results else None
     v12 = v12_block(json.loads(v12_results.read_text(encoding="utf-8"))) if v12_results else None
@@ -262,8 +266,10 @@ def main(results: Path, out: Path, v12_results: Path | None = None, skills_resul
     ]
 
     data = {
-        "date": v3["date"] if v3 else v12["date"] if v12 else v11.get("date"),
-        "spec": v3["version"] if v3 else v12["version"] if v12 else "specification " + v11.get("specification"),
+        "date": m1["date"] if m1 else v3["date"] if v3 else v12["date"] if v12 else v11.get("date"),
+        "spec": "tools 0.6.0, specification v1.5, format 1.3" if m1 else v3["version"] if v3 else v12["version"] if v12 else "specification " + v11.get("specification"),
+        "m1": m1,
+        "j2": j2,
         "v12": v12,
         "skills": skills,
         "v2": v2,
@@ -290,4 +296,4 @@ def main(results: Path, out: Path, v12_results: Path | None = None, skills_resul
 
 
 if __name__ == "__main__":
-    main(Path(sys.argv[1]), Path(sys.argv[2]), *(Path(a) for a in sys.argv[3:8]))
+    main(Path(sys.argv[1]), Path(sys.argv[2]), *(Path(a) for a in sys.argv[3:10]))

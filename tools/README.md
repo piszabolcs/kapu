@@ -20,15 +20,16 @@
   link preview image (Pillow, `py -3.12` on the build machine).
 - `make_demo_svg.py`: writes `docs/assets/demo.svg`, the animated terminal in
   the README, from real `kapu map`, `search` and `open` output.
-- `study/`: the measurement scripts of `bench/RESULTS.md` chapters 8 to 11;
+- `study/`: the measurement scripts of `bench/RESULTS.md` chapters 8 to 15;
   `study/skill_pool.py` and `study/skill_eval.py` (with the tasks in `study/skill_tasks.json`) measure skill finding;
-  `study/results_page.py` writes `docs/results/index.html` from the results JSON files (the pilot, format 1.2, skill finding).
+  `study/results_page.py` writes `docs/results/index.html` from the results JSON files.
   `study/results_pdf.py` prints that page to `docs/results/kapu-measurements-{en,hu}.pdf` with a headless Edge or Chrome.
   Plan v2 (bench/RESULTS.md chapter 12): `study/split_questions.py`, `study/ablation.py`, `study/ask_eval.py`,
   `study/title_weight.py`, `study/neighbour_follow.py`, `study/group_quality.py`, `study/oracle_eval.py`,
   `study/collect_v2.py` and `study/v2_tables.py`.
   Plan v3 (bench/RESULTS.md chapter 13): `study/model_candidates.py` (model candidates and storage forms)
   and `study/collect_v3.py` (the results file).
+  Chapter 14 and 15: `study/md_eval.py`, `study/collect_m1.py` and `study/collect_j2.py` (the results files).
 - `mcp_probe.py`, `mcp_eval.py`, `kapu_mcp_call.py`: MCP latency, isolated
   agent runs and a logged one-call client for agents.
 

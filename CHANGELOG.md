@@ -5,7 +5,12 @@ The file format has its own version (`%KAPU 1.3`, see `SPEC-KAPU.md`); the tools
 
 ## [Unreleased]
 
+### Changed
+- The README, the results page and the screenshots brought up to 0.6.0: the comparison with one Markdown file and grep, a small local model and the file maker at the front, and the screenshots taken from the 0.6.0 window (the old ones showed 0.1).
+- Chapter 14 of `bench/RESULTS.md` measured again with 0.6.0: `qwen3:8b` on an 8 GB GPU, on the PLC manuals, 12 of 36 fully correct at 8k context (2 with 0.5, 1 alone, 0 with grep over the Markdown) and 21 at 32k; it makes up 4 of 24 absent answers at 8k and 6 at 32k (17 alone, 1 with 0.5 at 8k). Where the model half knows the subject (Rust book, Kubernetes, MDN) KAPU changes little.
+
 ### Fixed
+- The desktop window: the address fields of Create had the browser's default look, and the graph view threw an error when it was resized before it had its data.
 - The one-line installers find the newest release again: they asked GitHub for `releases/latest`, which skips pre-releases, and every KAPU release is one, so they stopped with 404 unless `KAPU_VERSION` was set.
 - The minimum Rust 1.90 builds the workspace again: `kapu-create` uses `mail-parser` 0.11 and `sevenz-rust2` 0.20 (`mail-parser` 1.0 asks for Rust 1.98, `sevenz-rust2` 0.24 for 1.93). The source at the tag v0.6.0 needs Rust 1.98; its prebuilt packages are not affected.
 

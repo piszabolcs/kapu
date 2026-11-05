@@ -3,7 +3,7 @@
     py -3.12 tools/make_social.py   # needs Pillow
 
 Writes docs/assets/social-preview.png: the app icon, the name, one line of
-what it is, three measured facts (bench/RESULTS.md chapters 5, 11, 12) and the
+what it is, three measured facts (bench/RESULTS.md chapters 12, 14, 15) and the
 graph view of the desktop window. The text uses Geist, the window's own
 SIL OFL font (crates/kapu-gui/ui/fonts).
 """
@@ -50,14 +50,14 @@ def main():
     d.text((180, 66), "KAPU", font=sans(76, 700), fill=FG)
     d.text((184, 150), "one indexed knowledge file for AI agents", font=mono(19, 400), fill=ACCENT)
 
-    lines = ["Pack Markdown docs and agent skills into one", "text file. Claude Code, Codex or a local model",
+    lines = ["Pack manuals, web docs and agent skills into one", "text file. Claude Code, Codex or a local model",
              "searches it over MCP and reads only what it", "needs, within a token budget."]
     for i, line in enumerate(lines):
         d.text((64, 214 + i * 38), line, font=sans(28, 400), fill=FG)
 
-    facts = [("92% vs 28%", "correct on manuals the model never saw"),
-             ("23 of 24", "said \"not in the docs\" instead of guessing"),
-             ("$0.099 vs $0.236", "per task, finding 91 agent skills")]
+    facts = [("$1.42 vs $1.85", "against grep on a Markdown file"),
+             ("12 vs 1 of 36", "a local 8 GB model, on manuals it never saw"),
+             ("92% vs 28%", "Claude Sonnet, with KAPU and alone")]
     y = 400
     for big, small in facts:
         d.rounded_rectangle([64, y, 660, y + 54], radius=12, fill=CHIP, outline=LINE)

@@ -1,0 +1,377 @@
+{
+ "date": "2026-11-05",
+ "study": "J2: a small local model with KAPU, the way a user runs it, bench/RESULTS.md chapter 14",
+ "model": "qwen3:8b (Ollama, 8 GB GPU; at 32k about 40% of the model on the CPU)",
+ "client": "Vellum, branch feat/kapu-knowledge (815c6a9); not on its public main yet",
+ "runs": "one per question, temperature 0",
+ "judge": "Claude Haiku; on PLC the JUDGE and JUDGE_ABSENT prompts of chapter 12 word for word",
+ "tools": "0.6.0 where a row says 0.6, each question in its own kapu-mcp session; 0.5.0 where it says 0.5; the client's knowledge budget",
+ "plc": [
+  {
+   "form": "closed",
+   "tools": null,
+   "ctx": "8k",
+   "budget": null,
+   "chart": true,
+   "n": 36,
+   "correct": 0.028,
+   "partly": 0.222,
+   "wrong": 0.639,
+   "not_found": 0.111,
+   "right_room": null,
+   "absent": 24,
+   "made_up": 0.708,
+   "seconds": 13.1,
+   "tokens": 764.0
+  },
+  {
+   "form": "prefetch",
+   "tools": "0.5",
+   "ctx": "8k",
+   "budget": 600,
+   "chart": true,
+   "n": 36,
+   "correct": 0.056,
+   "partly": 0.167,
+   "wrong": 0.278,
+   "not_found": 0.5,
+   "right_room": 0.611,
+   "absent": 24,
+   "made_up": 0.042,
+   "seconds": 14.2,
+   "tokens": 3085.5
+  },
+  {
+   "form": "tools",
+   "tools": "0.6",
+   "ctx": "8k",
+   "budget": 600,
+   "chart": true,
+   "n": 36,
+   "correct": 0.278,
+   "partly": 0.139,
+   "wrong": 0.139,
+   "not_found": 0.444,
+   "right_room": 0.361,
+   "absent": 24,
+   "made_up": 0.042,
+   "seconds": 12.3,
+   "tokens": 2989.0
+  },
+  {
+   "form": "prefetch",
+   "tools": "0.6",
+   "ctx": "8k",
+   "budget": 600,
+   "chart": true,
+   "n": 36,
+   "correct": 0.333,
+   "partly": 0.139,
+   "wrong": 0.139,
+   "not_found": 0.389,
+   "right_room": 0.472,
+   "absent": 24,
+   "made_up": 0.167,
+   "seconds": 11.5,
+   "tokens": 2069.5
+  },
+  {
+   "form": "prefetch",
+   "tools": "0.6",
+   "ctx": "16k",
+   "budget": 4000,
+   "chart": true,
+   "n": 36,
+   "correct": 0.472,
+   "partly": 0.111,
+   "wrong": 0.139,
+   "not_found": 0.278,
+   "right_room": 0.667,
+   "absent": 24,
+   "made_up": 0.292,
+   "seconds": 29.1,
+   "tokens": 6031.0
+  },
+  {
+   "form": "prefetch",
+   "tools": "0.5",
+   "ctx": "32k",
+   "budget": 6000,
+   "chart": true,
+   "n": 36,
+   "correct": 0.444,
+   "partly": 0.111,
+   "wrong": 0.278,
+   "not_found": 0.167,
+   "right_room": 0.667,
+   "absent": null,
+   "made_up": null,
+   "seconds": 60.5,
+   "tokens": 5693.5
+  },
+  {
+   "form": "prefetch",
+   "tools": "0.6",
+   "ctx": "32k",
+   "budget": 8000,
+   "chart": true,
+   "n": 36,
+   "correct": 0.583,
+   "partly": 0.139,
+   "wrong": 0.167,
+   "not_found": 0.111,
+   "right_room": 0.806,
+   "absent": 24,
+   "made_up": 0.25,
+   "seconds": 69.2,
+   "tokens": 10488.0
+  },
+  {
+   "form": "grep",
+   "tools": null,
+   "ctx": "8k",
+   "budget": null,
+   "chart": true,
+   "n": 36,
+   "correct": 0.0,
+   "partly": 0.139,
+   "wrong": 0.167,
+   "not_found": 0.694,
+   "right_room": 0.0,
+   "absent": 24,
+   "made_up": 0.125,
+   "seconds": 11.6,
+   "tokens": 1253.5
+  },
+  {
+   "form": "grep",
+   "tools": null,
+   "ctx": "32k",
+   "budget": null,
+   "chart": true,
+   "n": 36,
+   "correct": 0.0,
+   "partly": 0.0,
+   "wrong": 0.139,
+   "not_found": 0.861,
+   "right_room": 0.0,
+   "absent": 24,
+   "made_up": 0.125,
+   "seconds": 43.2,
+   "tokens": 2466.0
+  },
+  {
+   "form": "pasted",
+   "tools": null,
+   "ctx": "8k",
+   "budget": null,
+   "chart": false,
+   "n": 36,
+   "correct": 0.028,
+   "partly": 0.056,
+   "wrong": 0.5,
+   "not_found": 0.417,
+   "right_room": 0.0,
+   "absent": 24,
+   "made_up": 0.167,
+   "seconds": 14.7,
+   "tokens": 12521.0
+  },
+  {
+   "form": "oracle",
+   "tools": null,
+   "ctx": "8k",
+   "budget": null,
+   "chart": false,
+   "n": 36,
+   "correct": 0.75,
+   "partly": 0.25,
+   "wrong": 0.0,
+   "not_found": 0.0,
+   "right_room": null,
+   "absent": null,
+   "made_up": null,
+   "seconds": 11.0,
+   "tokens": 2952.5
+  },
+  {
+   "form": "oracle",
+   "tools": null,
+   "ctx": "32k",
+   "budget": null,
+   "chart": true,
+   "n": 36,
+   "correct": 0.806,
+   "partly": 0.139,
+   "wrong": 0.0,
+   "not_found": 0.056,
+   "right_room": 1.0,
+   "absent": null,
+   "made_up": null,
+   "seconds": 49.4,
+   "tokens": 2820.5
+  },
+  {
+   "form": "claude_closed",
+   "tools": null,
+   "ctx": null,
+   "budget": null,
+   "chart": true,
+   "n": 36,
+   "correct": 0.278,
+   "partly": 0.167,
+   "wrong": 0.083,
+   "not_found": 0.472,
+   "right_room": null,
+   "absent": 24,
+   "made_up": 0.458,
+   "seconds": null,
+   "tokens": null
+  },
+  {
+   "form": "claude_kapu",
+   "tools": "0.3",
+   "ctx": null,
+   "budget": null,
+   "chart": true,
+   "n": 36,
+   "correct": 0.917,
+   "partly": 0.083,
+   "wrong": 0.0,
+   "not_found": 0.0,
+   "right_room": null,
+   "absent": 24,
+   "made_up": 0.042,
+   "seconds": null,
+   "tokens": null
+  }
+ ],
+ "public": [
+  {
+   "set": "rust",
+   "n": 30,
+   "closed": {
+    "correct": 0.167,
+    "partly": 0.7,
+    "wrong": 0.133,
+    "notfound": 0.0
+   },
+   "tools": {
+    "correct": 0.133,
+    "partly": 0.833,
+    "wrong": 0.033,
+    "notfound": 0.0
+   },
+   "prefetch": {
+    "correct": 0.133,
+    "partly": 0.867,
+    "wrong": 0.0,
+    "notfound": 0.0
+   },
+   "prefetch32": {
+    "correct": 0.172,
+    "partly": 0.793,
+    "wrong": 0.034,
+    "notfound": 0.0
+   },
+   "grep": {
+    "correct": 0.1,
+    "partly": 0.6,
+    "wrong": 0.3,
+    "notfound": 0.0
+   }
+  },
+  {
+   "set": "k8s",
+   "n": 30,
+   "closed": {
+    "correct": 0.1,
+    "partly": 0.7,
+    "wrong": 0.167,
+    "notfound": 0.033
+   },
+   "tools": null,
+   "prefetch": {
+    "correct": 0.133,
+    "partly": 0.8,
+    "wrong": 0.033,
+    "notfound": 0.033
+   },
+   "prefetch32": {
+    "correct": 0.1,
+    "partly": 0.8,
+    "wrong": 0.067,
+    "notfound": 0.033
+   },
+   "grep": {
+    "correct": 0.067,
+    "partly": 0.367,
+    "wrong": 0.2,
+    "notfound": 0.367
+   }
+  },
+  {
+   "set": "mdn",
+   "n": 30,
+   "closed": {
+    "correct": 0.3,
+    "partly": 0.633,
+    "wrong": 0.033,
+    "notfound": 0.033
+   },
+   "tools": null,
+   "prefetch": {
+    "correct": 0.2,
+    "partly": 0.633,
+    "wrong": 0.033,
+    "notfound": 0.133
+   },
+   "prefetch32": {
+    "correct": 0.3,
+    "partly": 0.567,
+    "wrong": 0.033,
+    "notfound": 0.1
+   },
+   "grep": {
+    "correct": 0.333,
+    "partly": 0.3,
+    "wrong": 0.1,
+    "notfound": 0.267
+   }
+  },
+  {
+   "set": "pixellab",
+   "n": 12,
+   "closed": {
+    "correct": 0.0,
+    "partly": 0.25,
+    "wrong": 0.667,
+    "notfound": 0.083
+   },
+   "tools": {
+    "correct": 0.083,
+    "partly": 0.417,
+    "wrong": 0.083,
+    "notfound": 0.417
+   },
+   "prefetch": {
+    "correct": 0.0,
+    "partly": 0.5,
+    "wrong": 0.417,
+    "notfound": 0.083
+   },
+   "prefetch32": {
+    "correct": 0.0,
+    "partly": 0.75,
+    "wrong": 0.25,
+    "notfound": 0.0
+   },
+   "grep": {
+    "correct": 0.0,
+    "partly": 0.25,
+    "wrong": 0.0,
+    "notfound": 0.75
+   }
+  }
+ ]
+}

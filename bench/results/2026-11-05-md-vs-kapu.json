@@ -1,0 +1,325 @@
+{
+ "date": "2026-11-05",
+ "study": "One Markdown file with grep against KAPU (plan v4 and v5), bench/RESULTS.md chapter 15",
+ "model": "Claude Sonnet through claude -p, no user settings",
+ "judge": "Claude Haiku",
+ "tools": "0.6.0; the forms name their own",
+ "plc_single": [
+  {
+   "name": "One Markdown file, Grep and Read",
+   "runs": 3,
+   "dollars": [
+    2.021,
+    1.905,
+    1.636
+   ],
+   "dollars_mean": 1.854,
+   "answerable": 108,
+   "fully_correct": 99,
+   "partly": 9,
+   "wrong": 0,
+   "not_found": 0,
+   "calls_answerable_median": 2.0,
+   "absent": 72,
+   "made_up": 5,
+   "calls_absent_median": 7.0,
+   "run_1": {
+    "dollars": 2.021,
+    "fully_correct": 32,
+    "made_up": 1
+   }
+  },
+  {
+   "name": "KAPU 0.5.1",
+   "runs": 3,
+   "dollars": [
+    2.609,
+    2.399,
+    2.659
+   ],
+   "dollars_mean": 2.556,
+   "answerable": 108,
+   "fully_correct": 99,
+   "partly": 9,
+   "wrong": 0,
+   "not_found": 0,
+   "calls_answerable_median": 2.0,
+   "absent": 72,
+   "made_up": 2,
+   "calls_absent_median": 5.0,
+   "run_1": {
+    "dollars": 2.609,
+    "fully_correct": 34,
+    "made_up": 1
+   }
+  },
+  {
+   "name": "KAPU 0.6.0",
+   "runs": 3,
+   "dollars": [
+    1.5,
+    1.334,
+    1.428
+   ],
+   "dollars_mean": 1.421,
+   "answerable": 108,
+   "fully_correct": 98,
+   "partly": 9,
+   "wrong": 0,
+   "not_found": 1,
+   "calls_answerable_median": 1.0,
+   "absent": 72,
+   "made_up": 2,
+   "calls_absent_median": 5.0,
+   "run_1": {
+    "dollars": 1.5,
+    "fully_correct": 31,
+    "made_up": 1
+   }
+  }
+ ],
+ "plc_hook": [
+  {
+   "name": "The hook",
+   "runs": 1,
+   "dollars": [
+    1.526
+   ],
+   "dollars_mean": 1.526,
+   "answerable": 36,
+   "fully_correct": 33,
+   "partly": 3,
+   "wrong": 0,
+   "not_found": 0,
+   "calls_answerable_median": 0.0,
+   "absent": 24,
+   "made_up": 1,
+   "calls_absent_median": 4.0,
+   "run_1": {
+    "dollars": 1.526,
+    "fully_correct": 33,
+    "made_up": 1
+   }
+  },
+  {
+   "name": "The hook with its stop line",
+   "runs": 1,
+   "dollars": [
+    1.522
+   ],
+   "dollars_mean": 1.522,
+   "answerable": 36,
+   "fully_correct": 35,
+   "partly": 1,
+   "wrong": 0,
+   "not_found": 0,
+   "calls_answerable_median": 0.0,
+   "absent": 24,
+   "made_up": 1,
+   "calls_absent_median": 4.0,
+   "run_1": {
+    "dollars": 1.522,
+    "fully_correct": 35,
+    "made_up": 1
+   }
+  },
+  {
+   "name": "The hook and at most one tool call (left out)",
+   "runs": 1,
+   "dollars": [
+    0.896
+   ],
+   "dollars_mean": 0.896,
+   "answerable": 36,
+   "fully_correct": 24,
+   "partly": 3,
+   "wrong": 1,
+   "not_found": 8,
+   "calls_answerable_median": 0.0,
+   "absent": 24,
+   "made_up": 0,
+   "calls_absent_median": 1.0,
+   "run_1": {
+    "dollars": 0.896,
+    "fully_correct": 24,
+    "made_up": 0
+   }
+  }
+ ],
+ "plc_session": [
+  {
+   "name": "One Markdown file",
+   "runs": 1,
+   "dollars": [
+    0.718
+   ],
+   "dollars_mean": 0.718,
+   "answerable": 20,
+   "fully_correct": 19,
+   "partly": 0,
+   "wrong": 0,
+   "not_found": 1,
+   "calls_answerable_median": 2.0,
+   "absent": 5,
+   "made_up": 0,
+   "calls_absent_median": 3,
+   "run_1": {
+    "dollars": 0.718,
+    "fully_correct": 19,
+    "made_up": 0
+   }
+  },
+  {
+   "name": "KAPU 0.5.1",
+   "runs": 1,
+   "dollars": [
+    1.202
+   ],
+   "dollars_mean": 1.202,
+   "answerable": 20,
+   "fully_correct": 19,
+   "partly": 1,
+   "wrong": 0,
+   "not_found": 0,
+   "calls_answerable_median": 2.0,
+   "absent": 5,
+   "made_up": 0,
+   "calls_absent_median": 3,
+   "run_1": {
+    "dollars": 1.202,
+    "fully_correct": 19,
+    "made_up": 0
+   }
+  },
+  {
+   "name": "KAPU 0.6.0",
+   "runs": 1,
+   "dollars": [
+    0.583
+   ],
+   "dollars_mean": 0.583,
+   "answerable": 20,
+   "fully_correct": 17,
+   "partly": 2,
+   "wrong": 0,
+   "not_found": 1,
+   "calls_answerable_median": 1.0,
+   "absent": 5,
+   "made_up": 0,
+   "calls_absent_median": 2,
+   "run_1": {
+    "dollars": 0.583,
+    "fully_correct": 17,
+    "made_up": 0
+   }
+  }
+ ],
+ "pixellab_single": [
+  {
+   "name": "One Markdown file",
+   "runs": 3,
+   "dollars": [
+    0.445,
+    0.397,
+    0.322
+   ],
+   "dollars_mean": 0.388,
+   "answerable": 36,
+   "fully_correct": 7,
+   "partly": 27,
+   "wrong": 2,
+   "not_found": 0,
+   "calls_answerable_median": 3.0
+  },
+  {
+   "name": "KAPU 0.5.1",
+   "runs": 3,
+   "dollars": [
+    0.277,
+    0.215,
+    0.212
+   ],
+   "dollars_mean": 0.235,
+   "answerable": 36,
+   "fully_correct": 5,
+   "partly": 27,
+   "wrong": 4,
+   "not_found": 0,
+   "calls_answerable_median": 1.0
+  },
+  {
+   "name": "KAPU 0.6.0",
+   "runs": 3,
+   "dollars": [
+    0.25,
+    0.234,
+    0.211
+   ],
+   "dollars_mean": 0.232,
+   "answerable": 36,
+   "fully_correct": 5,
+   "partly": 28,
+   "wrong": 3,
+   "not_found": 0,
+   "calls_answerable_median": 1.0
+  }
+ ],
+ "pixellab_session": [
+  {
+   "name": "One Markdown file",
+   "runs": 1,
+   "dollars": [
+    0.518
+   ],
+   "dollars_mean": 0.518,
+   "answerable": 12,
+   "fully_correct": 2,
+   "partly": 9,
+   "wrong": 1,
+   "not_found": 0,
+   "calls_answerable_median": 3.0
+  },
+  {
+   "name": "KAPU 0.5.1",
+   "runs": 1,
+   "dollars": [
+    0.423
+   ],
+   "dollars_mean": 0.423,
+   "answerable": 12,
+   "fully_correct": 4,
+   "partly": 6,
+   "wrong": 2,
+   "not_found": 0,
+   "calls_answerable_median": 1.5
+  },
+  {
+   "name": "KAPU 0.6.0 before the passage tail",
+   "runs": 1,
+   "dollars": [
+    0.259
+   ],
+   "dollars_mean": 0.259,
+   "answerable": 12,
+   "fully_correct": 4,
+   "partly": 8,
+   "wrong": 0,
+   "not_found": 0,
+   "calls_answerable_median": 1.0
+  },
+  {
+   "name": "The whole Markdown file pasted",
+   "runs": 1,
+   "dollars": [
+    1.679
+   ],
+   "dollars_mean": 1.679,
+   "answerable": 12,
+   "fully_correct": 2,
+   "partly": 10,
+   "wrong": 0,
+   "not_found": 0,
+   "calls_answerable_median": 0.0
+  }
+ ]
+}
