@@ -3,8 +3,8 @@
 #
 #   irm https://raw.githubusercontent.com/piszabolcs/kapu/main/install.ps1 | iex
 #
-# Environment: KAPU_VERSION (a tag such as v0.3.0; default: the latest
-# release), KAPU_HOME (default %LOCALAPPDATA%\Programs\KAPU), KAPU_BASE_URL (a
+# Environment: KAPU_VERSION (a tag such as v0.3.0; default: the newest
+# release, pre-releases included), KAPU_HOME (default %LOCALAPPDATA%\Programs\KAPU), KAPU_BASE_URL (a
 # mirror of the release downloads), KAPU_NO_PATH=1 (leave PATH alone). The archive's
 # SHA-256 is checked against the .sha256 file of the release, and the folder
 # is added to the user's PATH.
@@ -16,7 +16,8 @@ if (-not [Environment]::Is64BitOperatingSystem) { throw "kapu install: only 64-b
 
 $tag = $env:KAPU_VERSION
 if (-not $tag) {
-    $tag = (Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest").tag_name
+    # not releases/latest: it skips pre-releases, and every KAPU release is one so far
+    $tag = @(Invoke-RestMethod "https://api.github.com/repos/$repo/releases?per_page=1")[0].tag_name
     if (-not $tag) { throw "kapu install: could not find the latest release of $repo" }
 }
 $version = $tag.TrimStart("v")

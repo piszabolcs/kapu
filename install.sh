@@ -4,8 +4,8 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/piszabolcs/kapu/main/install.sh | sh
 #
-# Environment: KAPU_VERSION (a tag such as v0.3.0; default: the latest
-# release), KAPU_HOME (where the release is unpacked; default
+# Environment: KAPU_VERSION (a tag such as v0.3.0; default: the newest
+# release, pre-releases included), KAPU_HOME (where the release is unpacked; default
 # ~/.local/share/kapu), KAPU_BIN (where the commands go; default ~/.local/bin),
 # KAPU_BASE_URL (a mirror of the release downloads; default GitHub).
 # The archive's SHA-256 is checked against the .sha256 file of the release.
@@ -30,7 +30,8 @@ esac
 
 tag="${KAPU_VERSION:-}"
 if [ -z "$tag" ]; then
-  tag=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
+  # not releases/latest: it skips pre-releases, and every KAPU release is one so far
+  tag=$(curl -fsSL "https://api.github.com/repos/$REPO/releases?per_page=1" \
     | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n 1)
   [ -n "$tag" ] || fail "could not find the latest release of $REPO"
 fi
