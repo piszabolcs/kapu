@@ -5,6 +5,9 @@ The file format has its own version (`%KAPU 1.3`, see `SPEC-KAPU.md`); the tools
 
 ## [Unreleased]
 
+### Fixed
+- The minimum Rust 1.90 builds the workspace again: `kapu-create` uses `mail-parser` 0.11 and `sevenz-rust2` 0.20 (`mail-parser` 1.0 asks for Rust 1.98, `sevenz-rust2` 0.24 for 1.93). The source at the tag v0.6.0 needs Rust 1.98; its prebuilt packages are not affected.
+
 ## [0.6.0] - 2026-11-05
 
 Against one Markdown file with grep, measured with Claude Sonnet on PLC manuals: $1.42 against $1.85 on 60 single questions, $0.58 against $0.72 in a session of 25, at about the same accuracy (98 and 99 of 108, 17 and 19 of 20 fully correct). The target of 2/5 of its dollars at the same accuracy is not met ([chapter 15](bench/RESULTS.md#15-one-markdown-file-with-grep-against-kapu-plan-v4-and-v5)).

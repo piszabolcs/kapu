@@ -37,10 +37,10 @@ image = { version = "0.25", default-features = false, features = ["png"] }
 pdf-extract = "0.12.1"
 lopdf = "0.46"
 # Mail (KD7) and archives (KD8).
-mail-parser = "1.0"
+mail-parser = "0.11"
 msg_parser = "0.3"
 zip = { version = "9", default-features = false, features = ["deflate", "deflate64", "bzip2", "lzma", "zstd"] }
-sevenz-rust2 = { version = "0.24", default-features = false, features = ["bzip2", "ppmd", "deflate"] }
+sevenz-rust2 = { version = "0.20", default-features = false, features = ["bzip2", "ppmd", "deflate"] }
 # Web (KD9).
 ureq = "3.5"
 texting_robots = "0.2"

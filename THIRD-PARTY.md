@@ -144,7 +144,6 @@ KAPU code is MIT (`LICENSE`), the specification CC BY 4.0. The binaries `kapu`, 
 | ecb | 0.2.1 | MIT OR Apache-2.0 | https://github.com/RustCrypto/block-modes |
 | ego-tree | 0.11.1 | ISC | https://github.com/rust-scraper/ego-tree |
 | either | 1.19.0 | MIT OR Apache-2.0 | https://github.com/rayon-rs/either |
-| encodify | 1.0.2 | Apache-2.0 OR MIT | https://github.com/stalwartlabs/encodify |
 | encoding_rs | 0.8.44 | (Apache-2.0 OR MIT) AND BSD-3-Clause | https://github.com/hsivonen/encoding_rs |
 | env_filter | 2.0.0 | MIT OR Apache-2.0 | https://github.com/rust-cli/env_logger |
 | env_logger | 0.11.11 | MIT OR Apache-2.0 | https://github.com/rust-cli/env_logger |
@@ -178,7 +177,7 @@ KAPU code is MIT (`LICENSE`), the specification CC BY 4.0. The binaries `kapu`, 
 | glob | 0.3.4 | MIT OR Apache-2.0 | https://github.com/rust-lang/glob |
 | hashbrown | 0.12.3 | MIT OR Apache-2.0 | https://github.com/rust-lang/hashbrown |
 | hashbrown | 0.17.1 | MIT OR Apache-2.0 | https://github.com/rust-lang/hashbrown |
-| hashify | 0.3.2 | Apache-2.0 OR MIT | https://github.com/stalwartlabs/hashify |
+| hashify | 0.2.9 | Apache-2.0 OR MIT | https://github.com/stalwartlabs/hashify |
 | heck | 0.5.0 | MIT OR Apache-2.0 | https://github.com/withoutboats/heck |
 | hex | 0.4.3 | MIT OR Apache-2.0 | https://github.com/KokaKiwi/rust-hex |
 | htmd | 0.5.6 | Apache-2.0 | https://github.com/letmutex/htmd |
@@ -228,10 +227,11 @@ KAPU code is MIT (`LICENSE`), the specification CC BY 4.0. The binaries `kapu`, 
 | lopdf | 0.42.0 | MIT | https://github.com/J-F-Liu/lopdf.git |
 | lopdf | 0.45.0 | MIT | https://github.com/J-F-Liu/lopdf.git |
 | lopdf | 0.46.0 | MIT | https://github.com/J-F-Liu/lopdf.git |
+| lzma-rust2 | 0.16.5 | Apache-2.0 | https://github.com/hasenbanck/lzma-rust2/ |
 | lzma-rust2 | 0.23.0 | Apache-2.0 | https://github.com/hasenbanck/lzma-rust2/ |
 | macro_rules_attribute | 0.2.3 | Apache-2.0 OR MIT OR Zlib | https://github.com/danielhenrymantilla/macro_rules_attribute-rs |
 | macro_rules_attribute-proc_macro | 0.2.3 | Apache-2.0 OR MIT OR Zlib | https://github.com/danielhenrymantilla/macro_rules_attribute-rs |
-| mail-parser | 1.0.1 | Apache-2.0 OR MIT | https://github.com/stalwartlabs/mail-parser |
+| mail-parser | 0.11.9 | Apache-2.0 OR MIT | https://github.com/stalwartlabs/mail-parser |
 | markup5ever | 0.38.0 | MIT OR Apache-2.0 | https://github.com/servo/html5ever |
 | markup5ever | 0.39.0 | MIT OR Apache-2.0 | https://github.com/servo/html5ever |
 | markup5ever | 0.40.0 | MIT OR Apache-2.0 | https://github.com/servo/html5ever |
@@ -349,7 +349,7 @@ KAPU code is MIT (`LICENSE`), the specification CC BY 4.0. The binaries `kapu`, 
 | serialize-to-javascript-impl | 0.1.2 | MIT OR Apache-2.0 | https://github.com/chippers/serialize-to-javascript |
 | servo_arc | 0.4.3 | MIT OR Apache-2.0 | https://github.com/servo/stylo |
 | servo_arc | 0.5.0 | MIT OR Apache-2.0 | https://github.com/servo/stylo |
-| sevenz-rust2 | 0.24.2 | Apache-2.0 | https://github.com/hasenbanck/sevenz-rust |
+| sevenz-rust2 | 0.20.2 | Apache-2.0 | https://github.com/hasenbanck/sevenz-rust |
 | sha2 | 0.10.9 | MIT OR Apache-2.0 | https://github.com/RustCrypto/hashes |
 | sha2 | 0.11.1 | MIT OR Apache-2.0 | https://github.com/RustCrypto/hashes |
 | simd-adler32 | 0.3.10 | MIT | https://github.com/mcountryman/simd-adler32 |

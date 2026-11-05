@@ -3,6 +3,8 @@
 //! the body is the text; attachments are read as their own documents and
 //! linked from the mail.
 
+use mail_parser::MimeHeaders as _;
+
 use crate::doc::{Block, Document, Kind};
 use crate::readers::archive::failed;
 use crate::readers::{Ctx, html, read, text};
@@ -27,9 +29,9 @@ pub fn eml(bytes: &[u8], key: &str, name: &str, ctx: &Ctx<'_>) -> Result<Vec<Doc
     let message = mail_parser::MessageParser::default()
         .parse(bytes)
         .ok_or_else(|| Error::new("not a readable mail"))?;
-    let addresses = |list: Option<mail_parser::AddressList<'_>>| {
+    let addresses = |list: Option<&mail_parser::Address<'_>>| {
         list.map(|l| {
-            l.mailboxes()
+            l.iter()
                 .map(|m| match (m.name(), m.address()) {
                     (Some(n), Some(a)) => format!("{n} <{a}>"),
                     (Some(n), None) => n.to_owned(),
@@ -49,14 +51,17 @@ pub fn eml(bytes: &[u8], key: &str, name: &str, ctx: &Ctx<'_>) -> Result<Vec<Doc
             let file = part
                 .attachment_name()
                 .map_or_else(|| format!("attachment-{}", i + 1), str::to_owned);
-            (file, part.decoded().into_owned())
+            (file, part.contents().to_vec())
         })
         .collect();
     let mail = Mail {
         subject: message.subject().unwrap_or_default().to_owned(),
         from: addresses(message.from()),
         to: addresses(message.to()),
-        date: message.date().map(|d| d.to_rfc3339()).unwrap_or_default(),
+        date: message
+            .date()
+            .map(mail_parser::DateTime::to_rfc3339)
+            .unwrap_or_default(),
         text: message
             .body_text(0)
             .map(std::borrow::Cow::into_owned)
